@@ -1,0 +1,21 @@
+version = "0.1"
+description = "FIX library"
+requires = "fix.core"
+
+package "core" (
+  requires = "unix rresult mt ppx_deriving_yojson.runtime ppx_deriving.std containers containers.io"
+  archive(byte) = "fix.cma"
+  archive(byte, plugin) = "fix.cma"
+  archive(native) = "fix.cmxa"
+  archive(native, plugin) = "fix.cmxs"
+  exists_if = "fix.cma"
+)
+
+package "async" (
+  requires = "fix.core async nocrypto threads"
+  archive(byte) = "fix_async.cma"
+  archive(byte, plugin) = "fix_async.cma"
+  archive(native) = "fix_async.cmxa"
+  archive(native, plugin) = "fix_async.cmxs"
+  exists_if = "fix_async.cma"
+)

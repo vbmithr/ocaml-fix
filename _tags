@@ -1,0 +1,15 @@
+true: debug, bin_annot, safe_string
+<lib>: include
+<src>: include
+
+<{lib,src,lib_test}/*.*>: package(containers), \
+                          package(containers.io), \
+                          package(ppx_deriving.std), \
+                          package(ppx_deriving_yojson), \
+                          package(cohttp.async), \
+                          package(mt), \
+                          package(rresult), \
+                          package(nocrypto), \
+                          thread
+
+<top/*.*>: package(compiler-libs.toplevel)
