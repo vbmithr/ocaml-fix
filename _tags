@@ -2,14 +2,10 @@ true: debug, bin_annot
 <lib>: include
 <src>: include
 
-<{lib,src,lib_test}/*.*>: package(containers), \
-                          package(containers.io), \
-                          package(ppx_deriving.std), \
-                          package(ppx_deriving_yojson), \
-                          package(cohttp.async), \
-                          package(mt), \
-                          package(rresult), \
-                          package(nocrypto), \
+<{lib,src,lib_test}/*.*>: package(ppx_deriving.std), \
+                          package(core), \
+                          package(async), \
+                          package(conduit.async), \
                           thread
 
 <top/*.*>: package(compiler-libs.toplevel)

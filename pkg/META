@@ -3,7 +3,7 @@ description = "FIX library"
 requires = "fix.core"
 
 package "core" (
-  requires = "unix rresult mt ppx_deriving_yojson.runtime ppx_deriving.std containers containers.io"
+  requires = "unix ppx_deriving.std"
   archive(byte) = "fix.cma"
   archive(byte, plugin) = "fix.cma"
   archive(native) = "fix.cmxa"
@@ -12,7 +12,7 @@ package "core" (
 )
 
 package "async" (
-  requires = "fix.core async nocrypto threads"
+  requires = "fix.core core async threads"
   archive(byte) = "fix_async.cma"
   archive(byte, plugin) = "fix_async.cma"
   archive(native) = "fix_async.cmxa"

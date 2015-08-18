@@ -3,6 +3,7 @@ S lib
 S lib_test
 B _build/lib
 B _build/lib_test
+PKG ppx_deriving.std
 PKG core
 PKG async
-PKG async_ssl
+PKG conduit.async
