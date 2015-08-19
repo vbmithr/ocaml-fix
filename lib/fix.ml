@@ -93,7 +93,6 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
         (1900 + tm.tm_year) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour
         tm.tm_min tm.tm_sec (ms *. 1000.) in
     let msg = Hashtbl.create 13 in
-    Hashtbl.add msg 8 verstring;
     Hashtbl.add msg 34 (string_of_int !seqnum);
     Hashtbl.add msg 35 msgtype;
     Hashtbl.add msg 49 sendercompid;
@@ -101,6 +100,7 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
     Hashtbl.add msg 52 timestring;
     List.iter (fun (tag, value) -> Hashtbl.add msg tag value) fields;
     let msglen = body_length msg in
+    Hashtbl.add msg 8 verstring;
     Hashtbl.add msg 9 (string_of_int msglen);
     incr seqnum;
     pred !seqnum, msg
