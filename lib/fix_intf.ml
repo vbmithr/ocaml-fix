@@ -19,6 +19,7 @@ type tag =
   | Symbol [@value 55]
   | TargetCompId [@value 56]
   | Text [@value 58]
+  | RawData [@value 96]
   | EncryptMethod [@value 98]
   | HeartBtInt [@value 108]
   | TestReqID [@value 112]
