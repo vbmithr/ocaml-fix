@@ -9,5 +9,6 @@ let () =
     (* Pkg.lib ~exts:Exts.library "lib/fix"; *)
     (* Pkg.lib ~exts:Exts.library "lib/okcoin"; *)
     Pkg.lib ~exts:Exts.module_library "lib/fix_async";
-    Pkg.bin ~auto:true "lib_test/fixcat"
+    Pkg.bin ~auto:true "lib_test/shell_okcoin";
+    Pkg.bin ~auto:true "lib_test/shell_coinbase"
   ]

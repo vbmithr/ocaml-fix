@@ -7,3 +7,4 @@ PKG ppx_deriving.std
 PKG core
 PKG async
 PKG conduit.async
+PKG nocrypto

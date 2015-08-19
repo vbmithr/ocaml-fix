@@ -23,7 +23,7 @@ let heartbeat ?testreqid ~username ~passwd () =
     (match testreqid with None -> [] | Some value -> [112, value]) in
   make_msg "0" fields
 
-let testreq reqid = make_msg "1" [112, string_of_int reqid]
+let testreq reqid = make_msg "1" [112, reqid]
 
 let account_info_request ?account_id reqid =
   let fields =
