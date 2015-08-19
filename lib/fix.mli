@@ -1,4 +1,8 @@
-module IntMap : Map.S
+open Fix_intf
+
+val msgname_of_string : string -> msgname option
+
+module IntMap : Map.S with type key = int
 
 type msg = string IntMap.t
 

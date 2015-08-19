@@ -24,3 +24,8 @@ let heartbeat ?testreqid ~username ~passwd () =
   make_msg "0" fields
 
 let testreq reqid = make_msg "1" [112, string_of_int reqid]
+
+let account_info_request ?account_id ~username ~passwd reqid =
+  let fields =
+    (8000, reqid) :: (match account_id with None -> [] | Some id -> [1, id]) in
+  make_msg "Z1000" fields

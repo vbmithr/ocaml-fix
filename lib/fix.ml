@@ -1,35 +1,14 @@
-type msgname =
-  | Heartbeat
-  | Logon
-  | Logout
+include Fix_intf
 
-let msgtype_of_msgname = function
-  | Heartbeat -> "0"
-  | Logon -> "A"
-  | Logout -> "5"
-
-let msgname_of_msgtype = function
+let msgname_of_string = function
   | "0" -> Some Heartbeat
-  | "A" -> Some Logon
+  | "1" -> Some TestRequest
+  | "2" -> Some ResendRequest
+  | "3" -> Some Reject
+  | "4" -> Some SequenceReset
   | "5" -> Some Logout
+  | "A" -> Some Logon
   | _ -> None
-
-type tag =
-  | BeginString [@value 8]
-  | BodyLength [@value 9]
-  | CheckSum [@value 10]
-  | MsgSeqNum [@value 34]
-  | MsgType [@value 35]
-  | SenderCompId [@value 49]
-  | SendingTime [@value 52]
-  | TargetCompId [@value 56]
-  | Text [@value 58]
-  | EncryptMethod [@value 98]
-  | HeartBtInt [@value 108]
-  | ResetSeqNumFlag [@value 141]
-  | Username [@value 553]
-  | Password [@value 554]
-      [@@deriving show, enum]
 
 module IntMap = Map.Make(struct type t = int let compare = compare end)
 

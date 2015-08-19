@@ -47,6 +47,7 @@ let with_connection
   don't_wait_for @@
   (Tcp.(with_connection ~timeout
           (to_host_and_port host port) f) >>| fun _ ->
-   Log.debug log "TCP connection terminated, exiting");
+   Log.debug log "TCP connection terminated";
+   Pipe.close client_write
+  );
   return @@ (client_read, client_write)
-
