@@ -73,7 +73,7 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
       let timeofday = gettimeofday () in
       let ms, _ = modf timeofday in
       let tm = timeofday |> gmtime in
-      Printf.sprintf "%d%02d%02d-%02d:%02d:%02d.%3.0f"
+      Printf.sprintf "%d%02d%02d-%02d:%02d:%02d.%03.0f"
         (1900 + tm.tm_year) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour
         tm.tm_min tm.tm_sec (ms *. 1000.) in
     let msg = IntMap.empty in
