@@ -6,10 +6,11 @@ type msgname =
 val msgtype_of_msgname : msgname -> string
 val msgname_of_msgtype : string -> msgname option
 
-type fieldname =
+type tag =
   | BeginString [@value 8]
   | BodyLength [@value 9]
   | CheckSum [@value 10]
+  | MsgType [@value 35]
   | SenderCompId [@value 49]
   | TargetCompId [@value 56]
   | Text [@value 58]
@@ -19,23 +20,20 @@ type fieldname =
   | Password [@value 554]
       [@@deriving enum]
 
-type field = {
-  tag: int;
-  value: string
-} [@@deriving show,create]
+type msg = (int, string) Hashtbl.t
 
-type msg = field list [@@deriving show]
+val show_msg : msg -> string
 
-val field_of_string : string -> field
-val string_of_field : field -> string
+val field_of_string : string -> int * string
+val string_of_field : int -> string -> string
 
-val body_length : field list -> int
+val body_length : msg -> int
 
 val msg_maker : ?major:int -> ?minor:int ->
   sendercompid:string ->
   targetcompid:string -> unit ->
-  (string -> field list -> int * field list)
+  (string -> (int * string) list -> int * msg)
 
-val string_of_msg : field list -> string
-val read_msg : bytes -> pos:int -> len:int -> field list
-val write_msg : field list -> bytes -> pos:int -> unit
+val string_of_msg : msg -> string
+val read_msg : bytes -> pos:int -> len:int -> msg
+val write_msg : bytes -> pos:int -> msg -> unit
