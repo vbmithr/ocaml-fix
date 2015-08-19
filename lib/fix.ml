@@ -24,6 +24,7 @@ type tag =
   | SendingTime [@value 52]
   | TargetCompId [@value 56]
   | Text [@value 58]
+  | EncryptMethod [@value 98]
   | HeartBtInt [@value 108]
   | ResetSeqNumFlag [@value 141]
   | Username [@value 553]
@@ -102,8 +103,8 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
     let msg = IntMap.add 49 sendercompid msg in
     let msg = IntMap.add 56 targetcompid msg in
     let msg = IntMap.add 52 timestring msg in
-    let msg =
-      List.fold_left (fun a (tag, value) -> IntMap.add tag value msg) msg fields in
+    let msg = List.fold_left (fun a (tag, value) ->
+        IntMap.add tag value a) msg fields in
     let msglen = body_length msg in
     let msg = IntMap.add 8 verstring msg in
     let msg = IntMap.add 9 (string_of_int msglen) msg in
