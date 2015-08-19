@@ -58,19 +58,34 @@ let main () =
       Log.info log "EOF received, exiting.";
       Shutdown.exit 0
     | `Ok msg ->
-      (match msg with
+      let words = String.split msg ~on:' ' in
+      (match List.hd_exn words with
        | "LOGON" ->
          send_msg w (logon ~username ~passwd) >>= fun () ->
          read_loop ()
        | "LOGOUT" ->
-         send_msg w logout >>= fun () ->
+         send_msg w @@ logout ~response:true >>= fun () ->
          read_loop ()
        | "TESTREQ" ->
          send_msg w (fun () -> testreq @@ Random.int 100) >>= fun () ->
          read_loop ()
+       | "SUB" ->
+         (match List.nth words 1 with
+         | None ->
+           Log.info log "SUB should be followed by either XBTUSD or LTCUSD";
+           read_loop ()
+         | Some curr ->
+           let symbol = match curr with
+             | "XBTUSD"|"BTCUSD" -> `XBTUSD
+             | "LTCUSD" -> `LTCUSD
+             | _ -> `XBTUSD in
+           let req_id = Uuid.(create () |> to_string) in
+           send_msg w (fun () -> incremental_trades ~symbol req_id) >>= fun () ->
+           read_loop ()
+         )
        | "ACCINFO" ->
          let uuid_str = Uuid.(create () |> to_string) in
-         send_msg w (fun () -> account_info_request ~username ~passwd uuid_str) >>= fun () ->
+         send_msg w (fun () -> account_info_request uuid_str) >>= fun () ->
          read_loop ()
        | command ->
          Log.info log "Unsupported command: %s" command;
