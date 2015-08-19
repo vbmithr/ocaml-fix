@@ -18,8 +18,10 @@ type tag =
   | BeginString [@value 8]
   | BodyLength [@value 9]
   | CheckSum [@value 10]
+  | MsgSeqNum [@value 34]
   | MsgType [@value 35]
   | SenderCompId [@value 49]
+  | SendingTime [@value 52]
   | TargetCompId [@value 56]
   | Text [@value 58]
   | HeartBtInt [@value 108]
@@ -28,12 +30,14 @@ type tag =
   | Password [@value 554]
       [@@deriving show, enum]
 
-type msg = (int, string) Hashtbl.t
+module IntMap = Map.Make(struct type t = int let compare = compare end)
+
+type msg = string IntMap.t
 
 let show_msg msg =
   let buf = Buffer.create 128 in
   Buffer.add_string buf "\n";
-  Hashtbl.iter (fun tag value ->
+  IntMap.iter (fun tag value ->
       let tag_str = tag_of_enum tag |> function
         | Some tag -> show_tag tag
         | None -> string_of_int tag in
@@ -59,9 +63,9 @@ let string_of_field tag value =
 let string_of_msg msg =
   let buf = Buffer.create 128 in
   List.iter
-    (fun tag -> Buffer.add_string buf @@ string_of_field tag @@ Hashtbl.find msg tag)
+    (fun tag -> Buffer.add_string buf @@ string_of_field tag @@ IntMap.find tag msg)
     [8; 9; 35];
-  Hashtbl.iter
+  IntMap.iter
     (fun tag field ->
        if tag <> 8 && tag <> 9 && tag <> 35 then
          Buffer.add_string buf @@ string_of_field tag field)
@@ -73,7 +77,7 @@ let string_of_msg msg =
   Buffer.contents buf
 
 let body_length msg =
-  Hashtbl.fold
+  IntMap.fold
     (fun tag value a ->
        a + 2 + String.length value +
        String.length (string_of_int tag)
@@ -92,32 +96,31 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
       Printf.sprintf "%d%02d%02d-%02d:%02d:%02d.%3.0f"
         (1900 + tm.tm_year) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour
         tm.tm_min tm.tm_sec (ms *. 1000.) in
-    let msg = Hashtbl.create 13 in
-    Hashtbl.add msg 34 (string_of_int !seqnum);
-    Hashtbl.add msg 35 msgtype;
-    Hashtbl.add msg 49 sendercompid;
-    Hashtbl.add msg 56 targetcompid;
-    Hashtbl.add msg 52 timestring;
-    List.iter (fun (tag, value) -> Hashtbl.add msg tag value) fields;
+    let msg = IntMap.empty in
+    let msg = IntMap.add 34 (string_of_int !seqnum) msg in
+    let msg = IntMap.add 35 msgtype msg in
+    let msg = IntMap.add 49 sendercompid msg in
+    let msg = IntMap.add 56 targetcompid msg in
+    let msg = IntMap.add 52 timestring msg in
+    let msg =
+      List.fold_left (fun a (tag, value) -> IntMap.add tag value msg) msg fields in
     let msglen = body_length msg in
-    Hashtbl.add msg 8 verstring;
-    Hashtbl.add msg 9 (string_of_int msglen);
+    let msg = IntMap.add 8 verstring msg in
+    let msg = IntMap.add 9 (string_of_int msglen) msg in
     incr seqnum;
     pred !seqnum, msg
 
 let read_msg s ~pos ~len =
-  let msg = Hashtbl.create 13 in
-  let rec inner pos =
+  let rec inner acc pos =
     try
       let i = String.index_from s pos '\001' in
       if i > pos + len then raise Not_found
       else
         let sub = String.sub s pos (i - pos) in
         let tag, value = field_of_string sub in
-        Hashtbl.add msg tag value;
-        inner (succ i)
-    with Not_found -> msg
-  in inner pos
+        inner (IntMap.add tag value acc) @@ succ i
+    with Not_found -> acc
+  in inner IntMap.empty pos
 
 let write_msg buf ~pos msg =
   let msg = string_of_msg msg in
