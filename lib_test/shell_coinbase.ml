@@ -23,6 +23,7 @@ let main () =
   let passphrase = Sys.getenv_exn "COINBASE_PASSPHRASE" in
   let apikey = Sys.getenv_exn "COINBASE_APIKEY" in
   let apisecret = Sys.getenv_exn "COINBASE_APISECRET" in
+  init apikey;
   with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
   Log.info log "Connected to Coinbase";
   let rec drain_input () =
@@ -34,13 +35,13 @@ let main () =
       (match msgtype with
        | Some Logout ->
          (* Immediately send a logout msg and exit. *)
-         send_msg w @@ (fun () -> logout apikey) >>= fun () ->
+         send_msg w logout >>= fun () ->
          Shutdown.exit 0
        | Some TestRequest ->
          (try
             let testreqid = IntMap.find (tag_to_enum TestReqID) msg in
             (* Immediately send a heartbeat with the same seqnum. *)
-            send_msg w (fun () -> heartbeat ~testreqid apikey)
+            send_msg w (heartbeat ~testreqid)
           with Not_found -> Deferred.unit)
        | Some ResendRequest -> Deferred.unit
        | _ -> Deferred.unit
@@ -49,7 +50,7 @@ let main () =
   don't_wait_for @@ drain_input ();
   let rec heartbeat_loop w period =
     after @@ Time.Span.of_string (string_of_int period ^ "s") >>= fun () ->
-    send_msg w (fun () -> heartbeat apikey) >>= fun () ->
+    send_msg w heartbeat >>= fun () ->
     heartbeat_loop w period
   in
   don't_wait_for @@ heartbeat_loop w 30;
@@ -62,14 +63,14 @@ let main () =
       let words = String.split msg ~on:' ' in
       (match List.hd_exn words with
        | "LOGON" ->
-         send_msg w (logon ~apikey ~apisecret ~passphrase) >>= fun () ->
+         send_msg w (logon ~apisecret ~passphrase) >>= fun () ->
          read_loop ()
        | "LOGOUT" ->
-         send_msg w @@ (fun () -> logout apikey) >>= fun () ->
+         send_msg w logout >>= fun () ->
          read_loop ()
        | "TESTREQ" ->
          send_msg w
-           (fun () -> testreq ~testreqid:Uuid.(create () |> to_string) apikey)
+           (testreq ~testreqid:Uuid.(create () |> to_string))
          >>= fun () -> read_loop ()
        (* | "SUB" -> *)
        (*   (match List.nth words 1 with *)

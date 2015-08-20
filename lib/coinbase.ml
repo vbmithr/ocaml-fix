@@ -2,17 +2,21 @@ open Fix_intf
 open Fix
 open Nocrypto
 
-let make_msg = msg_maker ~minor:2 ~targetcompid:"Coinbase"
+let make_msg = ref @@
+  msg_maker ~minor:2 ~targetcompid:"Coinbase" ~sendercompid:"" ()
 
-let logon ?(heartbeat=30) ~apikey ~apisecret ~passphrase () =
-  let make_msg = make_msg ~sendercompid:apikey () in
+let init apikey =
+  make_msg :=
+    msg_maker ~minor:2 ~targetcompid:"Coinbase" ~sendercompid:apikey ()
+
+let logon ?(heartbeat=30) ~apisecret ~passphrase () =
   let fields =
     [
      98, "0"; (* encryption *)
      108, string_of_int heartbeat;
      554, passphrase;
     ] in
-  let seqnum, msg = make_msg "A" fields in
+  let seqnum, msg = !make_msg "A" fields in
   (* Now adding signature *)
   (* See https://docs.exchange.coinbase.com/?javascript#logon *)
   let prehash_tags = [SendingTime; MsgType; MsgSeqNum;
@@ -26,14 +30,10 @@ let logon ?(heartbeat=30) ~apikey ~apisecret ~passphrase () =
   let msg = add_field msg 96 Cstruct.(to_string signature) in
   seqnum, msg
 
-let logout apikey =
-  let make_msg = make_msg ~sendercompid:apikey () in
-  make_msg "5" []
+let logout () = !make_msg "5" []
 
-let heartbeat ?testreqid apikey =
-  let make_msg = make_msg ~sendercompid:apikey () in
-  make_msg "5" (match testreqid with None -> [] | Some id -> [112, id])
+let heartbeat ?testreqid () =
+  !make_msg "5" (match testreqid with None -> [] | Some id -> [112, id])
 
-let testreq ~testreqid apikey =
-  let make_msg = make_msg ~sendercompid:apikey () in
-  make_msg "1" [112, testreqid]
+let testreq ~testreqid () =
+  !make_msg "1" [112, testreqid]
