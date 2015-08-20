@@ -20,12 +20,11 @@ let send_msg w mk_msg =
 let main () =
   let host = Sys.getenv_exn "COINBASE_HOST" in
   let port = int_of_string @@ Sys.getenv_exn "COINBASE_PORT" in
+  let passphrase = Sys.getenv_exn "COINBASE_PASSPHRASE" in
   let apikey = Sys.getenv_exn "COINBASE_APIKEY" in
   let apisecret = Sys.getenv_exn "COINBASE_APISECRET" in
-  with_connection
-    ~ssl:false ~host ~port ~username:apikey
-    ~passwd:apisecret () >>= fun (r, w) ->
-  Log.info log "Welcome to the Coinbase shell";
+  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  Log.info log "Connected to Coinbase";
   let rec drain_input () =
     Pipe.read r >>= function
     | `Eof -> Deferred.unit
@@ -63,7 +62,7 @@ let main () =
       let words = String.split msg ~on:' ' in
       (match List.hd_exn words with
        | "LOGON" ->
-         send_msg w (logon ~apikey ~apisecret) >>= fun () ->
+         send_msg w (logon ~apikey ~apisecret ~passphrase) >>= fun () ->
          read_loop ()
        | "LOGOUT" ->
          send_msg w @@ (fun () -> logout apikey) >>= fun () ->

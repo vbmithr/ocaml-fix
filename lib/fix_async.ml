@@ -10,7 +10,7 @@ let with_connection
     ?(timeout=Time.Span.(of_int_sec 2))
     ?(max_msg_size=4096)
     ?(ssl=false)
-    ~host ~port ~username ~passwd () =
+    ~host ~port () =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
   let run s r w =

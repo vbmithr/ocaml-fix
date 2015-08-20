@@ -4,13 +4,13 @@ open Nocrypto
 
 let make_msg = msg_maker ~minor:2 ~targetcompid:"Coinbase"
 
-let logon ?(heartbeat=30) ~apikey ~apisecret () =
+let logon ?(heartbeat=30) ~apikey ~apisecret ~passphrase () =
   let make_msg = make_msg ~sendercompid:apikey () in
   let fields =
     [
      98, "0"; (* encryption *)
      108, string_of_int heartbeat;
-     554, apisecret;
+     554, passphrase;
     ] in
   let seqnum, msg = make_msg "A" fields in
   (* Now adding signature *)
@@ -22,8 +22,7 @@ let logon ?(heartbeat=30) ~apikey ~apisecret () =
   let prehash_str = String.concat "\001" prehash_tags in
   let secret_decoded = Base64.decode Cstruct.(of_string apisecret) in
   let signature = Hash.SHA256.hmac ~key:secret_decoded
-      Cstruct.(of_string prehash_str) in
-  let signature = Base64.encode signature in
+      Cstruct.(of_string prehash_str) |> Base64.encode in
   let msg = IntMap.add 96 Cstruct.(to_string signature) msg in
   seqnum, msg
 

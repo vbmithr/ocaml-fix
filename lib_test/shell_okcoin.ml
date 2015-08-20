@@ -22,8 +22,8 @@ let main () =
   let port = int_of_string @@ Sys.getenv_exn "OKCOIN_PORT" in
   let username = Sys.getenv_exn "OKCOIN_USER" in
   let passwd = Sys.getenv_exn "OKCOIN_PASSWD" in
-  with_connection ~ssl:false ~host ~port ~username ~passwd () >>= fun (r, w) ->
-  Log.info log "Welcome to the OKCoin shell";
+  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  Log.info log "Connected to OKCoin";
   let rec drain_input () =
     Pipe.read r >>= function
     | `Eof -> Deferred.unit

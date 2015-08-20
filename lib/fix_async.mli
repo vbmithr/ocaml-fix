@@ -5,5 +5,5 @@ val with_connection :
   ?timeout:Time.Span.t ->
   ?max_msg_size:int ->
   ?ssl:bool -> host:string -> port:int ->
-  username:string -> passwd:string -> unit ->
+  unit ->
   (Fix.msg Pipe.Reader.t * Fix.msg Pipe.Writer.t) Deferred.t
