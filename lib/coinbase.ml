@@ -23,7 +23,7 @@ let logon ?(heartbeat=30) ~apikey ~apisecret ~passphrase () =
   let secret_decoded = Base64.decode Cstruct.(of_string apisecret) in
   let signature = Hash.SHA256.hmac ~key:secret_decoded
       Cstruct.(of_string prehash_str) |> Base64.encode in
-  let msg = IntMap.add 96 Cstruct.(to_string signature) msg in
+  let msg = add_field msg 96 Cstruct.(to_string signature) in
   seqnum, msg
 
 let logout apikey =

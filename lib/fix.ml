@@ -90,6 +90,13 @@ let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
     incr seqnum;
     pred !seqnum, msg
 
+let add_field msg tag value =
+  let len =
+    String.length (string_of_int tag) + 2 +
+    String.length value in
+  let msg = IntMap.add tag value msg in
+  IntMap.(add 9 (string_of_int (len + int_of_string (find 9 msg))) msg)
+
 let read_msg s ~pos ~len =
   let rec inner acc pos =
     try
