@@ -9,10 +9,12 @@ type msgname =
   | NewOrderSingle
 
 type tag =
+  | BeginSeqNo [@value 7]
   | BeginString [@value 8]
   | BodyLength [@value 9]
   | CheckSum [@value 10]
   | ClOrdId [@value 11]
+  | EndSeqNo [@value 16]
   | HandlInst [@value 21]
   | MsgSeqNum [@value 34]
   | MsgType [@value 35]
