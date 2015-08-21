@@ -1,5 +1,6 @@
 open Fix_intf
 
+val string_of_msgname : msgname -> string
 val msgname_of_string : string -> msgname option
 
 module IntMap : Map.S with type key = int

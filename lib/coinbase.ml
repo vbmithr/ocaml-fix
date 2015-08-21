@@ -16,7 +16,7 @@ let logon ?(heartbeat=30) ~apisecret ~passphrase () =
      108, string_of_int heartbeat;
      554, passphrase;
     ] in
-  let seqnum, msg = !make_msg "A" fields in
+  let seqnum, msg = !make_msg (string_of_msgname Logon) fields in
   (* Now adding signature *)
   (* See https://docs.exchange.coinbase.com/?javascript#logon *)
   let prehash_tags = [SendingTime; MsgType; MsgSeqNum;
@@ -30,10 +30,11 @@ let logon ?(heartbeat=30) ~apisecret ~passphrase () =
   let msg = add_field msg 96 Cstruct.(to_string signature) in
   seqnum, msg
 
-let logout () = !make_msg "5" []
+let logout () = !make_msg (string_of_msgname Logout) []
 
 let heartbeat ?testreqid () =
-  !make_msg "5" (match testreqid with None -> [] | Some id -> [112, id])
+  !make_msg (string_of_msgname Heartbeat)
+    (match testreqid with None -> [] | Some id -> [112, id])
 
-let testreq ~testreqid () =
-  !make_msg "1" [112, testreqid]
+let testreq id =
+  !make_msg (string_of_msgname TestRequest) [112, id]

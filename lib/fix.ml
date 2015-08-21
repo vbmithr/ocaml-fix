@@ -1,5 +1,14 @@
 include Fix_intf
 
+let string_of_msgname = function
+  | Heartbeat -> "0"
+  | TestRequest -> "1"
+  | ResendRequest -> "2"
+  | Reject -> "3"
+  | SequenceReset -> "4"
+  | Logout -> "5"
+  | Logon -> "A"
+
 let msgname_of_string = function
   | "0" -> Some Heartbeat
   | "1" -> Some TestRequest

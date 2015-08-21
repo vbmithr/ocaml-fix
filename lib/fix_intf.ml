@@ -1,12 +1,11 @@
 type msgname =
-  | Heartbeat [@printer fun fmt _ -> Format.pp_print_string fmt "0"]
-  | TestRequest [@printer fun fmt _ -> Format.pp_print_string fmt "1"]
-  | ResendRequest [@printer fun fmt _ -> Format.pp_print_string fmt "2"]
-  | Reject [@printer fun fmt _ -> Format.pp_print_string fmt "3"]
-  | SequenceReset [@printer fun fmt _ -> Format.pp_print_string fmt "4"]
-  | Logout [@printer fun fmt _ -> Format.pp_print_string fmt "5"]
-  | Logon [@printer fun fmt _ -> Format.pp_print_string fmt "A"]
-    [@@deriving show]
+  | Heartbeat
+  | TestRequest
+  | ResendRequest
+  | Reject
+  | SequenceReset
+  | Logout
+  | Logon
 
 type tag =
   | BeginString [@value 8]

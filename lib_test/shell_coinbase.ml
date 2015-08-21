@@ -70,7 +70,7 @@ let main () =
          read_loop ()
        | "TESTREQ" ->
          send_msg w
-           (testreq ~testreqid:Uuid.(create () |> to_string))
+           (fun () -> testreq @@ Uuid.(create () |> to_string))
          >>= fun () -> read_loop ()
        (* | "SUB" -> *)
        (*   (match List.nth words 1 with *)
