@@ -6,7 +6,7 @@ type msgname =
   | SequenceReset
   | Logout
   | Logon
-  | OrderSingle
+  | NewOrderSingle
 
 type tag =
   | BeginString [@value 8]

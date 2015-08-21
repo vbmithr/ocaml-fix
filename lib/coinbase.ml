@@ -47,7 +47,7 @@ let new_order ?(order_type="2") ?(tif="1")
     | _ -> invalid_arg "string_of_symbol"
   in
   let string_of_direction = function `Buy -> "1" | `Sell -> "2" in
-  !make_msg (string_of_msgname OrderSingle)
+  !make_msg (string_of_msgname NewOrderSingle)
     [
       21, "1";
       11, uuid;
