@@ -25,6 +25,10 @@ module IntMap = Map.Make(struct type t = int let compare = compare end)
 
 type msg = string IntMap.t
 
+let find_field msg field =
+  try Some (IntMap.find field msg)
+  with Not_found -> None
+
 let show_msg msg =
   let buf = Buffer.create 128 in
   Buffer.add_string buf "\n";

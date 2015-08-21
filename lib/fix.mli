@@ -3,11 +3,11 @@ open Fix_intf
 val string_of_msgname : msgname -> string
 val msgname_of_string : string -> msgname option
 
-module IntMap : Map.S with type key = int
-
-type msg = string IntMap.t
+type msg
 
 val show_msg : msg -> string
+
+val find_field : msg -> int -> string option
 
 val field_of_string : string -> int * string
 val string_of_field : int -> string -> string

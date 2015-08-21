@@ -21,8 +21,12 @@ let logon ?(heartbeat=30) ~apisecret ~passphrase () =
   (* See https://docs.exchange.coinbase.com/?javascript#logon *)
   let prehash_tags = [SendingTime; MsgType; MsgSeqNum;
                       SenderCompId; TargetCompId; Password] in
-  let prehash_tags = List.map (fun tag -> IntMap.find (tag_to_enum tag) msg
-                              ) prehash_tags in
+  let prehash_tags =
+    List.map (fun tag ->
+        match find_field msg (tag_to_enum tag) with
+        | None -> invalid_arg "find_field"
+        | Some field -> field
+      ) prehash_tags in
   let prehash_str = String.concat "\001" prehash_tags in
   let secret_decoded = Base64.decode Cstruct.(of_string apisecret) in
   let signature = Hash.SHA256.hmac ~key:secret_decoded

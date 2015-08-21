@@ -1,6 +1,5 @@
 open Core.Std
 open Async.Std
-open Async_ssl.Std
 
 open Mt
 open Fix
@@ -31,19 +30,20 @@ let main () =
     Pipe.read r >>= function
     | `Eof -> Deferred.unit
     | `Ok msg ->
-      let msgtype = IntMap.find (tag_to_enum MsgType) msg |>
-                    msgname_of_string in
+      let msgtype =
+        Option.bind (find_field msg (tag_to_enum MsgType))
+          msgname_of_string in
       (match msgtype with
        | Some Logout ->
          (* Immediately send a logout msg and exit. *)
          send_msg w logout >>= fun () ->
          Shutdown.exit 0
        | Some TestRequest ->
-         (try
-            let testreqid = IntMap.find (tag_to_enum TestReqID) msg in
-            (* Immediately send a heartbeat with the same seqnum. *)
-            send_msg w (heartbeat ~testreqid)
-          with Not_found -> Deferred.unit)
+         (find_field msg (tag_to_enum TestReqID) |> function
+         | None -> Deferred.unit
+         | Some testreqid ->
+           (* Immediately send a heartbeat with the same seqnum. *)
+           send_msg w (heartbeat ~testreqid))
        | Some ResendRequest -> Deferred.unit
        | _ -> Deferred.unit
       ) >>= fun () ->
