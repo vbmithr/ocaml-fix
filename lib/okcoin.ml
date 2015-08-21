@@ -1,3 +1,4 @@
+open Fix_intf
 open Fix
 
 let make_msg = msg_maker
@@ -12,16 +13,17 @@ let logon ?(heartbeat=30) ~username ~passwd () =
      553, username;
      554, passwd;
     ] in
-  make_msg "A" fields
+  make_msg (string_of_msgname Logon) fields
 
 let logout ?(response=false) () =
-  make_msg "5" (if response then [8500, "0"] else [])
+  make_msg (string_of_msgname Logout)
+    (if response then [8500, "0"] else [])
 
 let heartbeat ?testreqid ~username ~passwd () =
   let fields =
     (553, username) :: (554, passwd) ::
     (match testreqid with None -> [] | Some value -> [112, value]) in
-  make_msg "0" fields
+  make_msg (string_of_msgname Heartbeat) fields
 
 let testreq reqid = make_msg "1" [112, reqid]
 
