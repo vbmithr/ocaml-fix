@@ -53,8 +53,8 @@ let new_order ?(order_type="2") ?(tif="1")
       11, uuid;
       55, string_of_symbol symbol;
       54, string_of_direction direction;
-      44, string_of_float p;
-      38, string_of_float v;
+      44, Printf.sprintf "%f" p;
+      38, Printf.sprintf "%f" v;
       40, order_type;
       59, tif;
     ]
