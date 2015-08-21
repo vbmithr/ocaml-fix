@@ -6,19 +6,27 @@ type msgname =
   | SequenceReset
   | Logout
   | Logon
+  | OrderSingle
 
 type tag =
   | BeginString [@value 8]
   | BodyLength [@value 9]
   | CheckSum [@value 10]
+  | ClOrdId [@value 11]
+  | HandlInst [@value 21]
   | MsgSeqNum [@value 34]
   | MsgType [@value 35]
+  | OrderQty [@value 38]
+  | OrdType [@value 40]
+  | Price [@value 44]
   | RefSeqNum [@value 45]
   | SenderCompId [@value 49]
   | SendingTime [@value 52]
+  | Side [@value 54]
   | Symbol [@value 55]
   | TargetCompId [@value 56]
   | Text [@value 58]
+  | TimeInForce [@value 59]
   | RawData [@value 96]
   | EncryptMethod [@value 98]
   | HeartBtInt [@value 108]

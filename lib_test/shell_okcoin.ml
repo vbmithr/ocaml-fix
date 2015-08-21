@@ -92,6 +92,8 @@ let main () =
          read_loop ()
       )
   in
+  Signal.(handle terminating ~f:(fun _ ->
+      don't_wait_for @@ send_msg w logout));
   don't_wait_for @@ read_loop ();
   Pipe.closed w >>= fun () ->
   Shutdown.exit 0

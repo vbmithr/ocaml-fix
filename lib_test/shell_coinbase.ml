@@ -2,6 +2,7 @@ open Core.Std
 open Async.Std
 open Async_ssl.Std
 
+open Mt
 open Fix
 open Fix_intf
 open Fix_async
@@ -72,29 +73,33 @@ let main () =
          send_msg w
            (fun () -> testreq @@ Uuid.(create () |> to_string))
          >>= fun () -> read_loop ()
-       (* | "SUB" -> *)
-       (*   (match List.nth words 1 with *)
-       (*   | None -> *)
-       (*     Log.info log "SUB should be followed by either XBTUSD or LTCUSD"; *)
-       (*     read_loop () *)
-       (*   | Some curr -> *)
-       (*     let symbol = match curr with *)
-       (*       | "XBTUSD"|"BTCUSD" -> `XBTUSD *)
-       (*       | "LTCUSD" -> `LTCUSD *)
-       (*       | _ -> `XBTUSD in *)
-       (*     let req_id = Uuid.(create () |> to_string) in *)
-       (*     send_msg w (fun () -> incremental_trades ~symbol req_id) >>= fun () -> *)
-       (*     read_loop () *)
-       (*   ) *)
-       (* | "ACCINFO" -> *)
-       (*   let uuid_str = Uuid.(create () |> to_string) in *)
-       (*   send_msg w (fun () -> account_info_request uuid_str) >>= fun () -> *)
-       (*   read_loop () *)
+       | "BUY" ->
+         let symbol = Option.value_exn
+             (List.nth_exn words 1 |> Symbol.of_string) in
+         let p = List.nth_exn words 2 |> Float.of_string in
+         let v = List.nth_exn words 3 |> Float.of_string in
+         send_msg w
+           (new_order
+               ~uuid:Uuid.(create () |> to_string)
+               ~symbol ~p ~v ~direction:`Buy)
+           >>= fun () -> read_loop ()
+       | "SELL" ->
+         let symbol = Option.value_exn
+             (List.nth_exn words 1 |> Symbol.of_string) in
+         let p = List.nth_exn words 2 |> Float.of_string in
+         let v = List.nth_exn words 3 |> Float.of_string in
+         send_msg w
+           (new_order
+               ~uuid:Uuid.(create () |> to_string)
+               ~symbol ~p ~v ~direction:`Sell)
+           >>= fun () -> read_loop ()
        | command ->
          Log.info log "Unsupported command: %s" command;
          read_loop ()
       )
   in
+  Signal.(handle terminating ~f:(fun _ ->
+      don't_wait_for @@ send_msg w logout));
   don't_wait_for @@ read_loop ();
   Pipe.closed w >>= fun () ->
   Shutdown.exit 0

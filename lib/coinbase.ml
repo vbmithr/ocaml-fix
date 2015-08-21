@@ -38,3 +38,23 @@ let heartbeat ?testreqid () =
 
 let testreq id =
   !make_msg (string_of_msgname TestRequest) [112, id]
+
+let new_order ?(order_type="2") ?(tif="1")
+    ~uuid ~symbol ~direction ~p ~v () =
+  let string_of_symbol = function
+    | `XBTUSD -> "BTC-USD"
+    | `XBTEUR -> "BTC-EUR"
+    | _ -> invalid_arg "string_of_symbol"
+  in
+  let string_of_direction = function `Buy -> "1" | `Sell -> "2" in
+  !make_msg (string_of_msgname OrderSingle)
+    [
+      21, "1";
+      11, uuid;
+      55, string_of_symbol symbol;
+      54, string_of_direction direction;
+      44, string_of_float p;
+      38, string_of_float v;
+      40, order_type;
+      59, tif;
+    ]

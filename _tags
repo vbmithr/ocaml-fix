@@ -7,6 +7,7 @@ true: debug, bin_annot
                           package(async), \
                           package(conduit.async), \
                           package(nocrypto), \
+                          package(mt), \
                           thread
 
 <top/*.*>: package(compiler-libs.toplevel)

@@ -8,6 +8,7 @@ let string_of_msgname = function
   | SequenceReset -> "4"
   | Logout -> "5"
   | Logon -> "A"
+  | OrderSingle -> "D"
 
 let msgname_of_string = function
   | "0" -> Some Heartbeat
@@ -17,6 +18,7 @@ let msgname_of_string = function
   | "4" -> Some SequenceReset
   | "5" -> Some Logout
   | "A" -> Some Logon
+  | "D" -> Some OrderSingle
   | _ -> None
 
 module IntMap = Map.Make(struct type t = int let compare = compare end)
