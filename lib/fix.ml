@@ -23,22 +23,26 @@ let msgname_of_string = function
 
 module IntMap = Map.Make(struct type t = int let compare = compare end)
 
-type msg = string IntMap.t
+module Msg = struct
+  type t = string IntMap.t
 
-let find_field msg field =
-  try Some (IntMap.find field msg)
-  with Not_found -> None
+  let find msg field =
+    try Some (IntMap.find field msg)
+    with Not_found -> None
 
-let show_msg msg =
-  let buf = Buffer.create 128 in
-  Buffer.add_string buf "\n";
-  IntMap.iter (fun tag value ->
-      let tag_str = tag_of_enum tag |> function
-        | Some tag -> show_tag tag
-        | None -> string_of_int tag in
-      Buffer.add_string buf @@ tag_str ^ "=" ^ value ^ "\n")
-    msg;
-  Buffer.contents buf
+  let show msg =
+    let buf = Buffer.create 128 in
+    Buffer.add_string buf "\n";
+    IntMap.iter (fun tag value ->
+        let tag_str = tag_of_enum tag |> function
+          | Some tag -> show_tag tag
+          | None -> string_of_int tag in
+        Buffer.add_string buf @@ tag_str ^ "=" ^ value ^ "\n")
+      msg;
+    Buffer.contents buf
+
+  let iter = IntMap.iter
+end
 
 let field_of_string s =
   try

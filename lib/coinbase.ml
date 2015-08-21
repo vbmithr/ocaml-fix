@@ -23,7 +23,7 @@ let logon ?(heartbeat=30) ~apisecret ~passphrase () =
                       SenderCompId; TargetCompId; Password] in
   let prehash_tags =
     List.map (fun tag ->
-        match find_field msg (tag_to_enum tag) with
+        match Msg.find msg (tag_to_enum tag) with
         | None -> invalid_arg "find_field"
         | Some field -> field
       ) prehash_tags in

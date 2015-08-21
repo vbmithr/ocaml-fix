@@ -25,7 +25,7 @@ let main host port =
     | `Eof -> Deferred.unit
     | `Ok msg ->
       let msgtype =
-        Option.bind (find_field msg (tag_to_enum MsgType))
+        Option.bind (Msg.find msg (tag_to_enum MsgType))
           msgname_of_string in
       (match msgtype with
        | Some Logout ->
@@ -33,7 +33,7 @@ let main host port =
          send_msg w logout >>= fun () ->
          Shutdown.exit 0
        | Some TestRequest ->
-         (find_field msg (tag_to_enum TestReqID) |> function
+         (Msg.find msg (tag_to_enum TestReqID) |> function
          | None -> Deferred.unit
          | Some testreqid ->
            (* Immediately send a heartbeat with the same seqnum. *)

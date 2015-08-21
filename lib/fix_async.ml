@@ -19,14 +19,14 @@ let with_connection
       String.fill scratchbuf '\000' ~pos:0 ~len:max_msg_size;
       Bigstring.To_string.blit buf pos scratchbuf 0 len;
       let msg = read_msg scratchbuf 0 len in
-      Log.debug log "<- %s\n%!" @@ show_msg msg;
+      Log.debug log "<- %s\n%!" @@ Msg.show msg;
       Pipe.write msg_write msg >>| fun () ->
       `Consumed (len, `Need_unknown)
     in
     don't_wait_for @@
     Pipe.transfer msg_read Writer.(pipe w)
       ~f:(fun msg ->
-          Log.debug log "-> %s\n" @@ show_msg msg;
+          Log.debug log "-> %s\n" @@ Msg.show msg;
           string_of_msg msg);
     Reader.read_one_chunk_at_a_time r handle_chunk >>| function
     | `Eof -> Ok ()

@@ -32,6 +32,22 @@ let account_info_request ?account_id reqid =
     (8000, reqid) :: (match account_id with None -> [] | Some id -> [1, id]) in
   make_msg "Z1000" fields
 
+let orders_request ~start_id ~status ~symbol reqid =
+  let string_of_status = function
+    | `Not_filled -> "0"
+    | `Fully_filled -> "1" in
+  let string_of_symbol = function
+    | `XBTUSD -> "BTC/USD"
+    | `LTCUSD -> "LTC/USD" in
+  let fields =
+    [
+      37, start_id;
+      39, string_of_status status;
+      55, string_of_symbol symbol;
+      568, reqid;
+    ] in
+  make_msg "Z2000" fields
+
 let market_data_request ?(depthlvls=1) ~symbol ~operation ~updatetype ~entrytypes reqid =
   let string_of_symbol = function
     | `XBTUSD -> "BTC/USD"

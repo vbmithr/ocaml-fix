@@ -6,4 +6,4 @@ val with_connection :
   ?max_msg_size:int ->
   ?ssl:bool -> host:string -> port:int ->
   unit ->
-  (Fix.msg Pipe.Reader.t * Fix.msg Pipe.Writer.t) Deferred.t
+  (Fix.Msg.t Pipe.Reader.t * Fix.Msg.t Pipe.Writer.t) Deferred.t
