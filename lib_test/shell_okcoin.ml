@@ -68,7 +68,7 @@ let main () =
       Shutdown.exit 0
     | `Ok msg ->
       let words = String.split msg ~on:' ' in
-      (match List.hd_exn words with
+      (match String.uppercase @@ List.hd_exn words with
        | "LOGON" ->
          send_msg w (logon ~username ~passwd) >>=
          read_loop
