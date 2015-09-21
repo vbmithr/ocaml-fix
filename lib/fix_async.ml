@@ -9,7 +9,7 @@ let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())]
 let with_connection
     ?(timeout=Time.Span.(of_int_sec 2))
     ?(max_msg_size=4096)
-    ?(ssl=false)
+    ?(tls=false)
     ~host ~port () =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
@@ -37,7 +37,7 @@ let with_connection
     let is_closed =
       Reader.close_finished r >>| fun () ->
       Ok () in
-    (if ssl then
+    (if tls then
       Conduit_async_ssl.ssl_connect r w
     else
       return (r, w))

@@ -24,7 +24,7 @@ let main () =
   let apikey = Sys.getenv_exn "COINBASE_APIKEY" in
   let apisecret = Sys.getenv_exn "COINBASE_APISECRET" in
   init apikey;
-  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  with_connection ~tls:false ~host ~port () >>= fun (r, w) ->
   Log.info log "Connected to Coinbase";
   let rec drain_input () =
     Pipe.read r >>= function

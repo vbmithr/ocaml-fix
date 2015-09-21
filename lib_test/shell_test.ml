@@ -18,7 +18,7 @@ let send_msg w mk_msg =
   Pipe.write w msg
 
 let main host port =
-  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  with_connection ~tls:false ~host ~port () >>= fun (r, w) ->
   Log.info log "Connected to %s %d" host port;
   let rec drain_input () =
     Pipe.read r >>= function

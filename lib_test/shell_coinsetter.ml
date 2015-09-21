@@ -25,7 +25,7 @@ let main () =
   let cust_uuid = Sys.getenv_exn "COINSETTER_CUSTOMER_UUID" in
   let account_uuid = Sys.getenv_exn "COINSETTER_ACCOUNT_UUID" in
   init @@ "T-" ^ username;
-  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  with_connection ~tls:false ~host ~port () >>= fun (r, w) ->
   Log.info log "Connected to Coinsetter";
   let rec drain_input () =
     Pipe.read r >>= function

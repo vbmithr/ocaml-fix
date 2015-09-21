@@ -21,7 +21,7 @@ let main () =
   let port = int_of_string @@ Sys.getenv_exn "OKCOIN_PORT" in
   let username = Sys.getenv_exn "OKCOIN_USER" in
   let passwd = Sys.getenv_exn "OKCOIN_PASSWD" in
-  with_connection ~ssl:false ~host ~port () >>= fun (r, w) ->
+  with_connection ~tls:true ~host ~port () >>= fun (r, w) ->
   Log.info log "Connected to OKCoin";
   let rec drain_input () =
     Pipe.read r >>= function
