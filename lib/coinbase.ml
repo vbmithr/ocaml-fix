@@ -4,8 +4,8 @@ open Nocrypto
 
 open Bs_devkit.Core
 
-let make_msg = ref @@ msg_maker ~targetcompid:"Coinbase" ~sendercompid:"" ()
-let init apikey = make_msg := msg_maker ~targetcompid:"Coinbase" ~sendercompid:apikey ()
+let create = ref @@ make_create ~targetcompid:"Coinbase" ~sendercompid:"" ()
+let init apikey = create := make_create ~targetcompid:"Coinbase" ~sendercompid:apikey ()
 
 let logon ?(heartbeat=30) ~secret ~passphrase () =
   let fields = [
@@ -14,7 +14,7 @@ let logon ?(heartbeat=30) ~secret ~passphrase () =
     S Password, passphrase;
   ]
   in
-  let seqnum, msg = !make_msg Logon fields in
+  let seqnum, msg = !create Logon fields in
   (* Now adding signature *)
   (* See https://docs.exchange.coinbase.com/?javascript#logon *)
   let prehash_tags = Tag.[
@@ -36,9 +36,9 @@ let logon ?(heartbeat=30) ~secret ~passphrase () =
   let msg = add_field msg (S RawData) Cstruct.(to_string signature) in
   seqnum, msg
 
-let logout () = !make_msg Logout []
-let heartbeat ?testreqid () = !make_msg Heartbeat (match testreqid with None -> [] | Some id -> [S TestReqID, id])
-let testreq id = !make_msg TestRequest [S TestReqID, id]
+let logout () = !create Logout []
+let heartbeat ?testreqid () = !create Heartbeat (match testreqid with None -> [] | Some id -> [S TestReqID, id])
+let testreq id = !create TestRequest [S TestReqID, id]
 
 let coinbase_of_symbol = function
   | "XBTUSD" -> "BTC-USD"
@@ -47,7 +47,7 @@ let coinbase_of_symbol = function
 
 let new_order ?(order_type="2") ?(tif="1") ~uuid ~symbol ~side ~p ~v () =
   let side = match side with BuyOrSell.Buy -> "1" | Sell -> "2" in
-  !make_msg NewOrderSingle [
+  !create NewOrderSingle [
     S HandlInst, "1";
     S ClOrdID, uuid;
     S Symbol, coinbase_of_symbol symbol;

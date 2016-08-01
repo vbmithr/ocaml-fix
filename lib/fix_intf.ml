@@ -92,5 +92,20 @@ module Tag = struct
     let compare = Pervasives.compare
   end
   include T
-  module Map = Map.Make(T)
+  module Map = struct
+    include Map.Make(T)
+    let t_of_sexp value_of_sexp = function
+      | Sexplib.Sexp.List sexps ->
+        ListLabels.fold_left sexps ~init:empty ~f:(fun a sexp ->
+            match sexp with
+            | Sexplib.Sexp.List [tag; value] -> add (t_of_sexp tag) (value_of_sexp value) a
+            | _ -> invalid_arg "t_of_sexp"
+          )
+      | _ -> invalid_arg "t_of_sexp"
+    let sexp_of_t sexp_of_value t =
+      let open Sexplib in
+      let t = bindings t in
+      let t = ListLabels.map t ~f:(fun (key, value) -> Sexp.List [sexp_of_t key; sexp_of_value value]) in
+      Sexp.List t
+  end
 end

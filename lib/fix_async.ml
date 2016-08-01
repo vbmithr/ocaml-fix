@@ -13,18 +13,17 @@ let with_connection
   let msg_read, client_write = Pipe.create () in
   let run s r w =
     let handle_chunk msgbuf ~pos ~len =
-      maybe_debug log "handle_chunk: received %d bytes" len;
       if len > String.length tmpbuf then failwith "Message bigger than tmpbuf";
       Bigstring.To_string.blit msgbuf pos tmpbuf 0 len;
       let msg = Fix.read tmpbuf ~len in
-      maybe_debug log "<- %s" (Fix.MsgType.sexp_of_t msg.typ |> Sexp.to_string);
+      maybe_debug log "<- %s" (Fix.sexp_of_t msg |> Sexplib.Sexp.to_string);
       Pipe.write msg_write msg >>| fun () ->
       `Consumed (len, `Need_unknown)
     in
     don't_wait_for @@
     Pipe.transfer msg_read Writer.(pipe w) ~f:(fun msg ->
-        maybe_debug log "-> %s" (Fix.MsgType.sexp_of_t msg.Fix.typ |> Sexp.to_string);
-        Fix.to_string msg);
+        maybe_debug log "-> %s" (Fix.sexp_of_t msg |> Sexplib.Sexp.to_string);
+        Fix.to_bytes msg);
     Reader.read_one_chunk_at_a_time r handle_chunk
   in
   let tcp_f s r w =
