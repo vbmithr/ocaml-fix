@@ -46,7 +46,7 @@ let main () =
          (* Send the required messages. *)
          let from = Option.value_exn (Msg.find msg 7) |> int_of_string in
          let to_ = Option.value_exn (Msg.find msg 16) |> int_of_string in
-         Int.Map.iter !history ~f:(fun ~key ~data ->
+         Int.Map.iteri !history ~f:(fun ~key ~data ->
              if key >= from && (to_ = 0 || key <= to_)
              then don't_wait_for @@ send_msg w (fun () -> key, data)
            );

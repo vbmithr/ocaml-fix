@@ -1,14 +1,12 @@
 open Core.Std
 open Async.Std
 
-open Mt
 open Fix
 open Fix_intf
 open Fix_async
 open Testserver
 
-let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())]
-                 ~on_error:`Raise)
+let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())] ~on_error:`Raise)
 
 let history = ref Int.Map.empty
 
@@ -98,13 +96,16 @@ let main host port =
   Pipe.closed w >>= fun () ->
   Shutdown.exit 0
 
-let () =
-  if Array.length Sys.argv < 3 then
-    (Printf.eprintf "Usage: %s host port\n" Sys.argv.(0);
-     Pervasives.exit 1
-    )
-  else
-    let host = Sys.argv.(1) in
-    let port = int_of_string Sys.argv.(2) in
-    don't_wait_for @@ main host port;
+let main (host, port) () =
+  don't_wait_for @@ main host port;
   never_returns @@ Scheduler.go ()
+
+let command =
+  let spec =
+    let open Command.Spec in
+    empty
+    +> anon (t2 ("host" %: string) ("port" %: int))
+  in
+  Command.basic ~summary:"FIX test shell" spec main
+
+let () = Command.run command

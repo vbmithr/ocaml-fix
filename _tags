@@ -4,10 +4,8 @@ true: debug, bin_annot
 
 <{lib,src,lib_test}/*.*>: package(ppx_deriving.std), \
                           package(core), \
-                          package(async), \
                           package(conduit.async), \
                           package(nocrypto), \
-                          package(mt), \
                           thread
 
 <top/*.*>: package(compiler-libs.toplevel)

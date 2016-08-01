@@ -28,7 +28,9 @@ let logon ?(heartbeat=30) ~apisecret ~passphrase () =
         | Some field -> field
       ) prehash_tags in
   let prehash_str = String.concat "\001" prehash_tags in
-  let secret_decoded = Base64.decode Cstruct.(of_string apisecret) in
+  match Base64.decode Cstruct.(of_string apisecret) with
+  | None -> invalid_arg "Base64.decode"
+  | Some secret_decoded ->
   let signature = Hash.SHA256.hmac ~key:secret_decoded
       Cstruct.(of_string prehash_str) |> Base64.encode in
   let msg = add_field msg 96 Cstruct.(to_string signature) in
@@ -43,19 +45,19 @@ let heartbeat ?testreqid () =
 let testreq id =
   !make_msg (string_of_msgname TestRequest) [112, id]
 
-let new_order ?(order_type="2") ?(tif="1")
-    ~uuid ~symbol ~direction ~p ~v () =
-  let string_of_symbol = function
-    | `XBTUSD -> "BTC-USD"
-    | `XBTEUR -> "BTC-EUR"
-    | _ -> invalid_arg "string_of_symbol"
-  in
+let coinbase_of_symbol = function
+  | "XBTUSD" -> "BTC-USD"
+  | "XBTEUR" -> "BTC-EUR"
+  | _ -> invalid_arg "coinbase_of_symbol"
+
+let new_order ?(order_type="2") ?(tif="1") ~uuid ~symbol ~direction ~p ~v () =
+
   let string_of_direction = function `Buy -> "1" | `Sell -> "2" in
   !make_msg (string_of_msgname NewOrderSingle)
     [
       21, "1";
       11, uuid;
-      55, string_of_symbol symbol;
+      55, coinbase_of_symbol symbol;
       54, string_of_direction direction;
       44, Printf.sprintf "%f" p;
       38, Printf.sprintf "%f" v;

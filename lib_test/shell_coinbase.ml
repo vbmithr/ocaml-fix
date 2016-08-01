@@ -1,7 +1,6 @@
 open Core.Std
 open Async.Std
 
-open Mt
 open Fix
 open Fix_intf
 open Fix_async
@@ -74,8 +73,7 @@ let main () =
            (fun () -> testreq @@ Uuid.(create () |> to_string))
          >>= fun () -> read_loop ()
        | "BUY" ->
-         let symbol = Option.value_exn
-             (List.nth_exn words 1 |> Symbol.of_string) in
+         let symbol = List.nth_exn words 1 in
          let p = List.nth_exn words 2 |> Float.of_string in
          let v = List.nth_exn words 3 |> Float.of_string in
          send_msg w
@@ -84,8 +82,7 @@ let main () =
                ~symbol ~p ~v ~direction:`Buy)
            >>= fun () -> read_loop ()
        | "SELL" ->
-         let symbol = Option.value_exn
-             (List.nth_exn words 1 |> Symbol.of_string) in
+         let symbol = List.nth_exn words 1 in
          let p = List.nth_exn words 2 |> Float.of_string in
          let v = List.nth_exn words 3 |> Float.of_string in
          send_msg w
