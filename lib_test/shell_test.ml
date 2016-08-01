@@ -2,10 +2,30 @@ open Core.Std
 open Async.Std
 open Log.Global
 
-open Fix
-open Fix_intf
-open Fix_async
-open Testserver
+let create = Fix.make_create ~sendercompid:"CLIENT1" ~targetcompid:"EXECUTOR" ()
+
+let logon ?(heartbeat=30) () =
+  let fields = Fix.Tag.[
+      S EncryptMethod, "0"; (* encryption *)
+      S HeartBtInt, string_of_int heartbeat;
+      (* 553, username; *)
+      (* 554, passwd; *)
+    ]
+  in
+  create Logon fields
+
+let logout ?(response=false) () =
+  create Logout (if response then [C 8500, "0"] else [])
+
+let heartbeat ?testreqid () =
+  let fields =
+    (match testreqid with
+     | None -> []
+     | Some value -> Fix.Tag.[S TestReqID, value])
+  in
+  create Heartbeat fields
+
+let testreq reqid = create TestRequest Fix.Tag.[S TestReqID, reqid]
 
 let history = ref Int.Map.empty
 
@@ -14,84 +34,45 @@ let send_msg w mk_msg =
   history := Int.Map.add !history ~key:seqnum ~data:msg;
   Pipe.write w msg
 
+let on_incoming_msg w msg = match msg.Fix.typ with
+  | Logout ->
+    (* Immediately send a logout msg and exit. *)
+    send_msg w logout >>= fun () ->
+    Shutdown.exit 0
+  | TestRequest -> begin
+      match Fix.Tag.Map.find (Fix.Tag.S TestReqID) msg.fields with
+      | exception Not_found -> Deferred.unit
+      | testreqid ->
+        (* Immediately send a heartbeat with the same seqnum. *)
+        send_msg w (heartbeat ~testreqid)
+    end
+  | ResendRequest -> Deferred.unit
+  | _ -> Deferred.unit
+
+let rec heartbeat_loop w period =
+  after @@ Time.Span.of_string (string_of_int period ^ "s") >>= fun () ->
+  send_msg w heartbeat >>= fun () ->
+  heartbeat_loop w period
+
+let on_user_cmd w msg =
+  match List.hd_exn @@ String.split msg ~on:' ' with
+  | "LOGON" -> send_msg w logon
+  | "LOGOUT" -> send_msg w logout
+  | "TESTREQ" -> send_msg w (fun () -> testreq @@ Uuid.(create () |> to_string))
+  | command ->
+    info "Unsupported command: %s" command;
+    Deferred.unit
+
 let main host port =
-  with_connection ~tls:`Noconf ~host ~port () >>= fun (r, w) ->
+  Fix_async.with_connection ~tls:`Noconf ~host ~port () >>= fun (r, w) ->
   info "Connected to %s %d" host port;
-  let rec drain_input () =
-    Pipe.read r >>= function
-    | `Eof -> Deferred.unit
-    | `Ok msg ->
-      let msgtype =
-        Option.bind (Msg.find msg (tag_to_enum MsgType))
-          msgname_of_string in
-      (match msgtype with
-       | Some Logout ->
-         (* Immediately send a logout msg and exit. *)
-         send_msg w logout >>= fun () ->
-         Shutdown.exit 0
-       | Some TestRequest ->
-         (Msg.find msg (tag_to_enum TestReqID) |> function
-         | None -> Deferred.unit
-         | Some testreqid ->
-           (* Immediately send a heartbeat with the same seqnum. *)
-           send_msg w (heartbeat ~testreqid))
-       | Some ResendRequest -> Deferred.unit
-       | _ -> Deferred.unit
-      ) >>= fun () ->
-      drain_input () in
-  don't_wait_for @@ drain_input ();
-  let rec heartbeat_loop w period =
-    after @@ Time.Span.of_string (string_of_int period ^ "s") >>= fun () ->
-    send_msg w heartbeat >>= fun () ->
-    heartbeat_loop w period
-  in
-  don't_wait_for @@ heartbeat_loop w 30;
-  let rec read_loop () =
-    Reader.(read_line Lazy.(force stdin)) >>= function
-    | `Eof ->
-      info "EOF received, exiting.";
-      Shutdown.exit 0
-    | `Ok msg ->
-      let words = String.split msg ~on:' ' in
-      (match List.hd_exn words with
-       | "LOGON" ->
-         send_msg w logon >>= fun () ->
-         read_loop ()
-       | "LOGOUT" ->
-         send_msg w logout >>= fun () ->
-         read_loop ()
-       | "TESTREQ" ->
-         send_msg w
-           (fun () -> testreq @@ Uuid.(create () |> to_string))
-         >>= fun () -> read_loop ()
-       (* | "BUY" -> *)
-       (*   let symbol = Option.value_exn *)
-       (*       (List.nth_exn words 1 |> Symbol.of_string) in *)
-       (*   let p = List.nth_exn words 2 |> Float.of_string in *)
-       (*   let v = List.nth_exn words 3 |> Float.of_string in *)
-       (*   send_msg w *)
-       (*     (new_order *)
-       (*         ~uuid:Uuid.(create () |> to_string) *)
-       (*         ~symbol ~p ~v ~direction:`Buy) *)
-       (*     >>= fun () -> read_loop () *)
-       (* | "SELL" -> *)
-       (*   let symbol = Option.value_exn *)
-       (*       (List.nth_exn words 1 |> Symbol.of_string) in *)
-       (*   let p = List.nth_exn words 2 |> Float.of_string in *)
-       (*   let v = List.nth_exn words 3 |> Float.of_string in *)
-       (*   send_msg w *)
-       (*     (new_order *)
-       (*         ~uuid:Uuid.(create () |> to_string) *)
-       (*         ~symbol ~p ~v ~direction:`Sell) *)
-       (*     >>= fun () -> read_loop () *)
-       | command -> info "Unsupported command: %s" command;
-         read_loop ()
-      )
-  in
-  Signal.(handle terminating ~f:(fun _ ->
-      don't_wait_for @@ send_msg w logout));
-  don't_wait_for @@ read_loop ();
-  Pipe.closed w >>= fun () ->
+  Signal.(handle terminating ~f:(fun _ -> don't_wait_for @@ send_msg w logout));
+  Deferred.any [
+    Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_user_cmd w);
+    Pipe.iter r ~f:(on_incoming_msg w);
+    heartbeat_loop w 30;
+    Pipe.closed w;
+  ] >>= fun () ->
   Shutdown.exit 0
 
 let main (host, port) () =
