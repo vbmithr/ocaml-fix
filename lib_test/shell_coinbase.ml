@@ -15,34 +15,28 @@ let send_msg w mk_msg =
   history := Int.Map.add !history ~key:seqnum ~data:msg;
   Pipe.write w msg
 
-let rec process_input r w =
-  Pipe.read r >>= function
-  | `Eof -> Deferred.unit
-  | `Ok msg ->
-    begin match msg.Fix.typ with
-      | Logout ->
-        (* Immediately send a logout msg and exit. *)
-        send_msg w logout >>= fun () ->
-        Shutdown.exit 0
-      | TestRequest -> begin match Fix.Tag.Map.find Fix.Tag.(S TestReqID) msg.fields with
-          | exception Not_found -> Deferred.unit
-          | testreqid ->
-            (* Immediately send a heartbeat with the same seqnum. *)
-            send_msg w (heartbeat ~testreqid)
-        end
-      | ResendRequest -> Deferred.unit
-      | _ -> Deferred.unit
-    end >>= fun () ->
-    process_input r w
+let rec on_server_msg w msg = match msg.Fix.typ with
+  | Logout ->
+    (* Immediately send a logout msg and exit. *)
+    send_msg w logout >>= fun () ->
+    Shutdown.exit 0
+  | TestRequest -> begin match Fix.Tag.Map.find Fix.Tag.(S TestReqID) msg.fields with
+      | exception Not_found -> Deferred.unit
+      | testreqid ->
+        (* Immediately send a heartbeat with the same seqnum. *)
+        send_msg w (heartbeat ~testreqid)
+    end
+  | ResendRequest -> Deferred.unit
+  | _ -> Deferred.unit
 
 let rec heartbeat_loop w period =
   after @@ Time.Span.of_string (string_of_int period ^ "s") >>= fun () ->
   send_msg w heartbeat >>= fun () ->
   heartbeat_loop w period
 
-let process_msg ~secret ~passphrase w words = match List.hd_exn words with
-  | "LOGON" -> send_msg w (logon ~secret ~passphrase)
-  | "LOGOUT" -> send_msg w logout
+let on_client_cmd ~secret ~passphrase w words =
+  let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
+  match List.hd_exn words with
   | "TESTREQ" -> send_msg w (fun () -> testreq @@ Uuid.(create () |> to_string))
   | "BUY" ->
     let symbol = List.nth_exn words 1 in
@@ -64,17 +58,6 @@ let process_msg ~secret ~passphrase w words = match List.hd_exn words with
     info "Unsupported command: %s" command;
     Deferred.unit
 
-let rec process_user_input ~secret ~passphrase w =
-  let rec loop () =
-    Reader.(read_line Lazy.(force stdin)) >>= function
-    | `Eof ->
-      info "EOF received, exiting.";
-      Shutdown.exit 0
-    | `Ok msg ->
-      process_msg ~secret ~passphrase w @@ String.split msg ~on:' ' >>=
-      loop
-  in loop ()
-
 let main cfg ca_file loglevel () =
   Option.iter loglevel ~f:(Fn.compose set_level loglevel_of_int);
   let cfg = Yojson.Safe.from_file cfg |> Cfg.of_yojson |> Result.ok_or_failwith in
@@ -84,11 +67,15 @@ let main cfg ca_file loglevel () =
     Fix_async.with_connection ~log:(Lazy.force log) ~tls:(`CAFile ca_file) ~host ~port () >>= fun (r, w) ->
     Signal.(handle terminating ~f:(fun _ -> don't_wait_for @@ send_msg w logout));
     info "Connected to Coinbase";
-    don't_wait_for @@ process_input r w;
-    don't_wait_for @@ heartbeat_loop w 30;
-    don't_wait_for @@ process_user_input ~secret ~passphrase w;
-    Pipe.closed w >>= fun () ->
-    Shutdown.exit 0
+    send_msg w (logon ~secret ~passphrase) >>= fun () ->
+    Deferred.any [
+      Pipe.iter r ~f:(on_server_msg w);
+      Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd ~secret ~passphrase w);
+      heartbeat_loop w 30;
+      Pipe.closed w
+    ] >>= fun () ->
+    send_msg w logout >>= fun () ->
+    Deferred.never ()
   in
   don't_wait_for @@ run ();
   never_returns @@ Scheduler.go ()
