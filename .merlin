@@ -5,6 +5,7 @@ B _build/lib
 B _build/lib_test
 PKG ppx_deriving.std
 PKG core
-PKG async
 PKG conduit.async
 PKG nocrypto
+PKG bs_devkit
+PKG astring

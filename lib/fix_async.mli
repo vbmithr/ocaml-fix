@@ -2,8 +2,11 @@ open Core.Std
 open Async.Std
 
 val with_connection :
+  ?log:Log.t ->
   ?timeout:Time.Span.t ->
-  ?max_msg_size:int ->
-  ?tls:bool -> host:string -> port:int ->
+  ?tmpbuf:string ->
+  ?tls:[`Noconf | `CAFile of string] ->
+  host:string ->
+  port:int ->
   unit ->
-  (Fix.Msg.t Pipe.Reader.t * Fix.Msg.t Pipe.Writer.t) Deferred.t
+  (Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t

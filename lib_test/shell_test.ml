@@ -1,12 +1,11 @@
 open Core.Std
 open Async.Std
+open Log.Global
 
 open Fix
 open Fix_intf
 open Fix_async
 open Testserver
-
-let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())] ~on_error:`Raise)
 
 let history = ref Int.Map.empty
 
@@ -16,8 +15,8 @@ let send_msg w mk_msg =
   Pipe.write w msg
 
 let main host port =
-  with_connection ~tls:false ~host ~port () >>= fun (r, w) ->
-  Log.info log "Connected to %s %d" host port;
+  with_connection ~tls:`Noconf ~host ~port () >>= fun (r, w) ->
+  info "Connected to %s %d" host port;
   let rec drain_input () =
     Pipe.read r >>= function
     | `Eof -> Deferred.unit
@@ -50,7 +49,7 @@ let main host port =
   let rec read_loop () =
     Reader.(read_line Lazy.(force stdin)) >>= function
     | `Eof ->
-      Log.info log "EOF received, exiting.";
+      info "EOF received, exiting.";
       Shutdown.exit 0
     | `Ok msg ->
       let words = String.split msg ~on:' ' in
@@ -85,8 +84,7 @@ let main host port =
        (*         ~uuid:Uuid.(create () |> to_string) *)
        (*         ~symbol ~p ~v ~direction:`Sell) *)
        (*     >>= fun () -> read_loop () *)
-       | command ->
-         Log.info log "Unsupported command: %s" command;
+       | command -> info "Unsupported command: %s" command;
          read_loop ()
       )
   in

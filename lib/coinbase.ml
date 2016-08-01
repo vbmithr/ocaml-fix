@@ -2,65 +2,58 @@ open Fix_intf
 open Fix
 open Nocrypto
 
-let make_msg = ref @@
-  msg_maker ~minor:2 ~targetcompid:"Coinbase" ~sendercompid:"" ()
+open Bs_devkit.Core
 
-let init apikey =
-  make_msg :=
-    msg_maker ~minor:2 ~targetcompid:"Coinbase" ~sendercompid:apikey ()
+let make_msg = ref @@ msg_maker ~targetcompid:"Coinbase" ~sendercompid:"" ()
+let init apikey = make_msg := msg_maker ~targetcompid:"Coinbase" ~sendercompid:apikey ()
 
-let logon ?(heartbeat=30) ~apisecret ~passphrase () =
-  let fields =
-    [
-     98, "0"; (* encryption *)
-     108, string_of_int heartbeat;
-     554, passphrase;
-    ] in
-  let seqnum, msg = !make_msg (string_of_msgname Logon) fields in
+let logon ?(heartbeat=30) ~secret ~passphrase () =
+  let fields = [
+    Fix.Tag.S EncryptMethod, "0";
+    S HeartBtInt, string_of_int heartbeat;
+    S Password, passphrase;
+  ]
+  in
+  let seqnum, msg = !make_msg Logon fields in
   (* Now adding signature *)
   (* See https://docs.exchange.coinbase.com/?javascript#logon *)
-  let prehash_tags = [SendingTime; MsgType; MsgSeqNum;
-                      SenderCompId; TargetCompId; Password] in
-  let prehash_tags =
-    List.map (fun tag ->
-        match Msg.find msg (tag_to_enum tag) with
-        | None -> invalid_arg "find_field"
-        | Some field -> field
-      ) prehash_tags in
+  let prehash_tags = Tag.[
+      S SendingTime;
+      S MsgType;
+      S MsgSeqNum;
+      S SenderCompID;
+      S TargetCompID;
+      S Password
+    ]
+  in
+  let fields_with_msgtype = Tag.Map.add (Tag.S MsgType) (MsgType.to_string msg.typ) msg.fields in
+  let prehash_tags = List.map (fun tag -> Tag.Map.find tag fields_with_msgtype) prehash_tags in
   let prehash_str = String.concat "\001" prehash_tags in
-  match Base64.decode Cstruct.(of_string apisecret) with
+  match Base64.decode Cstruct.(of_string secret) with
   | None -> invalid_arg "Base64.decode"
   | Some secret_decoded ->
-  let signature = Hash.SHA256.hmac ~key:secret_decoded
-      Cstruct.(of_string prehash_str) |> Base64.encode in
-  let msg = add_field msg 96 Cstruct.(to_string signature) in
+  let signature = Hash.SHA256.hmac ~key:secret_decoded Cstruct.(of_string prehash_str) |> Base64.encode in
+  let msg = add_field msg (S RawData) Cstruct.(to_string signature) in
   seqnum, msg
 
-let logout () = !make_msg (string_of_msgname Logout) []
-
-let heartbeat ?testreqid () =
-  !make_msg (string_of_msgname Heartbeat)
-    (match testreqid with None -> [] | Some id -> [112, id])
-
-let testreq id =
-  !make_msg (string_of_msgname TestRequest) [112, id]
+let logout () = !make_msg Logout []
+let heartbeat ?testreqid () = !make_msg Heartbeat (match testreqid with None -> [] | Some id -> [S TestReqID, id])
+let testreq id = !make_msg TestRequest [S TestReqID, id]
 
 let coinbase_of_symbol = function
   | "XBTUSD" -> "BTC-USD"
   | "XBTEUR" -> "BTC-EUR"
   | _ -> invalid_arg "coinbase_of_symbol"
 
-let new_order ?(order_type="2") ?(tif="1") ~uuid ~symbol ~direction ~p ~v () =
-
-  let string_of_direction = function `Buy -> "1" | `Sell -> "2" in
-  !make_msg (string_of_msgname NewOrderSingle)
-    [
-      21, "1";
-      11, uuid;
-      55, coinbase_of_symbol symbol;
-      54, string_of_direction direction;
-      44, Printf.sprintf "%f" p;
-      38, Printf.sprintf "%f" v;
-      40, order_type;
-      59, tif;
-    ]
+let new_order ?(order_type="2") ?(tif="1") ~uuid ~symbol ~side ~p ~v () =
+  let side = match side with BuyOrSell.Buy -> "1" | Sell -> "2" in
+  !make_msg NewOrderSingle [
+    S HandlInst, "1";
+    S ClOrdID, uuid;
+    S Symbol, coinbase_of_symbol symbol;
+    S Side, side;
+    S Price, Printf.sprintf "%f" p;
+    S OrderQty, Printf.sprintf "%f" v;
+    S OrdType, order_type;
+    S TimeInForce, tif;
+  ]

@@ -1,4 +1,4 @@
-true: debug, bin_annot
+true: debug, bin_annot, warn(-40)
 <lib>: include
 <src>: include
 
@@ -6,6 +6,8 @@ true: debug, bin_annot
                           package(core), \
                           package(conduit.async), \
                           package(nocrypto), \
+                          package(bs_devkit), \
+                          package(astring), \
                           thread
 
 <top/*.*>: package(compiler-libs.toplevel)

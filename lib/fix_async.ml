@@ -1,53 +1,42 @@
 open Core.Std
 open Async.Std
 
-open Fix
-
-let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())]
-                 ~on_error:`Raise)
+open Bs_devkit.Core
 
 let with_connection
-    ?(timeout=Time.Span.(of_int_sec 2))
-    ?(max_msg_size=4096)
-    ?(tls=false)
-    ~host ~port () =
+  ?log
+  ?(timeout=Time.Span.(of_int_sec 2))
+  ?(tmpbuf=String.create 4096)
+  ?tls
+  ~host ~port () =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
   let run s r w =
-    let scratchbuf = String.create max_msg_size in
-    let handle_chunk buf ~pos ~len =
-      String.fill scratchbuf '\000' ~pos:0 ~len:max_msg_size;
-      Bigstring.To_string.blit buf pos scratchbuf 0 len;
-      let msg = read_msg scratchbuf 0 len in
-      Log.debug log "<- %s\n%!" @@ Msg.show msg;
+    let handle_chunk msgbuf ~pos ~len =
+      maybe_debug log "handle_chunk: received %d bytes" len;
+      if len > String.length tmpbuf then failwith "Message bigger than tmpbuf";
+      Bigstring.To_string.blit msgbuf pos tmpbuf 0 len;
+      let msg = Fix.read tmpbuf ~len in
+      maybe_debug log "<- %s" (Fix.MsgType.sexp_of_t msg.typ |> Sexp.to_string);
       Pipe.write msg_write msg >>| fun () ->
       `Consumed (len, `Need_unknown)
     in
     don't_wait_for @@
-    Pipe.transfer msg_read Writer.(pipe w)
-      ~f:(fun msg ->
-          Log.debug log "-> %s\n" @@ Msg.show msg;
-          string_of_msg msg);
-    Reader.read_one_chunk_at_a_time r handle_chunk >>| function
-    | `Eof -> Ok ()
-    | `Stopped v -> Ok ()
-    | `Eof_with_unconsumed_data rem -> Ok ()
+    Pipe.transfer msg_read Writer.(pipe w) ~f:(fun msg ->
+        maybe_debug log "-> %s" (Fix.MsgType.sexp_of_t msg.Fix.typ |> Sexp.to_string);
+        Fix.to_string msg);
+    Reader.read_one_chunk_at_a_time r handle_chunk
   in
-  let f s r w =
-    let is_closed =
-      Reader.close_finished r >>| fun () ->
-      Ok () in
-    (if tls then
-      Conduit_async_ssl.ssl_connect r w
-    else
-      return (r, w))
-    >>= fun (r, w) ->
-    Deferred.any [ is_closed; run s r w ]
+  let tcp_f s r w =
+    begin match tls with
+    | None -> return (r, w)
+    | Some `Noconf -> Conduit_async_ssl.ssl_connect r w
+    | Some (`CAFile ca_file) -> Conduit_async_ssl.ssl_connect ~ca_file r w
+    end >>= fun (r, w) -> run s r w
   in
-  don't_wait_for @@
-  (Tcp.(with_connection ~timeout
-          (to_host_and_port host port) f) >>| fun _ ->
-   Log.debug log "TCP connection terminated";
-   Pipe.close client_write
-  );
-  return @@ (client_read, client_write)
+  don't_wait_for begin
+    Tcp.(with_connection ~timeout (to_host_and_port host port) tcp_f) >>| fun _ ->
+    maybe_info log "TCP connection terminated";
+    Pipe.close client_write
+  end;
+  return (client_read, client_write)

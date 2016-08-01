@@ -1,134 +1,119 @@
+open Astring
+open Sexplib.Std
+
 include Fix_intf
 
-let string_of_msgname = function
-  | Heartbeat -> "0"
-  | TestRequest -> "1"
-  | ResendRequest -> "2"
-  | Reject -> "3"
-  | SequenceReset -> "4"
-  | Logout -> "5"
-  | Logon -> "A"
-  | NewOrderSingle -> "D"
+type t = {
+  major: int;
+  minor: int;
+  len: int;
+  typ: MsgType.t;
+  fields: string Tag.Map.t
+} [@@deriving create]
 
-let msgname_of_string = function
-  | "0" -> Some Heartbeat
-  | "1" -> Some TestRequest
-  | "2" -> Some ResendRequest
-  | "3" -> Some Reject
-  | "4" -> Some SequenceReset
-  | "5" -> Some Logout
-  | "A" -> Some Logon
-  | "D" -> Some NewOrderSingle
-  | _ -> None
+let extract_opt ~msg = function
+  | None -> invalid_arg @@ "extract_opt: " ^ msg
+  | Some v -> v
 
-module IntMap = Map.Make(struct type t = int let compare = compare end)
+let size_of_int = function
+  | i when i < 10 -> 1
+  | i when i < 100 -> 2
+  | i when i < 1000 -> 3
+  | i when i < 10000 -> 4
+  | _ -> invalid_arg "size_of_int"
 
-module Msg = struct
-  type t = string IntMap.t
+let length_of_field tag value =
+  2 + (Tag.to_enum tag |> size_of_int) + String.length value
 
-  let find msg field =
-    try Some (IntMap.find field msg)
-    with Not_found -> None
+let field_of_sub ?expected s =
+  let s_str = String.Sub.to_string s in
+  let tag, value = String.Sub.cut ~sep:(String.Sub.of_char '=') s |> extract_opt ~msg:("field_of_sub: " ^ s_str) in
+  let tag = String.Sub.to_int tag |> extract_opt ~msg:("field_of_sub" ^ s_str) in
+  let tag = Tag.of_enum tag in
+  match expected with
+  | None -> tag, value
+  | Some expected ->
+    if expected <> tag then invalid_arg "field_of_sub: unexpected tag"
+    else tag, value
 
-  let show msg =
-    let buf = Buffer.create 128 in
-    Buffer.add_string buf "\n";
-    IntMap.iter (fun tag value ->
-        let tag_str = tag_of_enum tag |> function
-          | Some tag -> show_tag tag
-          | None -> string_of_int tag in
-        Buffer.add_string buf @@ tag_str ^ "=" ^ value ^ "\n")
-      msg;
-    Buffer.contents buf
+let parse_version s = Scanf.sscanf s "FIX.%d.%d" (fun major minor -> major, minor)
+let print_version ~major ~minor = Printf.sprintf "FIX.%d.%d" major minor
 
-  let iter = IntMap.iter
-end
+let create ?check_len ?(major=4) ?(minor=2) ~typ ~fields =
+  let len = Tag.Map.fold (fun tag value a -> a + length_of_field tag value) fields (length_of_field (S MsgType) (MsgType.to_string typ)) in
+  match check_len with
+  | None -> create ~major ~minor ~len ~typ ~fields
+  | Some len' ->
+    if len <> len' then invalid_arg @@ Printf.sprintf "create: check_len failure: given %d, computed %d" len' len 
+   else create ~major ~minor ~len ~typ ~fields
 
-let field_of_string s =
-  try
-    let i = String.index s '=' in
-    int_of_string @@ String.sub s 0 i,
-    String.sub s (i+1) (String.length s - i - 1)
-  with _ -> invalid_arg ("field_of_string: " ^ s)
-
-let string_of_field tag value =
-  let buf = Buffer.create 128 in
-  Buffer.add_string buf @@ string_of_int tag;
+let add_field buf tag value =
+  Buffer.add_string buf (Tag.to_enum tag |> String.of_int);
   Buffer.add_char buf '=';
   Buffer.add_string buf value;
-  Buffer.add_char buf '\001';
-  Buffer.contents buf
+  Buffer.add_char buf '\001'
 
-let string_of_msg msg =
+let to_string { major; minor; typ; len; fields } =
   let buf = Buffer.create 128 in
-  List.iter
-    (fun tag -> Buffer.add_string buf @@ string_of_field tag @@ IntMap.find tag msg)
-    [8; 9; 35];
-  IntMap.iter
-    (fun tag field ->
-       if tag <> 8 && tag <> 9 && tag <> 35 then
-         Buffer.add_string buf @@ string_of_field tag field)
-    msg;
-  let res = Buffer.contents buf in
-  let v = ref 0 in
-  String.iter (fun c -> v := !v + Char.code c) res;
-  Buffer.add_string buf ("10=" ^ string_of_int (!v mod 256) ^ "\001");
+  add_field buf (S BeginString) @@ print_version ~major ~minor;
+  add_field buf (S BodyLength) @@ String.of_int len;
+  add_field buf (S MsgType) @@ MsgType.to_string typ;
+  Tag.Map.iter (fun tag value -> add_field buf tag value) fields;
+  let sum = String.fold_left (fun a c -> a + Char.to_int c) 0 @@ Buffer.contents buf in
+  add_field buf (S CheckSum) @@ Printf.sprintf "%03d" (sum mod 256);
   Buffer.contents buf
 
-let body_length msg =
-  IntMap.fold
-    (fun tag value a ->
-       a + 2 + String.length value +
-       String.length (string_of_int tag)
-    )
-    msg 0
+let timestring ts_float =
+  let open Unix in
+  let ms, _ = modf ts_float in
+  let tm = ts_float |> gmtime in
+  Printf.sprintf "%d%02d%02d-%02d:%02d:%02d.%03.0f"
+    (1900 + tm.tm_year) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour
+    tm.tm_min tm.tm_sec (ms *. 1000.)
 
-let msg_maker ?(major=4) ?(minor=4) ~sendercompid ~targetcompid () =
+let msg_maker ?(now=Unix.gettimeofday ()) ?major ?minor ~sendercompid ~targetcompid () =
   let seqnum = ref 1 in
-  fun msgtype fields ->
-    let verstring = Printf.sprintf "FIX.%d.%d" major minor in
-    let timestring =
-      let open Unix in
-      let timeofday = gettimeofday () in
-      let ms, _ = modf timeofday in
-      let tm = timeofday |> gmtime in
-      Printf.sprintf "%d%02d%02d-%02d:%02d:%02d.%03.0f"
-        (1900 + tm.tm_year) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour
-        tm.tm_min tm.tm_sec (ms *. 1000.) in
-    let msg = IntMap.empty in
-    let msg = IntMap.add 34 (string_of_int !seqnum) msg in
-    let msg = IntMap.add 35 msgtype msg in
-    let msg = IntMap.add 49 sendercompid msg in
-    let msg = IntMap.add 56 targetcompid msg in
-    let msg = IntMap.add 52 timestring msg in
-    let msg = List.fold_left (fun a (tag, value) ->
-        IntMap.add tag value a) msg fields in
-    let msglen = body_length msg in
-    let msg = IntMap.add 8 verstring msg in
-    let msg = IntMap.add 9 (string_of_int msglen) msg in
+  let fields = Tag.Map.(add (S TargetCompID) targetcompid (add (S SenderCompID) sendercompid empty)) in
+  fun typ fields' ->
+    let fields = Tag.Map.add (S MsgSeqNum) (String.of_int !seqnum) fields in
+    let fields = Tag.Map.add (S SendingTime) (timestring now) fields in
+    let fields = ListLabels.fold_left fields' ~f:(fun a (tag, value) -> Tag.Map.add tag value a) ~init:fields in
+    let msg = create ?major ?minor ~typ ~fields () in
     incr seqnum;
     pred !seqnum, msg
 
 let add_field msg tag value =
-  let len =
-    String.length (string_of_int tag) + 2 +
-    String.length value in
-  let msg = IntMap.add tag value msg in
-  IntMap.(add 9 (string_of_int (len + int_of_string (find 9 msg))) msg)
+  { msg with
+    len = msg.len + length_of_field tag value;
+    fields = Tag.Map.add tag value msg.fields
+  }
 
-let read_msg s ~pos ~len =
-  let rec inner acc pos =
-    try
-      let i = String.index_from s pos '\001' in
-      if i > pos + len then raise Not_found
-      else
-        let sub = String.sub s pos (i - pos) in
-        let tag, value = field_of_string sub in
-        inner (IntMap.add tag value acc) @@ succ i
-    with Not_found -> acc
-  in inner IntMap.empty pos
+(* let compute_chksum fields = *)
+(*   ListLabels.fold_left fields ~init:0 ~f:(fun a sub -> *)
+(*       String.Sub.length sub *)
+(*     ) *)
 
-let write_msg buf ~pos msg =
-  let msg = string_of_msg msg in
-  let msg_len = String.length msg in
-  Bytes.blit_string msg 0 buf pos msg_len
+let read ?(pos=0) ?len buf =
+  let sublen = match len with None -> String.length buf - 1 | Some len -> len - 1 in
+  let subbuf = String.sub_with_range ~first:pos ~len:sublen buf in
+  match String.Sub.cuts ~sep:(String.Sub.of_char '\001') subbuf with
+  | version :: len :: typ :: fields ->
+    let _, version = field_of_sub version ~expected:(S BeginString) in
+    let _, len = field_of_sub len ~expected:(S BodyLength) in
+    let _, typ = field_of_sub typ ~expected:(S MsgType) in
+    let major, minor = parse_version @@ String.Sub.to_string version in
+    let len = String.Sub.to_string len |> int_of_string in
+    let typ = String.Sub.to_string typ |> MsgType.of_string in
+    let fields = ListLabels.fold_left fields ~init:Tag.Map.empty ~f:(fun a sub ->
+        let tag, field = field_of_sub sub in
+        Tag.Map.add tag (String.Sub.to_string field) a
+      )
+    in
+    let fields = Tag.Map.remove (S CheckSum) fields in
+    create ~check_len:len ~major ~minor ~typ ~fields ()
+  | _ -> invalid_arg "read_msg"
+
+(* let write buf ~pos msg = *)
+(*   let msg = to_string msg in *)
+(*   let msg_len = String.length msg in *)
+(*   Bytes.blit_string msg 0 buf pos msg_len *)

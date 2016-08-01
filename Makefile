@@ -1,6 +1,6 @@
 PKG=fix
 PREFIX=`opam config var prefix`
-BUILDOPTS=native=true native-dynlink=true
+BUILDOPTS=native=false native-dynlink=false
 
 all: build
 

@@ -1,29 +1,28 @@
-open Fix_intf
+include module type of Fix_intf
 
-val string_of_msgname : msgname -> string
-val msgname_of_string : string -> msgname option
+type t = private {
+  major: int;
+  minor: int;
+  len: int;
+  typ: MsgType.t;
+  fields: string Tag.Map.t
+}
 
+(* val field_of_string : string -> int * string *)
+(* val string_of_field : int -> string -> string *)
 
-module Msg : sig
-  type t
-  val show : t -> string
+(* val body_length : t -> int *)
 
-  val find : t -> int -> string option
-  val iter : (int -> string -> unit) -> t -> unit
-end
-
-val field_of_string : string -> int * string
-val string_of_field : int -> string -> string
-
-val body_length : Msg.t -> int
-
-val msg_maker : ?major:int -> ?minor:int ->
+val msg_maker :
+  ?now:float ->
+  ?major:int ->
+  ?minor:int ->
   sendercompid:string ->
   targetcompid:string -> unit ->
-  (string -> (int * string) list -> int * Msg.t)
+  (MsgType.t -> (Tag.t * string) list -> int * t)
 
-val add_field : Msg.t -> int -> string -> Msg.t
+val add_field : t -> Tag.t -> string -> t
 
-val string_of_msg : Msg.t -> string
-val read_msg : bytes -> pos:int -> len:int -> Msg.t
-val write_msg : bytes -> pos:int -> Msg.t -> unit
+val to_string : t -> string
+val read : ?pos:int -> ?len:int -> string -> t
+(* val write : bytes -> pos:int -> t -> unit *)

@@ -9,22 +9,21 @@ let make_msg =
 let logon ?(heartbeat=30) () =
   let fields =
     [
-     98, "0"; (* encryption *)
-     108, string_of_int heartbeat;
-     (* 553, username; *)
-     (* 554, passwd; *)
+      98, "0"; (* encryption *)
+      108, string_of_int heartbeat;
+      (* 553, username; *)
+      (* 554, passwd; *)
     ] in
-  make_msg (string_of_msgname Logon) fields
+  make_msg Logon fields
 
 let logout ?(response=false) () =
-  make_msg (string_of_msgname Logout)
-    (if response then [8500, "0"] else [])
+  make_msg Logout (if response then [8500, "0"] else [])
 
 let heartbeat ?testreqid () =
   let fields =
     (match testreqid with
      | None -> []
      | Some value -> [112, value]) in
-  make_msg (string_of_msgname Heartbeat) fields
+  make_msg Heartbeat fields
 
-let testreq reqid = make_msg "1" [112, reqid]
+let testreq reqid = make_msg "1" [TestReqID, reqid]

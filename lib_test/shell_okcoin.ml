@@ -1,13 +1,10 @@
 open Core.Std
 open Async.Std
+open Log.Global
 
 open Fix
 open Fix_intf
-open Fix_async
 open Okcoin
-
-let log = Log.(create ~level:`Debug ~output:[Output.(stderr ())]
-                 ~on_error:`Raise)
 
 let history = ref Int.Map.empty
 
@@ -21,8 +18,8 @@ let main () =
   let port = int_of_string @@ Sys.getenv_exn "OKCOIN_PORT" in
   let username = Sys.getenv_exn "OKCOIN_USER" in
   let passwd = Sys.getenv_exn "OKCOIN_PASSWD" in
-  with_connection ~tls:true ~host ~port () >>= fun (r, w) ->
-  Log.info log "Connected to OKCoin";
+  Fix_async.with_connection ~tls:`Noconf ~host ~port () >>= fun (r, w) ->
+  info "Connected to OKCoin";
   let rec drain_input () =
     Pipe.read r >>= function
     | `Eof -> Deferred.unit
@@ -64,7 +61,7 @@ let main () =
   let rec read_loop () =
     Reader.(read_line Lazy.(force stdin)) >>= function
     | `Eof ->
-      Log.info log "EOF received, exiting.";
+      info "EOF received, exiting.";
       Shutdown.exit 0
     | `Ok msg ->
       let words = String.split msg ~on:' ' in
@@ -81,7 +78,7 @@ let main () =
        | "SUB" ->
          (match List.nth words 1 with
          | None ->
-           Log.info log "SUB should be followed by either XBTUSD or LTCUSD";
+           info "SUB should be followed by either XBTUSD or LTCUSD";
            read_loop ()
          | Some curr ->
            let symbol = match curr with
@@ -99,7 +96,7 @@ let main () =
        | "ORDINFO" ->
          (List.nth words 1 |> function
          | None ->
-           Log.info log "Please specify an order id";
+           info "Please specify an order id";
            read_loop ()
          | Some start_id ->
            let reqid = Uuid.(create () |> to_string) in
@@ -110,7 +107,7 @@ let main () =
          )
        | "EXIT" -> Shutdown.exit 0
        | command ->
-         Log.info log "Unsupported command: %s" command;
+         info "Unsupported command: %s" command;
          read_loop ()
       )
   in
