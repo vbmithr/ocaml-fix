@@ -2,17 +2,17 @@
  ((name fix)
   (public_name fix)
   (modules (fix))
-  (libraries (astring))))
+  (libraries (astring ptime))))
 
-(library
- ((name coinbase)
-  (public_name fix.coinbase)
-  (modules (coinbase))
-  (libraries (fix base64 digestif))))
+;; (library
+;;  ((name coinbase)
+;;   (public_name fix.coinbase)
+;;   (modules (coinbase))
+;;   (libraries (fix base64 digestif))))
 
-(library
- ((name okcoin)
-  (public_name fix.okcoin)
-  (modules (okcoin))
-  (libraries (fix))))
+;; (library
+;;  ((name okcoin)
+;;   (public_name fix.okcoin)
+;;   (modules (okcoin))
+;;   (libraries (fix))))
 
