@@ -1,19 +1,5 @@
-PKG=fix
-PREFIX=`opam config var prefix`
-BUILDOPTS=native=false native-dynlink=false
-
-all: build
-
-build:
-	ocaml pkg/build.ml $(BUILDOPTS)
-
-install: build
-	opam-installer --prefix=$(PREFIX) $(PKG).install
-
-uninstall: $(PKG).install
-	opam-installer -u --prefix=$(PREFIX) $(PKG).install
-
-PHONY: clean
+all:
+	jbuilder build @install @runtest
 
 clean:
-	ocamlbuild -clean
+	rm -rf _build

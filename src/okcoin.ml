@@ -1,36 +1,35 @@
-open Fix_intf
 open Fix
 
-let make_msg = msg_maker
+let t = Factory.create
     ~sendercompid:"de5bbcf9-a6fc-4c32-b569-7d4d1d619525"
     ~targetcompid:"OKSERVER" ()
 
 let logon ?(heartbeat=30) ~username ~passwd () =
   let fields =
-    [
-     98, "0"; (* encryption *)
-     108, string_of_int heartbeat;
-     553, username;
-     554, passwd;
+    Tag.[
+      EncryptMethod, "0"; (* encryption *)
+      HeartBtInt, string_of_int heartbeat;
+      Username, username;
+      Password, passwd;
     ] in
-  make_msg (string_of_msgname Logon) fields
+  create t Logon fields
 
 let logout ?(response=false) () =
-  make_msg (string_of_msgname Logout)
-    (if response then [8500, "0"] else [])
+  create t Logout (if response then [Unknown 8500, "0"] else [])
 
 let heartbeat ?testreqid ~username ~passwd () =
   let fields =
-    (553, username) :: (554, passwd) ::
-    (match testreqid with None -> [] | Some value -> [112, value]) in
-  make_msg (string_of_msgname Heartbeat) fields
+    (Tag.Username, username) :: (Tag.Password, passwd) ::
+    (match testreqid with None -> [] | Some value -> [TestReqID, value]) in
+  create t Heartbeat fields
 
-let testreq reqid = make_msg "1" [112, reqid]
+let testreq reqid =
+  create t TestRequest [TestReqID, reqid]
 
 let account_info_request ?account_id reqid =
   let fields =
-    (8000, reqid) :: (match account_id with None -> [] | Some id -> [1, id]) in
-  make_msg "Z1000" fields
+    (Tag.Unknown 8000, reqid) :: (match account_id with None -> [] | Some id -> [Tag.Account, id]) in
+  create t (Unknown "Z1000") fields
 
 let orders_request ~start_id ~status ~symbol reqid =
   let string_of_status = function
@@ -40,13 +39,13 @@ let orders_request ~start_id ~status ~symbol reqid =
     | `XBTUSD -> "BTC/USD"
     | `LTCUSD -> "LTC/USD" in
   let fields =
-    [
-      37, start_id;
-      39, string_of_status status;
-      55, string_of_symbol symbol;
-      568, reqid;
+    Tag.[
+      OrderID, start_id;
+      OrdStatus, string_of_status status;
+      Symbol, string_of_symbol symbol;
+      TradeRequestID, reqid;
     ] in
-  make_msg "Z2000" fields
+  create t (Unknown "Z2000") fields
 
 let market_data_request ?(depthlvls=1) ~symbol ~operation ~updatetype ~entrytypes reqid =
   let string_of_symbol = function
@@ -69,18 +68,18 @@ let market_data_request ?(depthlvls=1) ~symbol ~operation ~updatetype ~entrytype
     | `C -> "5"
     | `VWAP -> "9"
     | `Vol -> "B" in
-  let fields = [
-    146, "1"; (* max one symbol allowed by OKCoin. *)
-    55, string_of_symbol symbol;
-    262, reqid;
-    263, string_of_operation operation;
-    264, string_of_int depthlvls;
-    265, string_of_updatetype updatetype;
-    267, string_of_int @@ List.length entrytypes;
+  let fields = Tag.[
+    NoRelatedSym, "1"; (* max one symbol allowed by OKCoin. *)
+    Symbol, string_of_symbol symbol;
+    MDReqID, reqid;
+    SubscriptionRequestType, string_of_operation operation;
+    MarketDepth, string_of_int depthlvls;
+    MDUpdateType, string_of_updatetype updatetype;
+    NoMDEntryTypes, string_of_int @@ List.length entrytypes;
   ] @
-    List.map (fun e -> 269, string_of_entrytype e) entrytypes
+    List.map (fun e -> Tag.MDEntryType, string_of_entrytype e) entrytypes
   in
-  make_msg "V" fields
+  create t MarketDataRequest fields
 
 let incremental_trades ~symbol reqid =
   market_data_request ~symbol ~operation:`Snapsub ~updatetype:`Incremental
