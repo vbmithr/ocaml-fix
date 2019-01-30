@@ -11,6 +11,12 @@
  (modules fix_async)
  (libraries bs-devkit fix async conduit-async uri logs-async))
 
+(library
+ (name deribit)
+ (public_name fix.deribit)
+ (modules deribit)
+ (libraries fix core base64 monocypher digestif.c))
+
 ;; (library
 ;;  ((name coinbase)
 ;;   (public_name fix.coinbase)

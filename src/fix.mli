@@ -89,9 +89,14 @@ module TimeInForce : sig
 end
 
 module Version : sig
-  type t =
-    | FIX of int * int
-    | FIXT of int * int
+  type t
+
+  val v40 : t
+  val v41 : t
+  val v42 : t
+  val v43 : t
+  val v44 : t
+  val v5  : t
 
   val parse : string -> t option
   val pp : Format.formatter -> t -> unit
@@ -159,6 +164,14 @@ module Field : sig
 
   type t
 
+  val create : 'a typ -> (Format.formatter -> 'a -> unit)  -> 'a -> t
+
+  val sendercompid : string -> t
+  val targetcompid : string -> t
+  val msgseqnum : int -> t
+  val rawdata : string -> t
+  val password : string -> t
+
   val find : 'a typ -> t -> 'a option
   val find_list : 'a typ -> t list -> 'a option
 end
@@ -167,6 +180,8 @@ type t = {
   typ : MsgType.t ;
   fields : Field.t list ;
 } [@@deriving sexp]
+
+val create : typ:MsgType.t -> fields:Field.t list -> t
 
 val pp : Format.formatter -> t -> unit
 

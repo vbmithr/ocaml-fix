@@ -356,6 +356,13 @@ module Version = struct
     | FIXT of int * int
   [@@deriving sexp]
 
+  let v40 = FIX (4, 0)
+  let v41 = FIX (4, 1)
+  let v42 = FIX (4, 2)
+  let v43 = FIX (4, 3)
+  let v44 = FIX (4, 4)
+  let v5  = FIXT (1, 1)
+
   let pp ppf = function
     | FIX  (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
     | FIXT (major, minor) -> Format.fprintf ppf "FIXT.%d.%d" major minor
@@ -461,6 +468,8 @@ module Field = struct
     type a b. a typ -> b typ -> (a,b) eq option = fun a b ->
     match a, b with
     | Account, Account -> Some Eq
+    | BeginSeqNo, BeginSeqNo -> Some Eq
+    | BeginString, BeginString -> Some Eq
     | _ -> None
 
   let tag_of_typ (type a) (typ : a typ) =
@@ -513,9 +522,14 @@ module Field = struct
 
   type t = F : 'a typ * (Format.formatter -> 'a -> unit) * 'a -> t
 
-  let make typ pp t = F (typ, pp, t)
+  let create typ pp t = F (typ, pp, t)
   let msgtype mt = F (MsgType, MsgType.pp, mt)
   let beginstring version = F (BeginString, Version.pp, version)
+  let sendercompid id = F (SenderCompID, Format.pp_print_string, id)
+  let targetcompid id = F (TargetCompID, Format.pp_print_string, id)
+  let msgseqnum i = F (MsgSeqNum, Format.pp_print_int, i)
+  let rawdata s = F (RawData, Format.pp_print_string, s)
+  let password s = (Password, Format.pp_print_string, s)
 
   let find :
     type a. a typ -> t -> a option =
@@ -549,48 +563,48 @@ module Field = struct
         let open Format in
         try R.ok @@
           match tag with
-          | 1   -> make Account pp_print_string value
-          | 7   -> make BeginSeqNo pp_print_int (int_of_string value)
-          | 8   -> make BeginString Version.pp (Version.parse_exn value)
-          | 9   -> make BodyLength pp_print_int (int_of_string value)
-          | 10  -> make CheckSum pp_print_string value
-          | 11  -> make ClOrdID pp_print_string value
-          | 16  -> make EndSeqNo pp_print_int (int_of_string value)
-          | 21  -> make HandlInst HandlInst.pp (HandlInst.parse_exn value)
-          | 34  -> make MsgSeqNum pp_print_int (int_of_string value)
-          | 35  -> make MsgType MsgType.pp (MsgType.parse_exn value)
-          | 46  -> make NewSeqNo pp_print_int (int_of_string value)
-          | 37  -> make OrderID pp_print_string value
-          | 38  -> make OrderQty pp_print_float (float_of_string value)
-          | 39  -> make OrdStatus OrdStatus.pp (OrdStatus.parse_exn value)
-          | 40  -> make OrdType OrdType.pp (OrdType.parse_exn value)
-          | 44  -> make Price pp_print_float (float_of_string value)
-          | 45  -> make RefSeqNum pp_print_int (int_of_string value)
-          | 49  -> make SenderCompID pp_print_string value
-          | 52  -> make SendingTime UTCTimestamp.pp (UTCTimestamp.parse_exn value)
-          | 54  -> make Side Side.pp (Side.parse_exn value)
-          | 55  -> make Symbol pp_print_string value
-          | 56  -> make TargetCompID pp_print_string value
-          | 58  -> make Text pp_print_string value
-          | 59  -> make TimeInForce TimeInForce.pp (TimeInForce.parse_exn value)
-          | 96  -> make RawData pp_print_string value
-          | 98  -> make EncryptMethod EncryptMethod.pp (EncryptMethod.parse_exn value)
-          | 108 -> make HeartBtInt pp_print_int (int_of_string value)
-          | 112 -> make TestReqID pp_print_string value
-          | 141 -> make ResetSeqNumFlag YesOrNo.pp (YesOrNo.parse_exn value)
-          | 146 -> make NoRelatedSym pp_print_int (int_of_string value)
-          | 262 -> make MDReqID pp_print_string value
-          | 263 -> make SubscriptionRequestType SubscriptionRequestType.pp (SubscriptionRequestType.parse_exn value)
-          | 264 -> make MarketDepth pp_print_int (int_of_string value)
-          | 265 -> make MDUpdateType MdUpdateType.pp (MdUpdateType.parse_exn value)
-          | 267 -> make NoMDEntryTypes pp_print_int (int_of_string value)
-          | 269 -> make MDEntryType MdEntryType.pp (MdEntryType.parse_exn value)
-          | 371 -> make RefTagID pp_print_int (int_of_string value)
-          | 372 -> make RefMsgType MsgType.pp (MsgType.parse_exn value)
-          | 553 -> make Username pp_print_string value
-          | 554 -> make Password pp_print_string value
-          | 568 -> make TradeRequestID pp_print_string value
-          | 1137 -> make DefaultApplVerID pp_print_string value
+          | 1   -> create Account pp_print_string value
+          | 7   -> create BeginSeqNo pp_print_int (int_of_string value)
+          | 8   -> create BeginString Version.pp (Version.parse_exn value)
+          | 9   -> create BodyLength pp_print_int (int_of_string value)
+          | 10  -> create CheckSum pp_print_string value
+          | 11  -> create ClOrdID pp_print_string value
+          | 16  -> create EndSeqNo pp_print_int (int_of_string value)
+          | 21  -> create HandlInst HandlInst.pp (HandlInst.parse_exn value)
+          | 34  -> create MsgSeqNum pp_print_int (int_of_string value)
+          | 35  -> create MsgType MsgType.pp (MsgType.parse_exn value)
+          | 46  -> create NewSeqNo pp_print_int (int_of_string value)
+          | 37  -> create OrderID pp_print_string value
+          | 38  -> create OrderQty pp_print_float (float_of_string value)
+          | 39  -> create OrdStatus OrdStatus.pp (OrdStatus.parse_exn value)
+          | 40  -> create OrdType OrdType.pp (OrdType.parse_exn value)
+          | 44  -> create Price pp_print_float (float_of_string value)
+          | 45  -> create RefSeqNum pp_print_int (int_of_string value)
+          | 49  -> create SenderCompID pp_print_string value
+          | 52  -> create SendingTime UTCTimestamp.pp (UTCTimestamp.parse_exn value)
+          | 54  -> create Side Side.pp (Side.parse_exn value)
+          | 55  -> create Symbol pp_print_string value
+          | 56  -> create TargetCompID pp_print_string value
+          | 58  -> create Text pp_print_string value
+          | 59  -> create TimeInForce TimeInForce.pp (TimeInForce.parse_exn value)
+          | 96  -> create RawData pp_print_string value
+          | 98  -> create EncryptMethod EncryptMethod.pp (EncryptMethod.parse_exn value)
+          | 108 -> create HeartBtInt pp_print_int (int_of_string value)
+          | 112 -> create TestReqID pp_print_string value
+          | 141 -> create ResetSeqNumFlag YesOrNo.pp (YesOrNo.parse_exn value)
+          | 146 -> create NoRelatedSym pp_print_int (int_of_string value)
+          | 262 -> create MDReqID pp_print_string value
+          | 263 -> create SubscriptionRequestType SubscriptionRequestType.pp (SubscriptionRequestType.parse_exn value)
+          | 264 -> create MarketDepth pp_print_int (int_of_string value)
+          | 265 -> create MDUpdateType MdUpdateType.pp (MdUpdateType.parse_exn value)
+          | 267 -> create NoMDEntryTypes pp_print_int (int_of_string value)
+          | 269 -> create MDEntryType MdEntryType.pp (MdEntryType.parse_exn value)
+          | 371 -> create RefTagID pp_print_int (int_of_string value)
+          | 372 -> create RefMsgType MsgType.pp (MsgType.parse_exn value)
+          | 553 -> create Username pp_print_string value
+          | 554 -> create Password pp_print_string value
+          | 568 -> create TradeRequestID pp_print_string value
+          | 1137 -> create DefaultApplVerID pp_print_string value
           | i   -> invalid_arg ("Unknown tag " ^ string_of_int i)
         with
         | Invalid_argument msg -> R.error_msg msg
@@ -665,8 +679,8 @@ let read ?pos ?len buf =
   | Error _ as e -> e
   | Ok [] -> R.error_msg "empty message"
   | Ok (chksum :: fields) ->
-    let open Field in
-    match find CheckSum chksum, find_list MsgType fields with
+    match Field.find CheckSum chksum,
+          Field.find_list MsgType fields with
     | None, _ -> R.error_msg "missing checksum"
     | Some _, None -> R.error_msg "missing MsgType"
     | Some chksum, Some typ ->
