@@ -2,8 +2,6 @@ open StdLabels
 open Astring
 
 module UTCTimestamp = struct
-  type t = Ptime.t
-
   let parse_date s =
     let y = String.sub_with_range s ~first:0 ~len:4 in
     let m = String.sub_with_range s ~first:4 ~len:2 in
@@ -207,8 +205,6 @@ module TimeInForce = struct
 end
 
 module YesOrNo = struct
-  type t = bool
-
   let parse = function
     | "Y" -> true
     | "N" -> false
@@ -335,10 +331,10 @@ module Field = struct
     | 1137 -> DefaultApplVerID value
     | i   -> Unknown (i, "")
 
-  let to_string ~tag ~value =
+  let to_string tag value =
     (string_of_int tag) ^ "=" ^ value ^ "\001"
 
-  let add_to_buffer buf ~tag ~value =
+  let add_to_buffer buf tag value =
     let open Buffer in
     add_string buf (string_of_int tag) ;
     add_char buf '=' ;
@@ -452,8 +448,8 @@ module Message = struct
 
   (* TODO: Implement. *)
   let of_fields = function
-    | Field.BeginString version ::
-      Field.BodyLength len ::
+    | Field.BeginString _version ::
+      Field.BodyLength _len ::
       Field.MsgType msgType :: fields ->
         Unknown { msgType ; fields }
     | _ -> invalid_arg "Message.of_fields"
@@ -477,7 +473,7 @@ module Message = struct
                DefaultApplVerID defaultApplVerID]
     | NewOrderSingle { clOrdID } -> [Field.ClOrdID clOrdID]
     | MarketDataRequest -> []
-    | Unknown { fields } -> fields
+    | Unknown { fields ; _ } -> fields
 
   let to_msgtype = function
     | Heartbeat _ -> "0"
@@ -489,7 +485,7 @@ module Message = struct
     | Logon _ -> "A"
     | NewOrderSingle _ -> "D"
     | MarketDataRequest -> "V"
-    | Unknown { msgType } -> msgType
+    | Unknown { msgType ; _ } -> msgType
 end
 
 let to_bytes ?(buf = Buffer.create 128) ~version msg =
@@ -516,7 +512,7 @@ let to_bytes ?(buf = Buffer.create 128) ~version msg =
 (* Compute checksum on all but the last field *)
 let compute_chksum fields =
   let global, local =
-    List.fold_left fields ~init:(0, 0) ~f:begin fun (global, local) sub ->
+    List.fold_left fields ~init:(0, 0) ~f:begin fun (global, _local) sub ->
       let count = String.Sub.fold_left (fun a c -> a + Char.to_int c) 1 sub in
       global + count, count
     end in

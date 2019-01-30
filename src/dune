@@ -1,8 +1,8 @@
 (library
- ((name fix)
-  (public_name fix)
-  (modules (fix))
-  (libraries (astring ptime))))
+ (name fix)
+ (public_name fix)
+ (modules fix)
+ (libraries astring ptime))
 
 ;; (library
 ;;  ((name coinbase)
