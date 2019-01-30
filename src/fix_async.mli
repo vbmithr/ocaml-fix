@@ -1,12 +1,9 @@
-open Core.Std
-open Async.Std
+open Core_kernel
+open Async
+open Fix
 
 val with_connection :
-  ?log:Log.t ->
-  ?timeout:Time.Span.t ->
-  ?tmpbuf:string ->
-  ?tls:[`Noconf | `CAFile of string] ->
-  host:string ->
-  port:int ->
-  unit ->
-  (Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t
+  ?tmpbuf:Bytes.t ->
+  version:Version.t ->
+  Uri.t ->
+  (t Pipe.Reader.t * t Pipe.Writer.t) Deferred.t

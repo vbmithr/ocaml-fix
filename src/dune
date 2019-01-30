@@ -2,7 +2,14 @@
  (name fix)
  (public_name fix)
  (modules fix)
- (libraries astring ptime))
+ (preprocess (pps ppx_sexp_conv))
+ (libraries rresult astring ptime sexplib))
+
+(library
+ (name fix_async)
+ (public_name fix-async)
+ (modules fix_async)
+ (libraries bs-devkit fix async conduit-async uri logs-async))
 
 ;; (library
 ;;  ((name coinbase)

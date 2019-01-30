@@ -1,5 +1,19 @@
-open StdLabels
+open Rresult
 open Astring
+open Sexplib.Std
+
+module Ptime = struct
+  include Ptime
+
+  let t_of_sexp sexp =
+    let sexp_str = string_of_sexp sexp in
+    match of_rfc3339 sexp_str with
+    | Ok (t, _, _) -> t
+    | _ -> invalid_arg "Timestamp.t_of_sexp"
+
+  let sexp_of_t t =
+    sexp_of_string (to_rfc3339 t)
+end
 
 module UTCTimestamp = struct
   let parse_date s =
@@ -38,14 +52,19 @@ module UTCTimestamp = struct
     with
     | Some ts, Some frac -> begin
         match Ptime.(add_span ts frac) with
-        | None -> invalid_arg "UTCTimestamp.parse"
-        | Some ts -> ts
+        | None -> None
+        | Some ts -> Some ts
       end
-    | _ -> invalid_arg "UTCTimestamp.parse"
+    | _ -> None
 
-  let print t =
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "UTCTimestamp.parse"
+    | Some v -> v
+
+  let pp ppf t =
     let ((y, m, d), ((hh, mm, ss), _)) = Ptime.to_date_time t in
-    Printf.sprintf "%d%d%d-%d:%d:%d" y m d hh mm ss
+    Format.fprintf ppf "%d%d%d-%d:%d:%d" y m d hh mm ss
 end
 
 module HandlInst = struct
@@ -53,41 +72,77 @@ module HandlInst = struct
     | Private
     | Public
     | Manual
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "1" -> Private
-    | "2" -> Public
-    | "3" -> Manual
-    | _ -> invalid_arg "HandleInst.parse"
+    | "1" -> Some Private
+    | "2" -> Some Public
+    | "3" -> Some Manual
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "HandlInst.parse"
+    | Some v -> v
 
   let print = function
     | Private -> "1"
     | Public -> "2"
     | Manual -> "3"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module OrdStatus = struct
   type t =
     | New
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> New
-    | _ -> invalid_arg "OrdStatus.parse"
+    | "0" -> Some New
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "OrdStatus.parse"
+    | Some v -> v
 
   let print = function
     | New -> "0"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module OrdType = struct
   type t =
     | Market
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "1" -> Market
-    | _ -> invalid_arg "OrdType.parse"
+    | "1" -> Some Market
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "OrdType.parse"
+    | Some v -> v
 
   let print = function
     | Market -> "1"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module EncryptMethod = struct
@@ -99,16 +154,25 @@ module EncryptMethod = struct
     | PGP_DES
     | PGP_DES_MD5
     | PEM_DES_MD5
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Other
-    | "1" -> PKCS
-    | "2" -> DES
-    | "3" -> PKCS_DES
-    | "4" -> PGP_DES
-    | "5" -> PGP_DES_MD5
-    | "6" -> PEM_DES_MD5
-    | _ -> invalid_arg "EncryptMethod.parse"
+    | "0" -> Some Other
+    | "1" -> Some PKCS
+    | "2" -> Some DES
+    | "3" -> Some PKCS_DES
+    | "4" -> Some PGP_DES
+    | "5" -> Some PGP_DES_MD5
+    | "6" -> Some PEM_DES_MD5
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "EncryptMethod.parse"
+    | Some v -> v
 
   let print = function
     | Other -> "0"
@@ -118,6 +182,9 @@ module EncryptMethod = struct
     | PGP_DES -> "4"
     | PGP_DES_MD5 -> "5"
     | PEM_DES_MD5 -> "6"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module SubscriptionRequestType = struct
@@ -125,32 +192,56 @@ module SubscriptionRequestType = struct
     | Snapshot
     | Subscribe
     | Unsubscribe
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Snapshot
-    | "1" -> Subscribe
-    | "2" -> Unsubscribe
-    | _ -> invalid_arg "SubscriptionRequestType.parse"
+    | "0" -> Some Snapshot
+    | "1" -> Some Subscribe
+    | "2" -> Some Unsubscribe
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "SubscriptionRequestType.parse"
+    | Some v -> v
 
   let print = function
     | Snapshot -> "0"
     | Subscribe -> "1"
     | Unsubscribe -> "2"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module MdUpdateType = struct
   type t =
     | Full
     | Incremental
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Full
-    | "1" -> Incremental
-    | _ -> invalid_arg "MdUpdateType.parse"
+    | "0" -> Some Full
+    | "1" -> Some Incremental
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "MdUpdateType.parse"
+    | Some v -> v
 
   let print = function
     | Full -> "0"
     | Incremental -> "1"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module MdEntryType = struct
@@ -158,32 +249,56 @@ module MdEntryType = struct
     | Bid
     | Offer
     | Trade
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Bid
-    | "1" -> Offer
-    | "2" -> Trade
-    | _ -> invalid_arg "MdEntryType.parse"
+    | "0" -> Some Bid
+    | "1" -> Some Offer
+    | "2" -> Some Trade
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "MdEntryType.parse"
+    | Some v -> v
 
   let print = function
     | Bid -> "0"
     | Offer -> "1"
     | Trade -> "2"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module Side = struct
   type t =
     | Buy
     | Sell
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Buy
-    | "1" -> Sell
-    | _ -> invalid_arg "Side.parse"
+    | "0" -> Some Buy
+    | "1" -> Some Sell
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "Side.parse"
+    | Some v -> v
 
   let print = function
     | Buy -> "0"
     | Sell -> "1"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module TimeInForce = struct
@@ -191,313 +306,330 @@ module TimeInForce = struct
     | Session
     | Good_till_cancel
     | At_the_opening
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
   let parse = function
-    | "0" -> Session
-    | "1" -> Good_till_cancel
-    | "2" -> At_the_opening
-    | _ -> invalid_arg "TimeInForce.parse"
+    | "0" -> Some Session
+    | "1" -> Some Good_till_cancel
+    | "2" -> Some At_the_opening
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "TimeInForce.parse"
+    | Some v -> v
 
   let print = function
     | Session -> "0"
     | Good_till_cancel -> "1"
     | At_the_opening -> "2"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module YesOrNo = struct
   let parse = function
-    | "Y" -> true
-    | "N" -> false
-    | _ -> invalid_arg "YesOrNo.parse"
+    | "Y" -> Some true
+    | "N" -> Some false
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "YesOrNo.parse"
+    | Some v -> v
 
   let print = function
     | true -> "Y"
     | false -> "N"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module Version = struct
   type t =
     | FIX of int * int
     | FIXT of int * int
-
-  let parse s =
-    match String.cuts ~sep:"." s with
-    | [ "FIX" ; major ; minor ] -> FIX (int_of_string major, int_of_string minor)
-    | [ "FIXT" ; major ; minor ] -> FIXT (int_of_string major, int_of_string minor)
-    | _ -> invalid_arg "Header.parse_version"
+  [@@deriving sexp]
 
   let pp ppf = function
-    | FIX (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
+    | FIX  (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
     | FIXT (major, minor) -> Format.fprintf ppf "FIXT.%d.%d" major minor
 
   let print t = Format.asprintf "%a" pp t
+
+  let parse s =
+    match String.cuts ~sep:"." s with
+    | [ "FIX" ; major ; minor ] ->
+      Some (FIX (int_of_string major, int_of_string minor))
+    | [ "FIXT" ; major ; minor ] ->
+      Some (FIXT (int_of_string major, int_of_string minor))
+    | _ -> None
+
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "Version.parse"
+    | Some v -> v
+end
+
+module MsgType = struct
+  type t =
+    | Heartbeat
+    | TestRequest
+    | ResendRequest
+    | Reject
+    | SequenceReset
+    | Logout
+    | Logon
+    | NewOrderSingle
+    | MarketDataRequest
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+
+  let parse_exn s =
+    failwith "not implemented"
+
+  let print = function
+    | Heartbeat         -> "0"
+    | TestRequest       -> "1"
+    | ResendRequest     -> "2"
+    | Reject            -> "3"
+    | SequenceReset     -> "4"
+    | Logout            -> "5"
+    | Logon             -> "A"
+    | NewOrderSingle    -> "D"
+    | MarketDataRequest -> "V"
+
+  let pp ppf t =
+    Format.fprintf ppf "%s" (print t)
 end
 
 module Field = struct
-  type t =
-    | Account of string
-    | BeginSeqNo of int
-    | BeginString of Version.t
-    | BodyLength of int
-    | CheckSum of string
-    | ClOrdID of string
-    | EndSeqNo of int
-    | HandlInst of HandlInst.t
-    | MsgSeqNum of int
-    | MsgType of string
-    | NewSeqNo of int
-    | OrderID of string
-    | OrderQty of float
-    | OrdStatus of OrdStatus.t
-    | OrdType of OrdType.t
-    | Price of float
-    | RefSeqNum of int
-    | SenderCompID of string
-    | SendingTime of Ptime.t
-    | Side of Side.t
-    | Symbol of string
-    | TargetCompID of string
-    | Text of string
-    | TimeInForce of TimeInForce.t
-    | RawData of string
-    | EncryptMethod of EncryptMethod.t
-    | HeartBtInt of int
-    | TestReqID of string
-    | ResetSeqNumFlag of bool
-    | NoRelatedSym of int
-    | MDReqID of string
-    | SubscriptionRequestType of SubscriptionRequestType.t
-    | MarketDepth of int
-    | MDUpdateType of MdUpdateType.t
-    | NoMDEntryTypes of int
-    | MDEntryType of MdEntryType.t
-    | RefTagID of int
-    | RefMsgType of string
-    | Username of string
-    | Password of string
-    | TradeRequestID of string
-    | DefaultApplVerID of string
+  type _ typ =
+    | Account                 : string typ
+    | BeginSeqNo              : int typ
+    | BeginString             : Version.t typ
+    | BodyLength              : int typ
+    | CheckSum                : string typ
+    | ClOrdID                 : string typ
+    | EndSeqNo                : int typ
+    | HandlInst               : HandlInst.t typ
+    | MsgSeqNum               : int typ
+    | MsgType                 : MsgType.t typ
+    | NewSeqNo                : int typ
+    | OrderID                 : string typ
+    | OrderQty                : float typ
+    | OrdStatus               : OrdStatus.t typ
+    | OrdType                 : OrdType.t typ
+    | Price                   : float typ
+    | RefSeqNum               : int typ
+    | SenderCompID            : string typ
+    | SendingTime             : Ptime.t typ
+    | Side                    : Side.t typ
+    | Symbol                  : string typ
+    | TargetCompID            : string typ
+    | Text                    : string typ
+    | TimeInForce             : TimeInForce.t typ
+    | RawData                 : string typ
+    | EncryptMethod           : EncryptMethod.t typ
+    | HeartBtInt              : int typ
+    | TestReqID               : string typ
+    | ResetSeqNumFlag         : bool typ
+    | NoRelatedSym            : int typ
+    | MDReqID                 : string typ
+    | SubscriptionRequestType : SubscriptionRequestType.t typ
+    | MarketDepth             : int typ
+    | MDUpdateType            : MdUpdateType.t typ
+    | NoMDEntryTypes          : int typ
+    | MDEntryType             : MdEntryType.t typ
+    | RefTagID                : int typ
+    | RefMsgType              : MsgType.t typ
+    | Username                : string typ
+    | Password                : string typ
+    | TradeRequestID          : string typ
+    | DefaultApplVerID        : string typ
 
-    | Unknown of int * string
+  type (_,_) eq = Eq : ('a,'a) eq
+
+  let eq_typ :
+    type a b. a typ -> b typ -> (a,b) eq option = fun a b ->
+    match a, b with
+    | Account, Account -> Some Eq
+    | _ -> None
+
+  let tag_of_typ (type a) (typ : a typ) =
+    match typ with
+    | Account                 -> 1
+    | BeginSeqNo              -> 7
+    | BeginString             -> 8
+    | BodyLength              -> 9
+    | CheckSum                -> 10
+    | ClOrdID                 -> 11
+    | EndSeqNo                -> 16
+    | HandlInst               -> 21
+    | MsgSeqNum               -> 34
+    | MsgType                 -> 35
+    | NewSeqNo                -> 36
+    | OrderID                 -> 37
+    | OrderQty                -> 38
+    | OrdStatus               -> 39
+    | OrdType                 -> 40
+    | Price                   -> 44
+    | RefSeqNum               -> 45
+    | SenderCompID            -> 49
+    | SendingTime             -> 52
+    | Side                    -> 54
+    | Symbol                  -> 55
+    | TargetCompID            -> 56
+    | Text                    -> 58
+    | TimeInForce             -> 59
+    | RawData                 -> 96
+    | EncryptMethod           -> 98
+    | HeartBtInt              -> 108
+    | TestReqID               -> 112
+    | ResetSeqNumFlag         -> 141
+    | NoRelatedSym            -> 146
+    | MDReqID                 -> 262
+    | SubscriptionRequestType -> 263
+    | MarketDepth             -> 264
+    | MDUpdateType            -> 265
+    | NoMDEntryTypes          -> 267
+    | MDEntryType             -> 269
+    | RefTagID                -> 371
+    | RefMsgType              -> 372
+    | Username                -> 553
+    | Password                -> 554
+    | TradeRequestID          -> 568
+    | DefaultApplVerID        -> 1137
+
+  let pp_typ (type a) ppf (t : a typ) =
+    Format.fprintf ppf "<not implemented>"
+
+  type t = F : 'a typ * (Format.formatter -> 'a -> unit) * 'a -> t
+
+  let make typ pp t = F (typ, pp, t)
+  let msgtype mt = F (MsgType, MsgType.pp, mt)
+  let beginstring version = F (BeginString, Version.pp, version)
+
+  let find :
+    type a. a typ -> t -> a option =
+    fun typ (F (typ', _, v)) ->
+    match eq_typ typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  exception Found_field of t
+
+  let find_list typ ts =
+    try
+      List.iter begin fun t ->
+        match find typ t with
+        | None -> ()
+        | Some _ -> raise (Found_field t)
+      end ts ;
+      None
+    with Found_field t -> find typ t
+
+  let pp ppf (F (typ, pp, v)) =
+    Format.fprintf ppf "@[<v 1>%a: %a@]" pp_typ typ pp v
 
   let parse str =
-    let tag = ref 0 in
-    let value = ref "" in
-    Scanf.sscanf str "%d=%s" (fun t v -> tag := t ; value := v) ;
-    let tag = !tag in
-    let value = !value in
-    match tag with
-    | 1   -> Account value
-    | 7   -> BeginSeqNo (int_of_string value)
-    | 8   -> BeginString (Version.parse value)
-    | 9   -> BodyLength (int_of_string value)
-    | 10  -> CheckSum value
-    | 11  -> ClOrdID value
-    | 16  -> EndSeqNo (int_of_string value)
-    | 21  -> HandlInst (HandlInst.parse value)
-    | 34  -> MsgSeqNum (int_of_string value)
-    | 35  -> MsgType value
-    | 46  -> NewSeqNo (int_of_string value)
-    | 37  -> OrderID value
-    | 38  -> OrderQty (float_of_string value)
-    | 39  -> OrdStatus (OrdStatus.parse value)
-    | 40  -> OrdType (OrdType.parse value)
-    | 44  -> Price (float_of_string value)
-    | 45  -> RefSeqNum (int_of_string value)
-    | 49  -> SenderCompID value
-    | 52  -> SendingTime (UTCTimestamp.parse value)
-    | 54  -> Side (Side.parse value)
-    | 55  -> Symbol value
-    | 56  -> TargetCompID value
-    | 58  -> Text value
-    | 59  -> TimeInForce (TimeInForce.parse value)
-    | 96  -> RawData value
-    | 98  -> EncryptMethod (EncryptMethod.parse value)
-    | 108 -> HeartBtInt (int_of_string value)
-    | 112 -> TestReqID value
-    | 141 -> ResetSeqNumFlag (YesOrNo.parse value)
-    | 146 -> NoRelatedSym (int_of_string value)
-    | 262 -> MDReqID value
-    | 263 -> SubscriptionRequestType (SubscriptionRequestType.parse value)
-    | 264 -> MarketDepth (int_of_string value)
-    | 265 -> MDUpdateType (MdUpdateType.parse value)
-    | 267 -> NoMDEntryTypes (int_of_string value)
-    | 269 -> MDEntryType (MdEntryType.parse value)
-    | 371 -> RefTagID (int_of_string value)
-    | 372 -> RefMsgType value
-    | 553 -> Username value
-    | 554 -> Password value
-    | 568 -> TradeRequestID value
-    | 1137 -> DefaultApplVerID value
-    | i   -> Unknown (i, "")
+    match String.cut ~sep:"=" str with
+    | None -> R.error_msg "Missing '='"
+    | Some (tag, value) ->
+      match int_of_string_opt tag with
+      | None -> R.error_msg "Tag is not an int value"
+      | Some tag ->
+        let open Format in
+        try R.ok @@
+          match tag with
+          | 1   -> make Account pp_print_string value
+          | 7   -> make BeginSeqNo pp_print_int (int_of_string value)
+          | 8   -> make BeginString Version.pp (Version.parse_exn value)
+          | 9   -> make BodyLength pp_print_int (int_of_string value)
+          | 10  -> make CheckSum pp_print_string value
+          | 11  -> make ClOrdID pp_print_string value
+          | 16  -> make EndSeqNo pp_print_int (int_of_string value)
+          | 21  -> make HandlInst HandlInst.pp (HandlInst.parse_exn value)
+          | 34  -> make MsgSeqNum pp_print_int (int_of_string value)
+          | 35  -> make MsgType MsgType.pp (MsgType.parse_exn value)
+          | 46  -> make NewSeqNo pp_print_int (int_of_string value)
+          | 37  -> make OrderID pp_print_string value
+          | 38  -> make OrderQty pp_print_float (float_of_string value)
+          | 39  -> make OrdStatus OrdStatus.pp (OrdStatus.parse_exn value)
+          | 40  -> make OrdType OrdType.pp (OrdType.parse_exn value)
+          | 44  -> make Price pp_print_float (float_of_string value)
+          | 45  -> make RefSeqNum pp_print_int (int_of_string value)
+          | 49  -> make SenderCompID pp_print_string value
+          | 52  -> make SendingTime UTCTimestamp.pp (UTCTimestamp.parse_exn value)
+          | 54  -> make Side Side.pp (Side.parse_exn value)
+          | 55  -> make Symbol pp_print_string value
+          | 56  -> make TargetCompID pp_print_string value
+          | 58  -> make Text pp_print_string value
+          | 59  -> make TimeInForce TimeInForce.pp (TimeInForce.parse_exn value)
+          | 96  -> make RawData pp_print_string value
+          | 98  -> make EncryptMethod EncryptMethod.pp (EncryptMethod.parse_exn value)
+          | 108 -> make HeartBtInt pp_print_int (int_of_string value)
+          | 112 -> make TestReqID pp_print_string value
+          | 141 -> make ResetSeqNumFlag YesOrNo.pp (YesOrNo.parse_exn value)
+          | 146 -> make NoRelatedSym pp_print_int (int_of_string value)
+          | 262 -> make MDReqID pp_print_string value
+          | 263 -> make SubscriptionRequestType SubscriptionRequestType.pp (SubscriptionRequestType.parse_exn value)
+          | 264 -> make MarketDepth pp_print_int (int_of_string value)
+          | 265 -> make MDUpdateType MdUpdateType.pp (MdUpdateType.parse_exn value)
+          | 267 -> make NoMDEntryTypes pp_print_int (int_of_string value)
+          | 269 -> make MDEntryType MdEntryType.pp (MdEntryType.parse_exn value)
+          | 371 -> make RefTagID pp_print_int (int_of_string value)
+          | 372 -> make RefMsgType MsgType.pp (MsgType.parse_exn value)
+          | 553 -> make Username pp_print_string value
+          | 554 -> make Password pp_print_string value
+          | 568 -> make TradeRequestID pp_print_string value
+          | 1137 -> make DefaultApplVerID pp_print_string value
+          | i   -> invalid_arg ("Unknown tag " ^ string_of_int i)
+        with
+        | Invalid_argument msg -> R.error_msg msg
 
-  let to_string tag value =
-    (string_of_int tag) ^ "=" ^ value ^ "\001"
+  let print (F (typ, pp, v)) =
+    Format.asprintf "%d=%a" (tag_of_typ typ) pp v
 
-  let add_to_buffer buf tag value =
+  let add_to_buffer buf (F (typ, pp, v)) =
     let open Buffer in
-    add_string buf (string_of_int tag) ;
+    add_string buf (string_of_int (tag_of_typ typ)) ;
     add_char buf '=' ;
-    add_string buf value ;
-    add_char buf '\001'
+    add_string buf (Format.asprintf "%a" pp v)
 
-  let print = function
-    | Account value                 -> to_string 1 value
-    | BeginSeqNo value              -> to_string 7 (string_of_int value)
-    | BeginString value             -> to_string 8 (Version.print value)
-    | BodyLength value              -> to_string 9 (string_of_int value)
-    | CheckSum value                -> to_string 10 value
-    | ClOrdID value                 -> to_string 11 value
-    | EndSeqNo value                -> to_string 16 (string_of_int value)
-    | HandlInst value               -> to_string 21 (HandlInst.print value)
-    | MsgSeqNum value               -> to_string 34 (string_of_int value)
-    | MsgType value                 -> to_string 35 value
-    | NewSeqNo value                -> to_string 36 (string_of_int value)
-    | OrderID value                 -> to_string 37 value
-    | OrderQty value                -> to_string 38 (string_of_float value)
-    | OrdStatus value               -> to_string 39 (OrdStatus.print value)
-    | OrdType value                 -> to_string 40 (OrdType.print value)
-    | Price value                   -> to_string 44 (string_of_float value)
-    | RefSeqNum value               -> to_string 45 (string_of_int value)
-    | SenderCompID value            -> to_string 49 value
-    | SendingTime value             -> to_string 52 (UTCTimestamp.print value)
-    | Side value                    -> to_string 54 (Side.print value)
-    | Symbol value                  -> to_string 55 value
-    | TargetCompID value            -> to_string 56 value
-    | Text value                    -> to_string 58 value
-    | TimeInForce value             -> to_string 59 (TimeInForce.print value)
-    | RawData value                 -> to_string 96 value
-    | EncryptMethod value           -> to_string 98 (EncryptMethod.print value)
-    | HeartBtInt value              -> to_string 108 (string_of_int value)
-    | TestReqID value               -> to_string 112 value
-    | ResetSeqNumFlag value         -> to_string 141 (YesOrNo.print value)
-    | NoRelatedSym value            -> to_string 146 (string_of_int value)
-    | MDReqID value                 -> to_string 262 value
-    | SubscriptionRequestType value -> to_string 263 (SubscriptionRequestType.print value)
-    | MarketDepth value             -> to_string 264 (string_of_int value)
-    | MDUpdateType value            -> to_string 265 (MdUpdateType.print value)
-    | NoMDEntryTypes value          -> to_string 267 (string_of_int value)
-    | MDEntryType value             -> to_string 269 (MdEntryType.print value)
-    | RefTagID value                -> to_string 371 (string_of_int value)
-    | RefMsgType value              -> to_string 372 value
-    | Username value                -> to_string 553 value
-    | Password value                -> to_string 554 value
-    | TradeRequestID value          -> to_string 568 value
-    | DefaultApplVerID value        -> to_string 1137 value
-    | Unknown (tag, value)          -> to_string tag value
-
-  let add_to_buffer buf = function
-    | Account value                 -> add_to_buffer buf 1 value
-    | BeginSeqNo value              -> add_to_buffer buf 7 (string_of_int value)
-    | BeginString value             -> add_to_buffer buf 8 (Version.print value)
-    | BodyLength value              -> add_to_buffer buf 9 (string_of_int value)
-    | CheckSum value                -> add_to_buffer buf 10 value
-    | ClOrdID value                 -> add_to_buffer buf 11 value
-    | EndSeqNo value                -> add_to_buffer buf 16 (string_of_int value)
-    | HandlInst value               -> add_to_buffer buf 21 (HandlInst.print value)
-    | MsgSeqNum value               -> add_to_buffer buf 34 (string_of_int value)
-    | MsgType value                 -> add_to_buffer buf 35 value
-    | NewSeqNo value                -> add_to_buffer buf 36 (string_of_int value)
-    | OrderID value                 -> add_to_buffer buf 37 value
-    | OrderQty value                -> add_to_buffer buf 38 (string_of_float value)
-    | OrdStatus value               -> add_to_buffer buf 39 (OrdStatus.print value)
-    | OrdType value                 -> add_to_buffer buf 40 (OrdType.print value)
-    | Price value                   -> add_to_buffer buf 44 (string_of_float value)
-    | RefSeqNum value               -> add_to_buffer buf 45 (string_of_int value)
-    | SenderCompID value            -> add_to_buffer buf 49 value
-    | SendingTime value             -> add_to_buffer buf 52 (UTCTimestamp.print value)
-    | Side value                    -> add_to_buffer buf 54 (Side.print value)
-    | Symbol value                  -> add_to_buffer buf 55 value
-    | TargetCompID value            -> add_to_buffer buf 56 value
-    | Text value                    -> add_to_buffer buf 58 value
-    | TimeInForce value             -> add_to_buffer buf 59 (TimeInForce.print value)
-    | RawData value                 -> add_to_buffer buf 96 value
-    | EncryptMethod value           -> add_to_buffer buf 98 (EncryptMethod.print value)
-    | HeartBtInt value              -> add_to_buffer buf 108 (string_of_int value)
-    | TestReqID value               -> add_to_buffer buf 112 value
-    | ResetSeqNumFlag value         -> add_to_buffer buf 141 (YesOrNo.print value)
-    | NoRelatedSym value            -> add_to_buffer buf 146 (string_of_int value)
-    | MDReqID value                 -> add_to_buffer buf 262 value
-    | SubscriptionRequestType value -> add_to_buffer buf 263 (SubscriptionRequestType.print value)
-    | MarketDepth value             -> add_to_buffer buf 264 (string_of_int value)
-    | MDUpdateType value            -> add_to_buffer buf 265 (MdUpdateType.print value)
-    | NoMDEntryTypes value          -> add_to_buffer buf 267 (string_of_int value)
-    | MDEntryType value             -> add_to_buffer buf 269 (MdEntryType.print value)
-    | RefTagID value                -> add_to_buffer buf 371 (string_of_int value)
-    | RefMsgType value              -> add_to_buffer buf 372 value
-    | Username value                -> add_to_buffer buf 553 value
-    | Password value                -> add_to_buffer buf 554 value
-    | TradeRequestID value          -> add_to_buffer buf 568 value
-    | DefaultApplVerID value        -> add_to_buffer buf 1137 value
-    | Unknown (tag, value)          -> add_to_buffer buf tag value
+  let sexp_of_t t = sexp_of_string (print t)
+  let t_of_sexp sexp =
+    R.failwith_error_msg (parse (string_of_sexp sexp))
 end
 
-module Message = struct
-  type t =
-    | Heartbeat of { testReqID : string option }
-    | TestRequest of { testReqID : string }
-    | ResendRequest of { beginSeqNo : int ; endSeqNo : int }
-    | Reject of { refSeqNum : int }
-    | SequenceReset of { newSeqNo : int }
-    | Logout
-    | Logon of { encryptMethod : EncryptMethod.t ; defaultApplVerID : string }
-    | NewOrderSingle of { clOrdID : string }
-    | MarketDataRequest
+type t = {
+  typ : MsgType.t ;
+  fields : Field.t list ;
+} [@@deriving sexp]
 
-    | Unknown of { msgType : string ; fields : Field.t list }
+let create ~typ ~fields = { typ ; fields }
 
-  (* TODO: Implement. *)
-  let of_fields = function
-    | Field.BeginString _version ::
-      Field.BodyLength _len ::
-      Field.MsgType msgType :: fields ->
-        Unknown { msgType ; fields }
-    | _ -> invalid_arg "Message.of_fields"
+let pp ppf t =
+  Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-  let to_fields = function
-    | Heartbeat { testReqID } -> begin
-        match testReqID with
-        | None -> []
-        | Some id -> [Field.TestReqID id]
-      end
-    | TestRequest { testReqID } -> [Field.TestReqID testReqID]
-    | ResendRequest { beginSeqNo ; endSeqNo } -> [
-        Field.BeginSeqNo beginSeqNo ;
-        Field.EndSeqNo endSeqNo ;
-      ]
-    | Reject { refSeqNum } -> [Field.RefSeqNum refSeqNum]
-    | SequenceReset { newSeqNo } -> [Field.NewSeqNo newSeqNo]
-    | Logout -> []
-    | Logon { encryptMethod ; defaultApplVerID } ->
-        Field.[EncryptMethod encryptMethod ;
-               DefaultApplVerID defaultApplVerID]
-    | NewOrderSingle { clOrdID } -> [Field.ClOrdID clOrdID]
-    | MarketDataRequest -> []
-    | Unknown { fields ; _ } -> fields
-
-  let to_msgtype = function
-    | Heartbeat _ -> "0"
-    | TestRequest _ -> "1"
-    | ResendRequest _ -> "2"
-    | Reject _ -> "3"
-    | SequenceReset _ -> "4"
-    | Logout -> "5"
-    | Logon _ -> "A"
-    | NewOrderSingle _ -> "D"
-    | MarketDataRequest -> "V"
-    | Unknown { msgType ; _ } -> msgType
-end
-
-let to_bytes ?(buf = Buffer.create 128) ~version msg =
+let to_bytes ?(buf = Buffer.create 128) ~version { typ ; fields } =
   let add_field buf tag value =
     Buffer.add_string buf tag;
     Buffer.add_char buf '=';
     Buffer.add_string buf value;
-    Buffer.add_char buf '\001'
+    Buffer.add_char buf '\x01'
   in
-  let fields = Field.MsgType (Message.to_msgtype msg) :: Message.to_fields msg in
-  List.iter fields ~f:begin fun f ->
-    Field.add_to_buffer buf f
+  let fields = Field.msgtype typ :: fields in
+  ListLabels.iter fields ~f:begin fun f ->
+    Field.add_to_buffer buf f ;
+    Buffer.add_char buf '\x01'
   end ;
   let fieldslen = Buffer.length buf in
   let fields = Buffer.contents buf in
@@ -512,7 +644,7 @@ let to_bytes ?(buf = Buffer.create 128) ~version msg =
 (* Compute checksum on all but the last field *)
 let compute_chksum fields =
   let global, local =
-    List.fold_left fields ~init:(0, 0) ~f:begin fun (global, _local) sub ->
+    ListLabels.fold_left fields ~init:(0, 0) ~f:begin fun (global, _local) sub ->
       let count = String.Sub.fold_left (fun a c -> a + Char.to_int c) 1 sub in
       global + count, count
     end in
@@ -520,12 +652,24 @@ let compute_chksum fields =
 
 let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
-  let fields = String.Sub.cuts ~sep:(String.Sub.of_char '\001') buf in
+  let fields = String.Sub.cuts ~sep:(String.Sub.of_char '\x01') buf in
   let computed_chksum = compute_chksum fields in
-  let fields = List.map fields ~f:(fun f -> Field.parse (String.Sub.to_string f)) in
-  match List.rev fields with
-  | CheckSum chksum :: _ ->
+  begin try
+      ListLabels.fold_left fields ~init:[] ~f:begin fun a f ->
+        match Field.parse (String.Sub.to_string f) with
+        | Error _ as e -> R.failwith_error_msg e
+        | Ok v -> v :: a
+      end |> R.ok
+    with Failure msg -> R.error_msg msg
+  end |> function
+  | Error _ as e -> e
+  | Ok [] -> R.error_msg "empty message"
+  | Ok (chksum :: fields) ->
+    let open Field in
+    match find CheckSum chksum, find_list MsgType fields with
+    | None, _ -> R.error_msg "missing checksum"
+    | Some _, None -> R.error_msg "missing MsgType"
+    | Some chksum, Some typ ->
       if computed_chksum <> (int_of_string chksum) then
-        failwith "Fix.read: bad checksum"
-      else Message.of_fields fields
-  | _ -> invalid_arg "Fix.read"
+        R.error_msg "bad checksum"
+      else R.ok (create ~typ ~fields)
