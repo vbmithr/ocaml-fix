@@ -1,10 +1,22 @@
 open Rresult
 open Fixtypes
 
+type (_,_) eq = Eq : ('a,'a) eq
+
 type _ typ = ..
 
-type field [@@deriving sexp]
+module type T = sig
+  type t [@@deriving sexp]
+  val pp : Format.formatter -> t -> unit
+  val tag : int
+  val name : string
+end
+
+type field =
+    F : 'a typ * (module T with type t = 'a) * 'a -> field [@@deriving sexp]
 type t = field
+
+val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
 
 val pp : Format.formatter -> t -> unit
 val print : t -> string
@@ -33,5 +45,11 @@ type _ typ += CheckSum : string typ
 module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string
 module MsgType : FIELD with type t := Fixtypes.MsgType.t
+module MsgSeqNum : FIELD with type t := int
+module SenderCompID : FIELD with type t := string
+module TargetCompID : FIELD with type t := string
+module RawData : FIELD with type t := string
+module Username : FIELD with type t := string
+module Password : FIELD with type t := string
 
 

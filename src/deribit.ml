@@ -1,9 +1,45 @@
 open Core
 open Fix
+open Fixtypes
+open Field
+
+type _ typ += CancelOnDisconnect : bool typ
+
+module CancelOnDisconnect = struct
+  module T = struct
+    type t = bool [@@deriving sexp]
+    let pp = YesOrNo.pp
+    let tag = 9001
+    let name = "CancelOnDisconnect"
+  end
+
+  include T
+
+  let create v = create CancelOnDisconnect (module T) v
+
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | CancelOnDisconnect, CancelOnDisconnect -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (Field.F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (CancelOnDisconnect, (module T), YesOrNo.parse_exn v))
+    else None
+end
+
+let () = register_field (module CancelOnDisconnect)
 
 let base_fields =
-  let open Field in
-  [ sendercompid "ocaml-fix" ; targetcompid "DERIBITSERVER" ]
+  [ SenderCompID.create "ocaml-fix" ;
+    TargetCompID.create "DERIBITSERVER" ]
 
 let logon
     ?(cancel_on_disconnect=true)
@@ -22,8 +58,8 @@ let logon
   let password =
     B64.encode Digestif.SHA256.(digest_string (rawdata ^ secret) |> to_raw_string) in
   let fields =
-    Field.msgseqnum 1 ::
-    Field.rawdata rawdata ::
-    Field.password password ::
+    MsgSeqNum.create 1 ::
+    RawData.create rawdata ::
+    Password.create password ::
     base_fields in
-  create ~typ:MsgType.Logon ~fields
+  Fix.create ~typ:Fixtypes.MsgType.Logon ~fields

@@ -1,3 +1,10 @@
+module YesOrNo : sig
+  val parse : string -> bool option
+  val parse_exn : string -> bool
+  val print : bool -> string
+  val pp : Format.formatter -> bool -> unit
+end
+
 module HandlInst : sig
   type t =
     | Private
