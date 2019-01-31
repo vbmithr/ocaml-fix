@@ -4,6 +4,6 @@ open Fix
 
 val with_connection :
   ?tmpbuf:Bytes.t ->
-  version:Version.t ->
+  version:Fixtypes.Version.t ->
   Uri.t ->
-  (t Pipe.Reader.t * t Pipe.Writer.t) Deferred.t
+  (Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t

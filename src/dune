@@ -1,7 +1,7 @@
 (library
  (name fix)
  (public_name fix)
- (modules fix)
+ (modules fixtypes field fix)
  (preprocess (pps ppx_sexp_conv))
  (libraries rresult astring ptime sexplib))
 
@@ -13,7 +13,7 @@
 
 (library
  (name deribit)
- (public_name fix.deribit)
+ (public_name fix-deribit)
  (modules deribit)
  (libraries fix core base64 monocypher digestif.c))
 
