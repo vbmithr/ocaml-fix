@@ -8,7 +8,7 @@ type _ typ  = ..
 
 type (_,_) eq = Eq : ('a,'a) eq
 
-module type SIMPLEFIELD = sig
+module type T = sig
   type t [@@deriving sexp]
   val pp : Format.formatter -> t -> unit
   val tag : int
@@ -16,11 +16,11 @@ module type SIMPLEFIELD = sig
 end
 
 type field =
-    F : 'a typ * (module SIMPLEFIELD with type t = 'a) * 'a -> field
+    F : 'a typ * (module T with type t = 'a) * 'a -> field
 type t = field
 
 module type FIELD = sig
-  include SIMPLEFIELD
+  include T
   val create : t -> field
   val find : 'a typ -> field -> 'a option
   val parse : int -> string -> field option
@@ -102,16 +102,17 @@ let field_of_sexp sexp =
 
 type _ typ += Account : string typ
 
-module rec SimpleAccount : SIMPLEFIELD with type t = string = struct
-  type t = string [@@deriving sexp]
-  let pp = Format.pp_print_string
-  let tag = 1
-  let name = "Account"
-end
+module Account = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 1
+    let name = "Account"
+  end
 
-and Account : FIELD with type t = string = struct
-  include SimpleAccount
-  let create v = (F (Account, (module SimpleAccount), v))
+  include T
+
+  let create v = (F (Account, (module T), v))
 
   let eq :
     type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
@@ -127,7 +128,7 @@ and Account : FIELD with type t = string = struct
 
   let parse tag' v =
     if tag = tag' then
-      Some (F (Account, (module SimpleAccount), v))
+      Some (F (Account, (module T), v))
     else None
 end
 
@@ -135,16 +136,16 @@ let () = register_field (module Account)
 
 type _ typ += MsgType : Fixtypes.MsgType.t typ
 
-module rec SimpleMsgType : SIMPLEFIELD with type t = Fixtypes.MsgType.t = struct
-  type t = Fixtypes.MsgType.t [@@deriving sexp]
-  let pp = Fixtypes.MsgType.pp
-  let tag = 35
-  let name = "MsgType"
-end
+module MsgType = struct
+  module T = struct
+    type t = Fixtypes.MsgType.t [@@deriving sexp]
+    let pp = Fixtypes.MsgType.pp
+    let tag = 35
+    let name = "MsgType"
+  end
 
-and MsgType : FIELD with type t = Fixtypes.MsgType.t = struct
-  include SimpleMsgType
-  let create v = (F (MsgType, (module SimpleMsgType), v))
+  include T
+  let create v = (F (MsgType, (module T), v))
   let eq :
     type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
     match a, b with
@@ -159,7 +160,7 @@ and MsgType : FIELD with type t = Fixtypes.MsgType.t = struct
 
   let parse tag' v =
     if tag = tag' then
-      Some (F (MsgType, (module SimpleMsgType), Fixtypes.MsgType.parse_exn v))
+      Some (F (MsgType, (module T), Fixtypes.MsgType.parse_exn v))
     else None
 end
 
@@ -167,16 +168,16 @@ let () = register_field (module MsgType)
 
 type _ typ += CheckSum : string typ
 
-module rec SimpleCheckSum : SIMPLEFIELD with type t = string = struct
-  type t = string [@@deriving sexp]
-  let pp = Format.pp_print_string
-  let tag = 10
-  let name = "CheckSum"
-end
+module CheckSum = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 10
+    let name = "CheckSum"
+  end
 
-and CheckSum : FIELD with type t = string = struct
-  include SimpleCheckSum
-  let create v = (F (CheckSum, (module SimpleCheckSum), v))
+  include T
+  let create v = (F (CheckSum, (module T), v))
   let eq :
     type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
     match a, b with
@@ -191,7 +192,7 @@ and CheckSum : FIELD with type t = string = struct
 
   let parse tag' v =
     if tag = tag' then
-      Some (F (CheckSum, (module SimpleCheckSum), v))
+      Some (F (CheckSum, (module T), v))
     else None
 end
 

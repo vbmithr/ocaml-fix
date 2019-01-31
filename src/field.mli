@@ -1,17 +1,9 @@
 open Rresult
 open Fixtypes
 
-module type SIMPLEFIELD = sig
-  type t [@@deriving sexp]
-  val pp : Format.formatter -> t -> unit
-  val tag : int
-  val name : string
-end
-
 type _ typ = ..
 
-type field =
-    F : 'a typ * (module SIMPLEFIELD with type t = 'a) * 'a -> field [@@deriving sexp]
+type field [@@deriving sexp]
 type t = field
 
 val pp : Format.formatter -> t -> unit
@@ -23,7 +15,10 @@ val find : 'a typ -> field -> 'a option
 val find_list : 'a typ -> field list -> 'a option
 
 module type FIELD = sig
-  include SIMPLEFIELD
+  type t [@@deriving sexp]
+  val pp : Format.formatter -> t -> unit
+  val tag : int
+  val name : string
   val create : t -> field
   val find : 'a typ -> field -> 'a option
   val parse : int -> string -> field option
