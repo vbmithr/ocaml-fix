@@ -9,9 +9,9 @@ open Deribit
 let src = Logs.Src.create "fix.deribit.shell"
 let uri = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
-let send_msg w =
+let send_msg =
   let count = ref 1 in
-  fun f ->
+  fun w f ->
     let msg = f !count in
     incr count ;
     Pipe.write w msg
@@ -67,7 +67,8 @@ let main cfg =
   Fix_async.with_connection ~version:Version.v44 uri >>= fun (r, w) ->
   Signal.(handle terminating ~f:(fun _ -> don't_wait_for @@ send_msg w logout));
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
-  send_msg w (fun _ -> logon ~secret ()) >>= fun () ->
+  let ts = Ptime_clock.now () in
+  send_msg w (logon ~username:key ~secret ~ts) >>= fun () ->
   Deferred.any [
     Pipe.iter r ~f:(on_server_msg w);
     (* Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd ~secret ~passphrase w); *)

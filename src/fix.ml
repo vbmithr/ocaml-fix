@@ -20,9 +20,11 @@ let heartbeat ~senderCompID ~targetCompID ~testReqID seqnum =
   let fields = Field.[
       SenderCompID.create senderCompID ;
       TargetCompID.create targetCompID ;
-      TestReqID.create testReqID ;
       MsgSeqNum.create seqnum ;
     ] in
+  let fields = match testReqID with
+    | "" -> fields
+    | s -> Field.TestReqID.create s :: fields in
   create ~typ:Fixtypes.MsgType.Heartbeat ~fields
 
 let pp ppf t =
@@ -63,12 +65,10 @@ let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
   let fields = String.Sub.cuts ~empty:false ~sep:(String.Sub.of_char '\x01') buf in
   Logs.debug ~src (fun m -> m "Read %a" String.Sub.pp buf) ;
-  Logs.debug ~src (fun m -> m "Found %d fields" (List.length fields)) ;
   let computed_chksum = compute_chksum fields in
   begin
     try
       ListLabels.fold_left fields ~init:[] ~f:begin fun a f ->
-        Logs.debug ~src (fun m -> m "Parsing %a" String.Sub.pp f) ;
         match Field.parse (String.Sub.to_string f) with
         | Error _ as e -> R.failwith_error_msg e
         | Ok None -> a

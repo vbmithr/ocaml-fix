@@ -1,4 +1,4 @@
-open Core
+open Sexplib.Std
 open Fix
 open Fixtypes
 open Field
@@ -28,23 +28,26 @@ let base_fields =
 
 let logon
     ?(cancel_on_disconnect=true)
-    ?(heartbeat=Time_ns.Span.of_int_sec 30)
+    ?(heartbeat=Ptime.Span.of_int_s 30)
+    ~username
     ~secret
-    () =
-  let ts =
-    let open Time_ns in
-    now () |>
-    to_int63_ns_since_epoch |>
-    fun v -> Int63.(v / of_int 1_000_000) in
+    ~ts
+    seqnum =
   let b64rand =
     B64.encode (Monocypher.Rand.gen 32 |> Bigstring.to_string) in
   let rawdata =
-    Format.asprintf "%a.%s" Int63.pp ts b64rand in
+    Format.asprintf "%.0f.%s" (Ptime.to_float_s ts *. 1e3) b64rand in
   let password =
     B64.encode Digestif.SHA256.(digest_string (rawdata ^ secret) |> to_raw_string) in
+  let heartbeat_s =
+    match Ptime.Span.to_int_s heartbeat with
+    | None -> invalid_arg "logon: invalid heartbeat"
+    | Some hb -> hb in
   let fields =
-    MsgSeqNum.create 1 ::
+    MsgSeqNum.create seqnum ::
     RawData.create rawdata ::
+    HeartBtInt.create heartbeat_s ::
+    Username.create username ::
     Password.create password ::
     CancelOnDisconnect.create cancel_on_disconnect ::
     base_fields in

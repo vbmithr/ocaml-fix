@@ -52,6 +52,7 @@ module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string
 module MsgType : FIELD with type t := Fixtypes.MsgType.t
 module MsgSeqNum : FIELD with type t := int
+module HeartBtInt : FIELD with type t := int
 module SenderCompID : FIELD with type t := string
 module TargetCompID : FIELD with type t := string
 module RawData : FIELD with type t := string

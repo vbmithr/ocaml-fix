@@ -347,6 +347,22 @@ module TestReqID = Make(struct
   end)
 let () = register_field (module TestReqID)
 
+type _ typ += HeartBtInt : int typ
+module HeartBtInt = Make(struct
+    type t = int [@@deriving sexp]
+    let t = HeartBtInt
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 108
+    let name = "HeartBtInt"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | HeartBtInt, HeartBtInt -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module HeartBtInt)
+
 (* type _ typ += Account                 : string typ
  * type _ typ += BeginSeqNo              : int typ
  * type _ typ += BeginString             : Version.t typ

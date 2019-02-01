@@ -2,6 +2,8 @@ open Sexplib
 
 module Ptime : sig
   include module type of Ptime
+    with type t = Ptime.t
+     and type span = Ptime.span
   val t_of_sexp : Sexp.t -> t
   val sexp_of_t : t -> Sexp.t
 end

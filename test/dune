@@ -3,4 +3,4 @@
  (public_name fix-deribit-shell)
  (package fix-deribit)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries logs-async-reporter fix-async deribit))
+ (libraries ptime.clock.os logs-async-reporter fix-async deribit))
