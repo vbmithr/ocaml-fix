@@ -38,9 +38,13 @@ end
 
 val register_field : (module FIELD) -> unit
 
-type _ typ += MsgType : Fixtypes.MsgType.t typ
 type _ typ += Account : string typ
 type _ typ += CheckSum : string typ
+type _ typ += MsgType : Fixtypes.MsgType.t typ
+type _ typ += Username : string typ
+type _ typ += Password : string typ
+type _ typ += Text : string typ
+type _ typ += TestReqID : string typ
 
 module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string
@@ -51,5 +55,7 @@ module TargetCompID : FIELD with type t := string
 module RawData : FIELD with type t := string
 module Username : FIELD with type t := string
 module Password : FIELD with type t := string
+module Text : FIELD with type t := string
+module TestReqID : FIELD with type t := string
 
 

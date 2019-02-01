@@ -398,8 +398,17 @@ module MsgType = struct
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-  let parse_exn s =
-    failwith "not implemented"
+  let parse_exn = function
+    | "0" -> Heartbeat
+    | "1" -> TestRequest
+    | "2" -> ResendRequest
+    | "3" -> Reject
+    | "4" -> SequenceReset
+    | "5" -> Logout
+    | "A" -> Logon
+    | "D" -> NewOrderSingle
+    | "V" -> MarketDataRequest
+    | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
 
   let print = function
     | Heartbeat         -> "0"

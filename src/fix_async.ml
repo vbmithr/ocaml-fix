@@ -1,9 +1,9 @@
 open Rresult
 open Core
 open Async
-open Fix
 
 open Bs_devkit
+open Fix
 
 let src = Logs.Src.create "fix.async"
 

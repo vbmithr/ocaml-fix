@@ -37,9 +37,12 @@ end
 
 let () = register_field (module CancelOnDisconnect)
 
+let senderCompID = "ocaml-fix"
+let targetCompID = "DERIBITSERVER"
+
 let base_fields =
-  [ SenderCompID.create "ocaml-fix" ;
-    TargetCompID.create "DERIBITSERVER" ]
+  [ SenderCompID.create senderCompID ;
+    TargetCompID.create targetCompID ]
 
 let logon
     ?(cancel_on_disconnect=true)
@@ -61,5 +64,15 @@ let logon
     MsgSeqNum.create 1 ::
     RawData.create rawdata ::
     Password.create password ::
+    CancelOnDisconnect.create cancel_on_disconnect ::
     base_fields in
   Fix.create ~typ:Fixtypes.MsgType.Logon ~fields
+
+let logout seqnum =
+  let fields =
+    MsgSeqNum.create seqnum ::
+    base_fields in
+  Fix.create ~typ:Fixtypes.MsgType.Logout ~fields
+
+let heartbeat testReqID seqnum =
+  Fix.heartbeat ~senderCompID ~targetCompID ~testReqID seqnum

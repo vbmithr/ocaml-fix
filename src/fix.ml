@@ -7,12 +7,23 @@ module Fixtypes = Fixtypes
 
 open Fixtypes
 
+let src = Logs.Src.create "fix.core"
+
 type t = {
   typ : MsgType.t ;
   fields : Field.field list ;
 } [@@deriving sexp]
 
 let create ~typ ~fields = { typ ; fields }
+
+let heartbeat ~senderCompID ~targetCompID ~testReqID seqnum =
+  let fields = Field.[
+      SenderCompID.create senderCompID ;
+      TargetCompID.create targetCompID ;
+      TestReqID.create testReqID ;
+      MsgSeqNum.create seqnum ;
+    ] in
+  create ~typ:Fixtypes.MsgType.Heartbeat ~fields
 
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
@@ -50,15 +61,20 @@ let compute_chksum fields =
 
 let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
-  let fields = String.Sub.cuts ~sep:(String.Sub.of_char '\x01') buf in
+  let fields = String.Sub.cuts ~empty:false ~sep:(String.Sub.of_char '\x01') buf in
+  Logs.debug ~src (fun m -> m "Read %a" String.Sub.pp buf) ;
+  Logs.debug ~src (fun m -> m "Found %d fields" (List.length fields)) ;
   let computed_chksum = compute_chksum fields in
   begin
     try
       ListLabels.fold_left fields ~init:[] ~f:begin fun a f ->
+        Logs.debug ~src (fun m -> m "Parsing %a" String.Sub.pp f) ;
         match Field.parse (String.Sub.to_string f) with
         | Error _ as e -> R.failwith_error_msg e
         | Ok None -> a
-        | Ok (Some v) -> v :: a
+        | Ok (Some v) ->
+          Logs.debug ~src (fun m -> m "Parsed %a" Field.pp v) ;
+          v :: a
       end |> R.ok
     with Failure msg -> R.error_msg msg
   end |> function

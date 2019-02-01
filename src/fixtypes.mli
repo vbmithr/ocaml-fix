@@ -1,3 +1,17 @@
+open Sexplib
+
+module Ptime : sig
+  include module type of Ptime
+  val t_of_sexp : Sexp.t -> t
+  val sexp_of_t : t -> Sexp.t
+end
+
+module UTCTimestamp : sig
+  val parse : string -> Ptime.t option
+  val parse_exn : string -> Ptime.t
+  val pp : Format.formatter -> Ptime.t -> unit
+end
+
 module YesOrNo : sig
   val parse : string -> bool option
   val parse_exn : string -> bool

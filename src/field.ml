@@ -32,7 +32,7 @@ module SMap = Map.Make(String)
 
 let parse_raw str =
   match String.cut ~sep:"=" str with
-  | None -> R.error_msg "Missing '='"
+  | None -> R.error_msgf "Missing '=' in '%s'" str
   | Some (tag, value) ->
     match int_of_string_opt tag with
     | None -> R.error_msg "Tag is not an int value"
@@ -136,6 +136,106 @@ end
 
 let () = register_field (module Account)
 
+type _ typ += BeginString : string typ
+
+module BeginString = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 8
+    let name = "BeginString"
+  end
+
+  include T
+
+  let create v = (F (BeginString, (module T), v))
+
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | BeginString, BeginString -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (BeginString, (module T), v))
+    else None
+end
+
+let () = register_field (module BeginString)
+
+type _ typ += BodyLength : string typ
+
+module BodyLength = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 9
+    let name = "BodyLength"
+  end
+
+  include T
+
+  let create v = (F (BodyLength, (module T), v))
+
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | BodyLength, BodyLength -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (BodyLength, (module T), v))
+    else None
+end
+
+let () = register_field (module BodyLength)
+
+type _ typ += CheckSum : string typ
+
+module CheckSum = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 10
+    let name = "CheckSum"
+  end
+
+  include T
+  let create v = (F (CheckSum, (module T), v))
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | CheckSum, CheckSum -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (CheckSum, (module T), v))
+    else None
+end
+
+let () = register_field (module CheckSum)
+
 type _ typ += MsgType : Fixtypes.MsgType.t typ
 
 module MsgType = struct
@@ -168,22 +268,22 @@ end
 
 let () = register_field (module MsgType)
 
-type _ typ += CheckSum : string typ
+type _ typ += SendingTime : Ptime.t typ
 
-module CheckSum = struct
+module SendingTime = struct
   module T = struct
-    type t = string [@@deriving sexp]
-    let pp = Format.pp_print_string
-    let tag = 10
-    let name = "CheckSum"
+    type t = Ptime.t [@@deriving sexp]
+    let pp = Fixtypes.UTCTimestamp.pp
+    let tag = 52
+    let name = "SendingTime"
   end
 
   include T
-  let create v = (F (CheckSum, (module T), v))
+  let create v = (F (SendingTime, (module T), v))
   let eq :
     type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
     match a, b with
-    | CheckSum, CheckSum -> Some Eq
+    | SendingTime, SendingTime -> Some Eq
     | _ -> None
 
   let find :
@@ -194,11 +294,11 @@ module CheckSum = struct
 
   let parse tag' v =
     if tag = tag' then
-      Some (F (CheckSum, (module T), v))
+      Some (F (SendingTime, (module T), Fixtypes.UTCTimestamp.parse_exn v))
     else None
 end
 
-let () = register_field (module MsgType)
+let () = register_field (module SendingTime)
 
 type _ typ += SenderCompID : string typ
 
@@ -403,6 +503,74 @@ module Password = struct
 end
 
 let () = register_field (module Password)
+
+type _ typ += Text : string typ
+
+module Text = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 58
+    let name = "Text"
+  end
+
+  include T
+
+  let create v = (F (Text, (module T), v))
+
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | Text, Text -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (Text, (module T), v))
+    else None
+end
+
+let () = register_field (module Text)
+
+type _ typ += TestReqID : string typ
+
+module TestReqID = struct
+  module T = struct
+    type t = string [@@deriving sexp]
+    let pp = Format.pp_print_string
+    let tag = 112
+    let name = "TestReqID"
+  end
+
+  include T
+
+  let create v = (F (TestReqID, (module T), v))
+
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | TestReqID, TestReqID -> Some Eq
+    | _ -> None
+
+  let find :
+    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
+    match eq typ typ' with
+    | None -> None
+    | Some Eq -> Some v
+
+  let parse tag' v =
+    if tag = tag' then
+      Some (F (TestReqID, (module T), v))
+    else None
+end
+
+let () = register_field (module TestReqID)
 
 (* type _ typ += Account                 : string typ
  * type _ typ += BeginSeqNo              : int typ
