@@ -4,37 +4,19 @@ open Fixtypes
 open Field
 
 type _ typ += CancelOnDisconnect : bool typ
-
-module CancelOnDisconnect = struct
-  module T = struct
+module CancelOnDisconnect = Make(struct
     type t = bool [@@deriving sexp]
+    let t = CancelOnDisconnect
     let pp = YesOrNo.pp
+    let parse = YesOrNo.parse
     let tag = 9001
     let name = "CancelOnDisconnect"
-  end
-
-  include T
-
-  let create v = create CancelOnDisconnect (module T) v
-
   let eq :
     type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
     match a, b with
     | CancelOnDisconnect, CancelOnDisconnect -> Some Eq
     | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (Field.F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (CancelOnDisconnect, (module T), YesOrNo.parse_exn v))
-    else None
-end
-
+end)
 let () = register_field (module CancelOnDisconnect)
 
 let senderCompID = "ocaml-fix"

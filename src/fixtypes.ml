@@ -57,6 +57,11 @@ module UTCTimestamp = struct
   let parse str =
     Tyre.exec re str
 
+  let parse_opt str =
+    match parse str with
+    | Ok v -> v
+    | _ -> None
+
   let parse_exn str =
     let open R in
     failwith_error_msg @@
@@ -410,6 +415,9 @@ module MsgType = struct
     | "D" -> NewOrderSingle
     | "V" -> MarketDataRequest
     | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
+
+  let parse s =
+    try Some (parse_exn s) with _ -> None
 
   let print = function
     | Heartbeat         -> "0"

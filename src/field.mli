@@ -7,9 +7,12 @@ type _ typ = ..
 
 module type T = sig
   type t [@@deriving sexp]
+  val t : t typ
   val pp : Format.formatter -> t -> unit
   val tag : int
   val name : string
+  val eq : 'a typ -> 'b typ -> ('a, 'b) eq option
+  val parse : string -> t option
 end
 
 type field =
@@ -27,16 +30,15 @@ val find : 'a typ -> field -> 'a option
 val find_list : 'a typ -> field list -> 'a option
 
 module type FIELD = sig
-  type t [@@deriving sexp]
-  val pp : Format.formatter -> t -> unit
-  val tag : int
-  val name : string
+  include T
   val create : t -> field
   val find : 'a typ -> field -> 'a option
   val parse : int -> string -> field option
 end
 
 val register_field : (module FIELD) -> unit
+
+module Make (T : T) : FIELD with type t = T.t
 
 type _ typ += Account : string typ
 type _ typ += CheckSum : string typ

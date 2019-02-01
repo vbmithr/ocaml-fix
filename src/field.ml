@@ -10,9 +10,12 @@ type (_,_) eq = Eq : ('a,'a) eq
 
 module type T = sig
   type t [@@deriving sexp]
+  val t : t typ
   val pp : Format.formatter -> t -> unit
   val tag : int
   val name : string
+  val eq : 'a typ -> 'b typ -> ('a, 'b) eq option
+  val parse : string -> t option
 end
 
 type field =
@@ -95,32 +98,17 @@ let field_of_sexp sexp =
   match parse_raw (string_of_sexp sexp) with
   | Error _ as e -> R.failwith_error_msg e
   | Ok (tag, v) ->
-  SMap.fold begin fun _ m a ->
-    let module F = (val m : FIELD) in
-    F.parse tag v
-  end !field_mods None |> function
-  | None -> failwith "field_of_sexp"
-  | Some v -> v
+    SMap.fold begin fun _ m a ->
+      let module F = (val m : FIELD) in
+      F.parse tag v
+    end !field_mods None |> function
+    | None -> failwith "field_of_sexp"
+    | Some v -> v
 
-type _ typ += Account : string typ
-
-module Account = struct
-  module T = struct
-    type t = string [@@deriving sexp]
-    let pp = Format.pp_print_string
-    let tag = 1
-    let name = "Account"
-  end
-
+module Make (T : T) = struct
   include T
 
-  let create v = (F (Account, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | Account, Account -> Some Eq
-    | _ -> None
+  let create v = (F (T.t, (module T), v))
 
   let find :
     type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
@@ -129,447 +117,233 @@ module Account = struct
     | Some Eq -> Some v
 
   let parse tag' v =
-    if tag = tag' then
-      Some (F (Account, (module T), v))
-    else None
+    match T.parse v with
+    | Some v when tag' = tag -> Some (F (T.t, (module T), v))
+    | _ -> None
 end
 
+type _ typ += Account : string typ
+module Account = Make(struct
+    type t = string [@@deriving sexp]
+    let t = Account
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 1
+    let name = "Account"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Account, Account -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module Account)
 
 type _ typ += BeginString : string typ
-
-module BeginString = struct
-  module T = struct
+module BeginString = Make(struct
     type t = string [@@deriving sexp]
+    let t = BeginString
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 8
     let name = "BeginString"
-  end
-
-  include T
-
-  let create v = (F (BeginString, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | BeginString, BeginString -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (BeginString, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | BeginString, BeginString -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module BeginString)
 
 type _ typ += BodyLength : string typ
-
-module BodyLength = struct
-  module T = struct
+module BodyLength = Make(struct
     type t = string [@@deriving sexp]
+    let t = BodyLength
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 9
     let name = "BodyLength"
-  end
-
-  include T
-
-  let create v = (F (BodyLength, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | BodyLength, BodyLength -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (BodyLength, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | BodyLength, BodyLength -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module BodyLength)
 
 type _ typ += CheckSum : string typ
-
-module CheckSum = struct
-  module T = struct
+module CheckSum = Make(struct
     type t = string [@@deriving sexp]
+    let t = CheckSum
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 10
     let name = "CheckSum"
-  end
-
-  include T
-  let create v = (F (CheckSum, (module T), v))
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | CheckSum, CheckSum -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (CheckSum, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CheckSum, CheckSum -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module CheckSum)
 
 type _ typ += MsgType : Fixtypes.MsgType.t typ
-
-module MsgType = struct
-  module T = struct
+module MsgType = Make(struct
     type t = Fixtypes.MsgType.t [@@deriving sexp]
+    let t = MsgType
     let pp = Fixtypes.MsgType.pp
     let tag = 35
+    let parse = Fixtypes.MsgType.parse
     let name = "MsgType"
-  end
-
-  include T
-  let create v = (F (MsgType, (module T), v))
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | MsgType, MsgType -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (MsgType, (module T), Fixtypes.MsgType.parse_exn v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MsgType, MsgType -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module MsgType)
 
 type _ typ += SendingTime : Ptime.t typ
-
-module SendingTime = struct
-  module T = struct
+module SendingTime = Make(struct
     type t = Ptime.t [@@deriving sexp]
+    let t = SendingTime
     let pp = Fixtypes.UTCTimestamp.pp
+    let parse = Fixtypes.UTCTimestamp.parse_opt
     let tag = 52
     let name = "SendingTime"
-  end
-
-  include T
-  let create v = (F (SendingTime, (module T), v))
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | SendingTime, SendingTime -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (SendingTime, (module T), Fixtypes.UTCTimestamp.parse_exn v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SendingTime, SendingTime -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module SendingTime)
 
 type _ typ += SenderCompID : string typ
-
-module SenderCompID = struct
-  module T = struct
+module SenderCompID = Make(struct
     type t = string [@@deriving sexp]
+    let t = SenderCompID
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 49
     let name = "SenderCompID"
-  end
-
-  include T
-
-  let create v = (F (SenderCompID, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | SenderCompID, SenderCompID -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (SenderCompID, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SenderCompID, SenderCompID -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module SenderCompID)
 
 type _ typ += TargetCompID : string typ
-
-module TargetCompID = struct
-  module T = struct
+module TargetCompID = Make(struct
     type t = string [@@deriving sexp]
+    let t = TargetCompID
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 56
     let name = "TargetCompID"
-  end
-
-  include T
-
-  let create v = (F (TargetCompID, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | TargetCompID, TargetCompID -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (TargetCompID, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TargetCompID, TargetCompID -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module TargetCompID)
 
 type _ typ += MsgSeqNum : int typ
-
-module MsgSeqNum = struct
-  module T = struct
+module MsgSeqNum = Make(struct
     type t = int [@@deriving sexp]
+    let t = MsgSeqNum
     let pp = Format.pp_print_int
+    let parse = int_of_string_opt
     let tag = 34
     let name = "MsgSeqNum"
-  end
-
-  include T
-
-  let create v = (F (MsgSeqNum, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | MsgSeqNum, MsgSeqNum -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (MsgSeqNum, (module T), int_of_string v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MsgSeqNum, MsgSeqNum -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module MsgSeqNum)
 
 type _ typ += RawData : string typ
-
-module RawData = struct
-  module T = struct
+module RawData = Make(struct
     type t = string [@@deriving sexp]
+    let t = RawData
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 96
     let name = "RawData"
-  end
-
-  include T
-
-  let create v = (F (RawData, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | RawData, RawData -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (RawData, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | RawData, RawData -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module RawData)
 
 type _ typ += Username : string typ
-
-module Username = struct
-  module T = struct
+module Username = Make(struct
     type t = string [@@deriving sexp]
+    let t = Username
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 553
     let name = "Username"
-  end
-
-  include T
-
-  let create v = (F (Username, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | Username, Username -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (Username, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Username, Username -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module Username)
 
 type _ typ += Password : string typ
-
-module Password = struct
-  module T = struct
+module Password = Make(struct
     type t = string [@@deriving sexp]
+    let t = Password
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 554
     let name = "Password"
-  end
-
-  include T
-
-  let create v = (F (Password, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | Password, Password -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (Password, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Password, Password -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module Password)
 
 type _ typ += Text : string typ
-
-module Text = struct
-  module T = struct
+module Text = Make(struct
     type t = string [@@deriving sexp]
+    let t = Text
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 58
     let name = "Text"
-  end
-
-  include T
-
-  let create v = (F (Text, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | Text, Text -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (Text, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Text, Text -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module Text)
 
 type _ typ += TestReqID : string typ
-
-module TestReqID = struct
-  module T = struct
+module TestReqID = Make(struct
     type t = string [@@deriving sexp]
+    let t = TestReqID
     let pp = Format.pp_print_string
+    let parse s = Some s
     let tag = 112
     let name = "TestReqID"
-  end
-
-  include T
-
-  let create v = (F (TestReqID, (module T), v))
-
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | TestReqID, TestReqID -> Some Eq
-    | _ -> None
-
-  let find :
-    type a. a typ -> field -> a option = fun typ (F (typ', _, v)) ->
-    match eq typ typ' with
-    | None -> None
-    | Some Eq -> Some v
-
-  let parse tag' v =
-    if tag = tag' then
-      Some (F (TestReqID, (module T), v))
-    else None
-end
-
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TestReqID, TestReqID -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module TestReqID)
 
 (* type _ typ += Account                 : string typ

@@ -8,6 +8,7 @@ end
 
 module UTCTimestamp : sig
   val parse : string -> (Ptime.t option, Ptime.t option Tyre.error) result
+  val parse_opt : string -> Ptime.t option
   val parse_exn : string -> Ptime.t
   val pp : Format.formatter -> Ptime.t -> unit
 end
@@ -135,6 +136,7 @@ module MsgType : sig
     | MarketDataRequest
   [@@deriving sexp]
 
+  val parse : string -> t option
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
 end
