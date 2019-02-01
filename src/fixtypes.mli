@@ -28,6 +28,8 @@ module HandlInst : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module OrdStatus : sig
@@ -36,6 +38,8 @@ module OrdStatus : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module OrdType : sig
@@ -44,6 +48,8 @@ module OrdType : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module EncryptMethod : sig
@@ -58,6 +64,8 @@ module EncryptMethod : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module SubscriptionRequestType : sig
@@ -68,6 +76,8 @@ module SubscriptionRequestType : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module MdUpdateType : sig
@@ -77,6 +87,8 @@ module MdUpdateType : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module MdEntryType : sig
@@ -87,6 +99,8 @@ module MdEntryType : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module Side : sig
@@ -96,6 +110,8 @@ module Side : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module TimeInForce : sig
@@ -106,6 +122,8 @@ module TimeInForce : sig
 
   val parse : string -> t option
   val print : t -> string
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
 
 module Version : sig
@@ -139,4 +157,5 @@ module MsgType : sig
   val parse : string -> t option
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
 end
