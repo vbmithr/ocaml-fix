@@ -3,7 +3,7 @@
  (public_name fix)
  (modules fixtypes field fix)
  (preprocess (pps ppx_sexp_conv))
- (libraries rresult astring ptime logs sexplib))
+ (libraries rresult astring ptime logs sexplib tyre))
 
 (library
  (name fix_async)

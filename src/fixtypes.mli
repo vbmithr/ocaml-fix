@@ -7,7 +7,7 @@ module Ptime : sig
 end
 
 module UTCTimestamp : sig
-  val parse : string -> Ptime.t option
+  val parse : string -> (Ptime.t option, Ptime.t option Tyre.error) result
   val parse_exn : string -> Ptime.t
   val pp : Format.formatter -> Ptime.t -> unit
 end

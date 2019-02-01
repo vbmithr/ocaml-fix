@@ -1,3 +1,4 @@
+open Rresult
 open Astring
 open Sexplib.Std
 
@@ -15,39 +16,9 @@ module Ptime = struct
 end
 
 module UTCTimestamp = struct
-  let parse_date s =
-    let y = String.sub_with_range s ~first:0 ~len:4 in
-    let m = String.sub_with_range s ~first:4 ~len:2 in
-    let d = String.sub_with_range s ~first:6 ~len:2 in
-    String.(int_of_string @@ Sub.to_string y,
-            int_of_string @@ Sub.to_string m,
-            int_of_string @@ Sub.to_string d)
-
-  let parse str =
-    let date = ref "" in
-    let h = ref 0 in
-    let m = ref 0 in
-    let s = ref 0 in
-    let ms = ref 0 in
-    begin
-      try Scanf.sscanf str "%s-%d:%d:%d" begin fun dd hh mm ss ->
-          date := dd ;
-          h := hh ;
-          m := mm ;
-          s := ss
-        end
-      with  _ ->
-        Scanf.sscanf str "%s-%d:%d:%d.%d" begin fun dd hh mm ss mmss ->
-          date := dd ;
-          h := hh ;
-          m := mm ;
-          s := ss ;
-          ms := mmss ;
-        end
-    end ;
-    let date = parse_date !date in
-    match Ptime.of_date_time (date, ((!h, !m, !s), 0)),
-          Ptime.Span.(of_float_s (float_of_int !ms /. 1e3))
+  let parse ?(ms=0) y m d h mm s =
+    match Ptime.of_date_time ((y, m, d), ((h, mm, s), 0)),
+          Ptime.Span.of_d_ps (0, Int64.(mul 1_000_000_000L (of_int ms)))
     with
     | Some ts, Some frac -> begin
         match Ptime.(add_span ts frac) with
@@ -56,14 +27,44 @@ module UTCTimestamp = struct
       end
     | _ -> None
 
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "UTCTimestamp.parse"
-    | Some v -> v
-
   let pp ppf t =
     let ((y, m, d), ((hh, mm, ss), _)) = Ptime.to_date_time t in
-    Format.fprintf ppf "%d%d%d-%d:%d:%d" y m d hh mm ss
+    let _, ps = Ptime.(Span.to_d_ps (frac_s t)) in
+    match ps with
+    | 0L -> Format.fprintf ppf "%d%02d%02d-%02d:%02d:%02d" y m d hh mm ss
+    | _ ->
+      Format.fprintf ppf "%d%02d%02d-%02d:%02d:%02d.%03Ld" y m d hh mm ss
+        Int64.(div ps 1_000_000_000L)
+
+  let re =
+    let open Tyre in
+    let dash = char '-' in
+    let colon = char ':' in
+    let dot = char '.' in
+    let ms = dot *> int in
+    let ci = conv int_of_string string_of_int in
+    compile @@ conv
+      (fun ((((((y, m), d), h), mm), s), ms) -> parse y m d h mm s ?ms)
+      (function
+        | None -> ((((((0, 0), 0), 0), 0), 0), None)
+        | Some t ->
+          match Ptime.to_date_time t
+          with ((y, m, d), ((h, mm, s), _)) ->
+            ((((((y, m), d), h), mm), s), None))
+      (ci (pcre "\\d{4}") <&> ci (pcre "\\d{2}") <&> ci (pcre "\\d{2}") <*
+       dash <&> int <* colon <&> int <* colon <&> int <&> (opt ms))
+
+  let parse str =
+    Tyre.exec re str
+
+  let parse_exn str =
+    let open R in
+    failwith_error_msg @@
+    reword_error
+      (fun e -> msg (Format.asprintf "%a" Tyre.pp_error e))
+      (parse str) |> function
+    | None -> failwith "invalid timestamp"
+    | Some ts -> ts
 end
 
 module HandlInst = struct
