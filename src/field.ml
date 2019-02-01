@@ -77,9 +77,10 @@ let parse str =
     None
   with Parsed_ok t -> Some t
 
-let pp ppf (F (_, m, a)) =
+let pp ppf (F (_, m, v)) =
   let module F = (val m) in
-  Format.fprintf ppf "@[<v 1>%s: %a@]" F.name F.pp a
+  Format.fprintf ppf "@[<v 1>%s: %a@]"
+    F.name Sexplib.Sexp.pp (F.sexp_of_t v)
 
 let print (F (typ, m, v)) =
   let module F = (val m) in
