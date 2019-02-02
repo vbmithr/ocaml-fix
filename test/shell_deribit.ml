@@ -31,10 +31,10 @@ let rec on_server_msg w msg = match msg.Fix.typ with
   | ResendRequest -> Deferred.unit
   | _ -> Deferred.unit
 
-let rec heartbeat_loop w period =
-  Clock_ns.(after (Time_ns.Span.of_int_sec period)) >>= fun () ->
-  send_msg w (heartbeat "") >>= fun () ->
-  heartbeat_loop w period
+(* let rec heartbeat_loop w period =
+ *   Clock_ns.(after (Time_ns.Span.of_int_sec period)) >>= fun () ->
+ *   send_msg w (heartbeat "") >>= fun () ->
+ *   heartbeat_loop w period *)
 
 (* let on_client_cmd ~secret ~passphrase w words =
  *   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
@@ -64,15 +64,17 @@ let main cfg =
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
   let { Cfg.key; secret; passphrase } =
     List.Assoc.find_exn ~equal:String.equal cfg "DERIBIT" in
-  Fix_async.with_connection ~version:Version.v44 uri >>= fun (r, w) ->
+  let ts = Ptime_clock.now () in
+  let logon_fields =
+    logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
+  Fix_async.with_connection_ez
+    ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (r, w) ->
   Signal.(handle terminating ~f:(fun _ -> don't_wait_for @@ send_msg w logout));
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
-  let ts = Ptime_clock.now () in
-  send_msg w (logon ~username:key ~secret ~ts) >>= fun () ->
   Deferred.any [
     Pipe.iter r ~f:(on_server_msg w);
     (* Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd ~secret ~passphrase w); *)
-    heartbeat_loop w 30;
+    (* heartbeat_loop w 30; *)
     Pipe.closed w
   ] >>= fun () ->
   send_msg w logout

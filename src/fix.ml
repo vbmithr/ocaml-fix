@@ -11,21 +11,21 @@ let src = Logs.Src.create "fix.core"
 
 type t = {
   typ : MsgType.t ;
+  sid : string ;
+  tid : string ;
+  seqnum : int ;
+  ts : Ptime.t option ;
   fields : Field.field list ;
 } [@@deriving sexp]
 
-let create ~typ ~fields = { typ ; fields }
+let create ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=[]) typ =
+  { typ ; sid ; tid ; seqnum ; ts ; fields }
 
-let heartbeat ~senderCompID ~targetCompID ~testReqID seqnum =
-  let fields = Field.[
-      SenderCompID.create senderCompID ;
-      TargetCompID.create targetCompID ;
-      MsgSeqNum.create seqnum ;
-    ] in
+let heartbeat ?ts ?sid ?tid ?seqnum ?(testReqID="") () =
   let fields = match testReqID with
-    | "" -> fields
-    | s -> Field.TestReqID.create s :: fields in
-  create ~typ:Fixtypes.MsgType.Heartbeat ~fields
+    | "" -> []
+    | s -> [Field.TestReqID.create s] in
+  create ?ts ?sid ?tid ?seqnum ~fields Fixtypes.MsgType.Heartbeat
 
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
@@ -82,10 +82,18 @@ let read ?pos ?len buf =
   | Ok [] -> R.error_msg "empty message"
   | Ok (chksum :: fields) ->
     match Field.(CheckSum.find CheckSum chksum),
-          Field.find_list Field.MsgType fields with
-    | None, _ -> R.error_msg "missing checksum"
-    | Some _, None -> R.error_msg "missing MsgType"
-    | Some chksum, Some typ ->
-      if computed_chksum <> (int_of_string chksum) then
-        R.error_msg "bad checksum"
-      else R.ok (create ~typ ~fields)
+          Field.find_list Field.MsgType fields,
+          Field.find_list Field.MsgSeqNum fields,
+          Field.find_list Field.SenderCompID fields,
+          Field.find_list Field.TargetCompID fields
+    with
+    | None, _, _, _, _ -> R.error_msg "missing checksum"
+    | Some _, None, _, _, _ -> R.error_msg "missing MsgType"
+    | Some _, Some _, None, _, _ -> R.error_msg "missing MsgSeqNum"
+    | Some _, Some _, Some _, None, _ -> R.error_msg "missing SenderCompID"
+    | Some _, Some _, Some _, Some _, None -> R.error_msg "missing targetCompID"
+    | Some ck, Some typ, Some seqnum, Some sid, Some tid ->
+      if computed_chksum <> (int_of_string ck) then R.error_msg "bad checksum"
+      else
+        let ts = Field.find_list Field.SendingTime fields in
+        R.ok (create ?ts ~fields ~seqnum ~sid ~tid typ)

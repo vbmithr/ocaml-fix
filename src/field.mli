@@ -43,12 +43,16 @@ module Make (T : T) : FIELD with type t = T.t
 type _ typ += Account : string typ
 type _ typ += CheckSum : string typ
 type _ typ += MsgType : Fixtypes.MsgType.t typ
+type _ typ += MsgSeqNum : int typ
+type _ typ += SenderCompID : string typ
+type _ typ += TargetCompID : string typ
 type _ typ += Username : string typ
 type _ typ += Password : string typ
 type _ typ += Text : string typ
 type _ typ += TestReqID : string typ
 type _ typ += BeginSeqNo : int typ
 type _ typ += EndSeqNo : int typ
+type _ typ += SendingTime : Ptime.t typ
 
 module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string

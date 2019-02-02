@@ -1,11 +1,13 @@
-val logon :
+open Fix
+
+val sid : string
+val tid : string
+
+val logon_fields :
   ?cancel_on_disconnect:bool ->
-  ?heartbeat:Ptime.Span.t ->
   username:string ->
   secret:string ->
-  ts:Ptime.t ->
-  int ->
-  Fix.t
+  ts:Ptime.t -> Field.t list
 
 val logout : int -> Fix.t
 val heartbeat : string -> int -> Fix.t
