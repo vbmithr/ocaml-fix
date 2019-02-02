@@ -161,3 +161,28 @@ module MsgType : sig
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
 end
+
+module SessionRejectReason : sig
+  type t =
+    | InvalidTag
+    | MissingTag
+    | TagNotDefinedForThisMessage
+    | UndefinedTag
+    | TagWithoutValue
+    | TagValueIncorrect
+    | IncorrectData
+    | DecryptionProblem
+    | SignatureProblem
+    | CompIDProblem
+    | SendingTimeAccuracy
+    | InvalidMsgType
+    | XMLValidationError
+    | InvalidVersion
+    | Other
+  [@@deriving sexp]
+
+  val parse : string -> t option
+  val parse_exn : string -> t
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
+end

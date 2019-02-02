@@ -203,6 +203,22 @@ module MsgType = Make(struct
   end)
 let () = register_field (module MsgType)
 
+type _ typ += RefMsgType : Fixtypes.MsgType.t typ
+module RefMsgType = Make(struct
+    type t = Fixtypes.MsgType.t [@@deriving sexp]
+    let t = RefMsgType
+    let pp = Fixtypes.MsgType.pp
+    let tag = 372
+    let parse = Fixtypes.MsgType.parse
+    let name = "RefMsgType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | RefMsgType, RefMsgType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module RefMsgType)
+
 type _ typ += SendingTime : Ptime.t typ
 module SendingTime = Make(struct
     type t = Ptime.t [@@deriving sexp]
@@ -266,6 +282,38 @@ module MsgSeqNum = Make(struct
       | _ -> None
   end)
 let () = register_field (module MsgSeqNum)
+
+type _ typ += RefSeqNum : int typ
+module RefSeqNum = Make(struct
+    type t = int [@@deriving sexp]
+    let t = RefSeqNum
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 45
+    let name = "RefSeqNum"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | RefSeqNum, RefSeqNum -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module RefSeqNum)
+
+type _ typ += SessionRejectReason : int typ
+module SessionRejectReason = Make(struct
+    type t = int [@@deriving sexp]
+    let t = SessionRejectReason
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 373
+    let name = "SessionRejectReason"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SessionRejectReason, SessionRejectReason -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SessionRejectReason)
 
 type _ typ += RawData : string typ
 module RawData = Make(struct
@@ -362,6 +410,38 @@ module HeartBtInt = Make(struct
       | _ -> None
   end)
 let () = register_field (module HeartBtInt)
+
+type _ typ += BeginSeqNo : int typ
+module BeginSeqNo = Make(struct
+    type t = int [@@deriving sexp]
+    let t = BeginSeqNo
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 7
+    let name = "BeginSeqNo"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | BeginSeqNo, BeginSeqNo -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module BeginSeqNo)
+
+type _ typ += EndSeqNo : int typ
+module EndSeqNo = Make(struct
+    type t = int [@@deriving sexp]
+    let t = EndSeqNo
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 16
+    let name = "EndSeqNo"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | EndSeqNo, EndSeqNo -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module EndSeqNo)
 
 (* type _ typ += Account                 : string typ
  * type _ typ += BeginSeqNo              : int typ

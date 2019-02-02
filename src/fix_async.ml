@@ -57,3 +57,100 @@ let with_connection
       Deferred.unit
     end;
   return (client_read, client_write)
+
+module BoundedIntMap : sig
+  type 'a t
+
+  val empty : int -> 'a t
+  val add : 'a t -> key:int -> data:'a -> 'a t
+  val find : 'a t -> int -> 'a option
+end = struct
+  type 'a t = {
+    m : 'a Int.Map.t ;
+    length : int ;
+  }
+
+  let empty length = { m = Int.Map.empty ; length }
+
+  let add ({ m ; length } as t) ~key ~data =
+    match Int.Map.add m ~key ~data with
+    | `Duplicate -> t
+    | `Ok m ->
+      if Int.Map.length m < length then
+        { t with m }
+      else
+        let m = Int.Map.(remove m (fst (min_elt_exn m))) in
+        { t with m }
+
+  let find { m ; _ } k = Int.Map.find m k
+end
+
+let send_msg history =
+  let count = ref 1 in
+  fun w msg ->
+    let seqnum = Field.MsgSeqNum.create !count in
+    let msg = { msg with fields = seqnum :: msg.fields } in
+    history := BoundedIntMap.add !history !count msg ;
+    incr count ;
+    Pipe.write w msg
+
+let with_connection_ez
+    ?tmpbuf
+    ?(history_size=10)
+    ?(heartbeat=Time_ns.Span.of_int_sec 30)
+    ?(logon_fields=[])
+    ~senderCompID
+    ~targetCompID
+    ~version uri =
+  let base_fields =
+    Field.[ SenderCompID.create senderCompID ;
+            TargetCompID.create targetCompID ] in
+  let logon =
+    let fields =
+      List.rev_append logon_fields
+        (Field.HeartBtInt.create
+           (Time_ns.Span.to_int_sec heartbeat) :: base_fields)
+    in
+    Fix.create ~typ:Fixtypes.MsgType.Logon ~fields in
+  let heartbeat testreqid =
+    let fields =
+      match testreqid with
+      | None -> base_fields
+      | Some s -> Field.TestReqID.create s :: base_fields
+    in
+    Fix.create ~typ:Fixtypes.MsgType.Heartbeat ~fields in
+  let reject ?reason ?test rsn =
+    let fields = base_fields in
+    Fix.create ~typ:Fixtypes.MsgType.Reject ~fields in
+  let history = ref (BoundedIntMap.empty history_size) in
+  let last_received = ref (Time_stamp_counter.now ()) in
+  let last_send     = ref (Time_stamp_counter.now ()) in
+  let s = send_msg history in
+  with_connection ?tmpbuf ~version uri >>= fun (r, w) ->
+  s w logon >>= fun () ->
+  let r = Pipe.filter_map' r ~f:begin fun m ->
+      last_received := Time_stamp_counter.now () ;
+      match m.typ with
+      | Heartbeat
+      | TestRequest ->
+        let treqid = Field.(find_list TestReqID m.fields) in
+        s w (heartbeat treqid) >>= fun () ->
+        return None
+      | ResendRequest ->
+        let bsn = Field.(find_list BeginSeqNo m.fields) in
+        let esn = Field.(find_list EndSeqNo m.fields) in
+        begin match bsn, esn with
+        | Some _, Some _ -> ()
+        | _ -> ()
+        end ;
+        return None
+      | _ -> return (Some m)
+    end in
+  let rr, ww = Pipe.create () in
+  don't_wait_for begin
+    Pipe.transfer rr w ~f:begin fun m ->
+      last_send := Time_stamp_counter.now () ;
+      m
+    end
+  end ;
+  return (r, ww)

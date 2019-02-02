@@ -433,3 +433,67 @@ module MsgType = struct
   let pp ppf t =
     Format.fprintf ppf "%s" (print t)
 end
+
+module SessionRejectReason = struct
+  type t =
+    | InvalidTag
+    | MissingTag
+    | TagNotDefinedForThisMessage
+    | UndefinedTag
+    | TagWithoutValue
+    | TagValueIncorrect
+    | IncorrectData
+    | DecryptionProblem
+    | SignatureProblem
+    | CompIDProblem
+    | SendingTimeAccuracy
+    | InvalidMsgType
+    | XMLValidationError
+    | InvalidVersion
+    | Other
+  [@@deriving sexp]
+
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+
+  let of_int_exn = function
+    | 0 -> InvalidTag
+    | 1 -> MissingTag
+    | 2 -> TagNotDefinedForThisMessage
+    | 3 -> UndefinedTag
+    | _ -> invalid_arg "SessionRejectReason.of_int"
+
+  let of_int i =
+    try Some (of_int_exn i) with _ -> None
+
+  let to_int = function
+    | InvalidTag -> 0
+    | MissingTag -> 1
+    | TagNotDefinedForThisMessage -> 2
+    | UndefinedTag -> 3
+    | TagWithoutValue -> 4
+    | TagValueIncorrect -> 5
+    | IncorrectData -> 6
+    | DecryptionProblem -> 7
+    | SignatureProblem -> 8
+    | CompIDProblem -> 9
+    | SendingTimeAccuracy -> 10
+    | InvalidMsgType -> 11
+    | XMLValidationError -> 12
+    | InvalidVersion -> 18
+    | Other -> 99
+
+  let parse s =
+    match int_of_string_opt s with
+    | None -> None
+    | Some i -> of_int i
+
+  let parse_exn s =
+    match parse s with
+    | Some v -> v
+    | None -> invalid_arg "SessionRejectReason.parse_exn"
+
+  let print t = string_of_int (to_int t)
+
+  let pp ppf t = Format.pp_print_int ppf (to_int t)
+end
