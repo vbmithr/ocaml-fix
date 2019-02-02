@@ -16,7 +16,8 @@ let with_connection
     let handle_chunk msgbuf ~pos ~len =
       if len > Bytes.length tmpbuf then
         failwith "Message bigger than tmpbuf" ;
-      Bigstring.To_bytes.blit msgbuf pos tmpbuf 0 len;
+      Bigstring.To_bytes.blito
+        ~src:msgbuf ~src_pos:pos ~src_len:len ~dst:tmpbuf () ;
       let msg_str =
         Bytes.unsafe_to_string
           ~no_mutation_while_string_reachable:tmpbuf in
@@ -38,7 +39,7 @@ let with_connection
       Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
       Fix.to_bytes ~version msg
     end ;
-    Reader.read_one_chunk_at_a_time r handle_chunk
+    Reader.read_one_chunk_at_a_time r ~handle_chunk
   in
   don't_wait_for begin
     addr_of_uri uri >>= fun addr ->
@@ -63,7 +64,7 @@ module BoundedIntMap : sig
 
   val empty : int -> 'a t
   val add : 'a t -> key:int -> data:'a -> 'a t
-  val find : 'a t -> int -> 'a option
+  (* val find : 'a t -> int -> 'a option *)
 end = struct
   type 'a t = {
     m : 'a Int.Map.t ;
@@ -82,16 +83,8 @@ end = struct
         let m = Int.Map.(remove m (fst (min_elt_exn m))) in
         { t with m }
 
-  let find { m ; _ } k = Int.Map.find m k
+  (* let find { m ; _ } k = Int.Map.find m k *)
 end
-
-let send_msg history =
-  let count = ref 1 in
-  fun w msg ->
-    let msg = { msg with seqnum = !count } in
-    history := BoundedIntMap.add !history !count msg ;
-    incr count ;
-    Pipe.write w msg
 
 let with_connection_ez
     ?tmpbuf
@@ -113,16 +106,22 @@ let with_connection_ez
   let history = ref (BoundedIntMap.empty history_size) in
   let last_received = ref (Time_stamp_counter.now ()) in
   let last_send     = ref (Time_stamp_counter.now ()) in
-  let s = send_msg history in
+  let count = ref 1 in
   with_connection ?tmpbuf ~version uri >>= fun (r, w) ->
-  s w logon >>= fun () ->
+  let s msg =
+    let msg = { msg with seqnum = !count } in
+    history := BoundedIntMap.add !history ~key:!count ~data:msg ;
+    incr count ;
+    last_send := Time_stamp_counter.now () ;
+    Pipe.write w msg in
+  s logon >>= fun () ->
   let r = Pipe.filter_map' r ~f:begin fun m ->
       last_received := Time_stamp_counter.now () ;
       match m.typ with
       | Heartbeat
       | TestRequest ->
         let testReqID = Field.(find_list TestReqID m.fields) in
-        s w (Fix.heartbeat ?testReqID ~sid ~tid ()) >>= fun () ->
+        s (Fix.heartbeat ?testReqID ~sid ~tid ()) >>= fun () ->
         return None
       | ResendRequest ->
         (* TODO implement *)
@@ -136,10 +135,5 @@ let with_connection_ez
       | _ -> return (Some m)
     end in
   let rr, ww = Pipe.create () in
-  don't_wait_for begin
-    Pipe.transfer rr w ~f:begin fun m ->
-      last_send := Time_stamp_counter.now () ;
-      m
-    end
-  end ;
+  don't_wait_for (Pipe.iter rr ~f:s) ;
   return (r, ww)

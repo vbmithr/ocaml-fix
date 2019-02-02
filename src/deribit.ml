@@ -38,9 +38,3 @@ let logon_fields
     Password.create password ;
     CancelOnDisconnect.create cancel_on_disconnect ;
   ]
-
-let logout seqnum =
-  Fix.create  ~sid ~tid ~seqnum Fixtypes.MsgType.Logout
-
-let heartbeat testReqID seqnum =
-  Fix.heartbeat ~sid ~tid ~testReqID ~seqnum ()

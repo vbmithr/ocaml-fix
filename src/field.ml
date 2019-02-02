@@ -82,11 +82,11 @@ let pp ppf (F (_, m, v)) =
   Format.fprintf ppf "@[<v 1>%s: %a@]"
     F.name Sexplib.Sexp.pp (F.sexp_of_t v)
 
-let print (F (typ, m, v)) =
+let print (F (_, m, v)) =
   let module F = (val m) in
   Format.asprintf "%d=%a" F.tag F.pp v
 
-let add_to_buffer buf (F (typ, m, v)) =
+let add_to_buffer buf (F (_, m, v)) =
   let module F = (val m) in
   let open Buffer in
   add_string buf (string_of_int F.tag) ;
@@ -101,7 +101,9 @@ let field_of_sexp sexp =
   | Ok (tag, v) ->
     SMap.fold begin fun _ m a ->
       let module F = (val m : FIELD) in
-      F.parse tag v
+      match F.parse tag v with
+      | None -> a
+      | Some t -> Some t
     end !field_mods None |> function
     | None -> failwith "field_of_sexp"
     | Some v -> v

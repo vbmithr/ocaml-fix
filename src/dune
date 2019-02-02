@@ -18,13 +18,6 @@
  (preprocess (pps ppx_sexp_conv))
  (libraries ptime fix base64 monocypher digestif.c))
 
-(library
- (name deribit_async)
- (public_name fix-deribit-async)
- (modules deribit_async)
- (preprocess (pps ppx_sexp_conv))
- (libraries fix-async core base64 monocypher digestif.c))
-
 ;; (library
 ;;  ((name coinbase)
 ;;   (public_name fix.coinbase)

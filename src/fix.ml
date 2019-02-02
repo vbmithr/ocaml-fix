@@ -30,14 +30,21 @@ let heartbeat ?ts ?sid ?tid ?seqnum ?(testReqID="") () =
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-let to_bytes ?(buf = Buffer.create 128) ~version { typ ; fields } =
+let to_bytes ?(buf = Buffer.create 128) ~version { typ ; sid ; tid ; seqnum ; ts ; fields } =
   let add_field buf tag value =
     Buffer.add_string buf tag;
     Buffer.add_char buf '=';
     Buffer.add_string buf value;
     Buffer.add_char buf '\x01'
   in
-  let fields = Field.MsgType.create typ :: fields in
+  let fields =
+    match ts with
+    | None -> fields
+    | Some ts -> Field.SendingTime.create ts :: fields in
+  add_field buf "35" @@ MsgType.print typ ;
+  add_field buf "49" sid ;
+  add_field buf "56" tid ;
+  add_field buf "34" @@ string_of_int seqnum ;
   ListLabels.iter fields ~f:begin fun f ->
     Field.add_to_buffer buf f ;
     Buffer.add_char buf '\x01'

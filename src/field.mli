@@ -71,3 +71,4 @@ module Password : FIELD with type t := string
 module Text : FIELD with type t := string
 module TestReqID : FIELD with type t := string
 module SessionRejectReason : FIELD with type t := int
+module SendingTime : FIELD with type t := Ptime.t

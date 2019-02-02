@@ -8,6 +8,3 @@ val logon_fields :
   username:string ->
   secret:string ->
   ts:Ptime.t -> Field.t list
-
-val logout : int -> Fix.t
-val heartbeat : string -> int -> Fix.t

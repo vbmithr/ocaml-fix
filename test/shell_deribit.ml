@@ -9,24 +9,21 @@ open Deribit
 let src = Logs.Src.create "fix.deribit.shell"
 let uri = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
-let send_msg =
-  let count = ref 1 in
-  fun w f ->
-    let msg = f !count in
-    incr count ;
-    Pipe.write w msg
+let logout = Fix.create MsgType.Logout
+let hb msg =
+  Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
 
-let rec on_server_msg w msg = match msg.Fix.typ with
+let on_server_msg w msg = match msg.Fix.typ with
   | Logout ->
     (* Immediately send a logout msg and exit. *)
-    send_msg w logout >>= fun () ->
+    Pipe.write w logout >>= fun () ->
     Shutdown.exit 0
   | TestRequest -> begin
       match Field.find_list Field.TestReqID msg.fields with
       | None -> Deferred.unit
       | Some testreqid ->
         (* Immediately send a heartbeat with the same seqnum. *)
-        send_msg w (heartbeat testreqid)
+        Pipe.write w (hb testreqid)
     end
   | ResendRequest -> Deferred.unit
   | _ -> Deferred.unit
@@ -36,48 +33,54 @@ let rec on_server_msg w msg = match msg.Fix.typ with
  *   send_msg w (heartbeat "") >>= fun () ->
  *   heartbeat_loop w period *)
 
-(* let on_client_cmd ~secret ~passphrase w words =
- *   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
- *   match List.hd_exn words with
- *   | "TESTREQ" -> send_msg w (fun () -> testreq @@ Uuid.(create () |> to_string))
- *   | "BUY" ->
- *     let symbol = List.nth_exn words 1 in
- *     let p = List.nth_exn words 2 |> Float.of_string in
- *     let v = List.nth_exn words 3 |> Float.of_string in
- *     send_msg w
- *       (new_order
- *          ~uuid:Uuid.(create () |> to_string)
- *          ~symbol ~p ~v ~side:Buy)
- *   | "SELL" ->
- *     let symbol = List.nth_exn words 1 in
- *     let p = List.nth_exn words 2 |> Float.of_string in
- *     let v = List.nth_exn words 3 |> Float.of_string in
- *     send_msg w
- *       (new_order
- *          ~uuid:Uuid.(create () |> to_string)
- *          ~symbol ~p ~v ~side:Sell)
- *   | command ->
- *     info "Unsupported command: %s" command;
- *     Deferred.unit *)
+let on_client_cmd w words =
+  let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
+  match String.lowercase (List.hd_exn words) with
+  | "testreq" ->
+    let fields = [Field.TestReqID.create "a"] in
+    Pipe.write w (Fix.create ~fields MsgType.TestRequest)
+  | command ->
+    Logs_async.app ~src (fun m -> m "Unsupported command: %s" command)
+  (* | "BUY" ->
+   *   let symbol = List.nth_exn words 1 in
+   *   let p = List.nth_exn words 2 |> Float.of_string in
+   *   let v = List.nth_exn words 3 |> Float.of_string in
+   *   send_msg w
+   *     (new_order
+   *        ~uuid:Uuid.(create () |> to_string)
+   *        ~symbol ~p ~v ~side:Buy)
+   * | "SELL" ->
+   *   let symbol = List.nth_exn words 1 in
+   *   let p = List.nth_exn words 2 |> Float.of_string in
+   *   let v = List.nth_exn words 3 |> Float.of_string in
+   *   send_msg w
+   *     (new_order
+   *        ~uuid:Uuid.(create () |> to_string)
+   *        ~symbol ~p ~v ~side:Sell) *)
+
+let cleanup_term w _ =
+  don't_wait_for begin
+    Pipe.write w logout
+  end
 
 let main cfg =
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
-  let { Cfg.key; secret; passphrase } =
+  let { Cfg.key ; secret ; _ } =
     List.Assoc.find_exn ~equal:String.equal cfg "DERIBIT" in
   let ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
   Fix_async.with_connection_ez
     ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (r, w) ->
-  Signal.(handle terminating ~f:(fun _ -> don't_wait_for @@ send_msg w logout));
+  Signal.(handle terminating ~f:(cleanup_term w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
   Deferred.any [
     Pipe.iter r ~f:(on_server_msg w);
-    (* Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd ~secret ~passphrase w); *)
+    Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
     (* heartbeat_loop w 30; *)
     Pipe.closed w
   ] >>= fun () ->
-  send_msg w logout
+  Pipe.write w logout
 
 let command =
   Command.async ~summary:"Deribit testnet shell" begin

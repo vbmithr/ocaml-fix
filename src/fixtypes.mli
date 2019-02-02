@@ -29,6 +29,7 @@ module HandlInst : sig
     | Manual
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -39,6 +40,7 @@ module OrdStatus : sig
     | New
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -49,6 +51,7 @@ module OrdType : sig
     | Market
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -65,6 +68,7 @@ module EncryptMethod : sig
     | PEM_DES_MD5
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -77,6 +81,7 @@ module SubscriptionRequestType : sig
     | Unsubscribe
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -88,6 +93,7 @@ module MdUpdateType : sig
     | Incremental
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -100,6 +106,7 @@ module MdEntryType : sig
     | Trade
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -111,6 +118,7 @@ module Side : sig
     | Sell
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -123,6 +131,7 @@ module TimeInForce : sig
     | At_the_opening
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val print : t -> string
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -139,6 +148,7 @@ module Version : sig
   val v5  : t
 
   val parse : string -> t option
+  val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val print : t -> string
 end
@@ -160,6 +170,7 @@ module MsgType : sig
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
+  val print : t -> string
 end
 
 module SessionRejectReason : sig
@@ -185,4 +196,5 @@ module SessionRejectReason : sig
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
+  val print : t -> string
 end
