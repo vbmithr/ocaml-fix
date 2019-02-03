@@ -99,6 +99,8 @@ let with_connection_ez
     ~sid
     ~tid
     ~version uri =
+  let closed = Ivar.create () in
+  let do_logout = Ivar.create () in
   let do_cleanup = Ivar.create () in
   Clock_ns.every (Time_ns.Span.of_int_sec 60)
     Time_stamp_counter.Calibrator.calibrate
@@ -145,6 +147,10 @@ let with_connection_ez
     else
       Deferred.unit in
   s logon >>= fun () ->
+  don't_wait_for begin
+    Ivar.read do_logout >>= fun () ->
+    s (Fix.create Fixtypes.MsgType.Logout)
+  end ;
   Clock_ns.every' (Time_ns.Span.of_int_sec 5)
     watchdog
     ~continue_on_error:false
@@ -152,6 +158,13 @@ let with_connection_ez
   let r = Pipe.filter_map' r ~f:begin fun m ->
       last_received := Time_stamp_counter.now () ;
       match m.typ with
+      | Logout when Ivar.is_full do_logout ->
+        Ivar.fill_if_empty do_cleanup () ;
+        return None
+      | Logout ->
+        s (Fix.create Fixtypes.MsgType.Logout) >>= fun () ->
+        Ivar.fill_if_empty do_cleanup () ;
+        return None
       | Heartbeat
       | TestRequest ->
         let testReqID = Field.(find_list TestReqID m.fields) in
@@ -175,7 +188,8 @@ let with_connection_ez
     Logs_async.warn
       (fun m -> m "with_connection_ez: cleaning up") >>| fun () ->
     Pipe.close w ;
-    Pipe.close_read rr in
+    Pipe.close_read rr ;
+    Ivar.fill closed () in
   don't_wait_for (cleanup ()) ;
-  don't_wait_for (Pipe.closed ww >>| Ivar.fill_if_empty do_cleanup) ;
-  return (r, ww)
+  don't_wait_for (Pipe.closed ww >>| Ivar.fill_if_empty do_logout) ;
+  return (Ivar.read closed, r, ww)

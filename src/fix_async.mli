@@ -17,4 +17,4 @@ val with_connection_ez :
   tid:string ->
   version:Fixtypes.Version.t ->
   Uri.t ->
-  (Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t
+  (unit Deferred.t * Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t
