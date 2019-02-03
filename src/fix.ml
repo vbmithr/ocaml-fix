@@ -7,7 +7,7 @@ module Fixtypes = Fixtypes
 
 open Fixtypes
 
-let src = Logs.Src.create "fix.core"
+(* let src = Logs.Src.create "fix.core" *)
 
 type t = {
   typ : MsgType.t ;
@@ -71,7 +71,6 @@ let compute_chksum fields =
 let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
   let fields = String.Sub.cuts ~empty:false ~sep:(String.Sub.of_char '\x01') buf in
-  Logs.debug ~src (fun m -> m "Read %a" String.Sub.pp buf) ;
   let computed_chksum = compute_chksum fields in
   begin
     try
@@ -79,9 +78,7 @@ let read ?pos ?len buf =
         match Field.parse (String.Sub.to_string f) with
         | Error _ as e -> R.failwith_error_msg e
         | Ok None -> a
-        | Ok (Some v) ->
-          Logs.debug ~src (fun m -> m "Parsed %a" Field.pp v) ;
-          v :: a
+        | Ok (Some v) -> v :: a
       end |> R.ok
     with Failure msg -> R.error_msg msg
   end |> function
