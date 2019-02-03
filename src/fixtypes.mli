@@ -1,5 +1,15 @@
 open Sexplib
 
+module type IO = sig
+  type t [@@deriving sexp]
+
+  val parse : string -> t option
+  val print : t -> string
+  val parse_exn : string -> t
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
+end
+
 module Ptime : sig
   include module type of Ptime
     with type t = Ptime.t
@@ -15,12 +25,7 @@ module UTCTimestamp : sig
   val pp : Format.formatter -> Ptime.t -> unit
 end
 
-module YesOrNo : sig
-  val parse : string -> bool option
-  val parse_exn : string -> bool
-  val print : bool -> string
-  val pp : Format.formatter -> bool -> unit
-end
+module YesOrNo : IO with type t := bool
 
 module HandlInst : sig
   type t =
@@ -28,33 +33,21 @@ module HandlInst : sig
     | Public
     | Manual
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module OrdStatus : sig
   type t =
     | New
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module OrdType : sig
   type t =
     | Market
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module EncryptMethod : sig
@@ -67,11 +60,7 @@ module EncryptMethod : sig
     | PGP_DES_MD5
     | PEM_DES_MD5
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module SubscriptionRequestType : sig
@@ -80,11 +69,7 @@ module SubscriptionRequestType : sig
     | Subscribe
     | Unsubscribe
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module MdUpdateType : sig
@@ -92,11 +77,7 @@ module MdUpdateType : sig
     | Full
     | Incremental
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module MdEntryType : sig
@@ -105,11 +86,7 @@ module MdEntryType : sig
     | Offer
     | Trade
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module Side : sig
@@ -117,11 +94,7 @@ module Side : sig
     | Buy
     | Sell
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module TimeInForce : sig
@@ -130,11 +103,7 @@ module TimeInForce : sig
     | Good_till_cancel
     | At_the_opening
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val print : t -> string
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  include IO with type t := t
 end
 
 module Version : sig
@@ -150,10 +119,7 @@ module Version : sig
   val v44 : t
   val v5  : t
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val pp : Format.formatter -> t -> unit
-  val print : t -> string
+  include IO with type t := t
 end
 
 module MsgType : sig
@@ -166,14 +132,25 @@ module MsgType : sig
     | Logout
     | Logon
     | NewOrderSingle
+    | NewOrderList
+    | OrderCancelRequest
+    | OrderCancelReplaceRequest
+    | OrderStatusRequest
     | MarketDataRequest
+    | MarketDataSnapshotFullRefresh
+    | MarketDataIncrementalRefresh
+    | MarketDataRequestReject
+    | SecurityListRequest
+    | SecurityList
+    | DerivativeSecurityListRequest
+    | OrderMassStatusRequest
+    | RequestForPositions
+    | PositionReport
+    | UserRequest
+    | UserResponse
   [@@deriving sexp]
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
-  val print : t -> string
+  include IO with type t := t
 end
 
 module SessionRejectReason : sig
@@ -195,9 +172,43 @@ module SessionRejectReason : sig
     | Other
   [@@deriving sexp]
 
-  val parse : string -> t option
-  val parse_exn : string -> t
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
-  val print : t -> string
+  include IO with type t := t
+end
+
+module PutOrCall : sig
+  type t =
+    | Put
+    | Call
+  [@@deriving sexp]
+
+  include IO with type t := t
+end
+
+module SecurityListRequestType : sig
+  type t =
+    | Symbol
+    | SecurityType
+    | Product
+    | TradingSessionID
+    | AllSecurities
+    | MarketID
+  [@@deriving sexp]
+
+  include IO with type t := t
+end
+
+module SecurityRequestResult : sig
+  type t =
+    | Valid
+  [@@deriving sexp]
+
+  include IO with type t := t
+end
+
+module SecurityType : sig
+  type t =
+    | Future
+    | Option
+  [@@deriving sexp]
+  include IO with type t := t
 end

@@ -2,6 +2,35 @@ open Rresult
 open Astring
 open Sexplib.Std
 
+module type IOMIN = sig
+  type t
+
+  val t_of_sexp : Sexplib.Sexp.t -> t
+  val sexp_of_t : t -> Sexplib.Sexp.t
+  val parse : string -> t option
+  val print : t -> string
+end
+
+module type IO = sig
+  include IOMIN
+
+  val parse_exn : string -> t
+  val pp : Format.formatter -> t -> unit
+  val pp_sexp : Format.formatter -> t -> unit
+end
+
+module Make (T : IOMIN) = struct
+  open T
+  let parse_exn s =
+    match parse s with
+    | None -> invalid_arg "parse"
+    | Some v -> v
+
+  let pp ppf v = Format.fprintf ppf "%s" (print v)
+  let pp_sexp ppf t =
+    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+end
+
 module Ptime = struct
   include Ptime
 
@@ -73,319 +102,344 @@ module UTCTimestamp = struct
 end
 
 module HandlInst = struct
-  type t =
-    | Private
-    | Public
-    | Manual
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Private
+      | Public
+      | Manual
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "1" -> Some Private
+      | "2" -> Some Public
+      | "3" -> Some Manual
+      | _ -> None
 
-  let parse = function
-    | "1" -> Some Private
-    | "2" -> Some Public
-    | "3" -> Some Manual
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "HandlInst.parse"
-    | Some v -> v
-
-  let print = function
-    | Private -> "1"
-    | Public -> "2"
-    | Manual -> "3"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Private -> "1"
+      | Public -> "2"
+      | Manual -> "3"
+  end
+  include T
+  include Make(T)
 end
 
 module OrdStatus = struct
-  type t =
-    | New
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | New
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some New
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some New
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "OrdStatus.parse"
-    | Some v -> v
-
-  let print = function
-    | New -> "0"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | New -> "0"
+  end
+  include T
+  include Make(T)
 end
 
 module OrdType = struct
-  type t =
-    | Market
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Market
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "1" -> Some Market
+      | _ -> None
 
-  let parse = function
-    | "1" -> Some Market
-    | _ -> None
+    let print = function
+      | Market -> "1"
+  end
+  include T
+  include Make(T)
+end
 
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "OrdType.parse"
-    | Some v -> v
 
-  let print = function
-    | Market -> "1"
+module PutOrCall = struct
+  module T = struct
+    type t =
+      | Put
+      | Call
+    [@@deriving sexp]
 
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let parse = function
+      | "0" -> Some Put
+      | "1" -> Some Call
+      | _ -> None
+
+    let print = function
+      | Put -> "0"
+      | Call -> "1"
+  end
+  include T
+  include Make(T)
 end
 
 module EncryptMethod = struct
-  type t =
-    | Other
-    | PKCS
-    | DES
-    | PKCS_DES
-    | PGP_DES
-    | PGP_DES_MD5
-    | PEM_DES_MD5
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Other
+      | PKCS
+      | DES
+      | PKCS_DES
+      | PGP_DES
+      | PGP_DES_MD5
+      | PEM_DES_MD5
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Other
+      | "1" -> Some PKCS
+      | "2" -> Some DES
+      | "3" -> Some PKCS_DES
+      | "4" -> Some PGP_DES
+      | "5" -> Some PGP_DES_MD5
+      | "6" -> Some PEM_DES_MD5
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Other
-    | "1" -> Some PKCS
-    | "2" -> Some DES
-    | "3" -> Some PKCS_DES
-    | "4" -> Some PGP_DES
-    | "5" -> Some PGP_DES_MD5
-    | "6" -> Some PEM_DES_MD5
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "EncryptMethod.parse"
-    | Some v -> v
-
-  let print = function
-    | Other -> "0"
-    | PKCS -> "1"
-    | DES -> "2"
-    | PKCS_DES -> "3"
-    | PGP_DES -> "4"
-    | PGP_DES_MD5 -> "5"
-    | PEM_DES_MD5 -> "6"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Other -> "0"
+      | PKCS -> "1"
+      | DES -> "2"
+      | PKCS_DES -> "3"
+      | PGP_DES -> "4"
+      | PGP_DES_MD5 -> "5"
+      | PEM_DES_MD5 -> "6"
+  end
+  include T
+  include Make(T)
 end
 
 module SubscriptionRequestType = struct
-  type t =
-    | Snapshot
-    | Subscribe
-    | Unsubscribe
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Snapshot
+      | Subscribe
+      | Unsubscribe
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Snapshot
+      | "1" -> Some Subscribe
+      | "2" -> Some Unsubscribe
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Snapshot
-    | "1" -> Some Subscribe
-    | "2" -> Some Unsubscribe
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "SubscriptionRequestType.parse"
-    | Some v -> v
-
-  let print = function
-    | Snapshot -> "0"
-    | Subscribe -> "1"
-    | Unsubscribe -> "2"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Snapshot -> "0"
+      | Subscribe -> "1"
+      | Unsubscribe -> "2"
+  end
+  include T
+  include Make(T)
 end
 
 module MdUpdateType = struct
-  type t =
-    | Full
-    | Incremental
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Full
+      | Incremental
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Full
+      | "1" -> Some Incremental
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Full
-    | "1" -> Some Incremental
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "MdUpdateType.parse"
-    | Some v -> v
-
-  let print = function
-    | Full -> "0"
-    | Incremental -> "1"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Full -> "0"
+      | Incremental -> "1"
+  end
+  include T
+  include Make(T)
 end
 
 module MdEntryType = struct
-  type t =
-    | Bid
-    | Offer
-    | Trade
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Bid
+      | Offer
+      | Trade
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Bid
+      | "1" -> Some Offer
+      | "2" -> Some Trade
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Bid
-    | "1" -> Some Offer
-    | "2" -> Some Trade
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "MdEntryType.parse"
-    | Some v -> v
-
-  let print = function
-    | Bid -> "0"
-    | Offer -> "1"
-    | Trade -> "2"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Bid -> "0"
+      | Offer -> "1"
+      | Trade -> "2"
+  end
+  include T
+  include Make(T)
 end
 
 module Side = struct
-  type t =
-    | Buy
-    | Sell
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Buy
+      | Sell
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Buy
+      | "1" -> Some Sell
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Buy
-    | "1" -> Some Sell
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "Side.parse"
-    | Some v -> v
-
-  let print = function
-    | Buy -> "0"
-    | Sell -> "1"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Buy -> "0"
+      | Sell -> "1"
+  end
+  include T
+  include Make(T)
 end
 
 module TimeInForce = struct
-  type t =
-    | Session
-    | Good_till_cancel
-    | At_the_opening
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | Session
+      | Good_till_cancel
+      | At_the_opening
+    [@@deriving sexp]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse = function
+      | "0" -> Some Session
+      | "1" -> Some Good_till_cancel
+      | "2" -> Some At_the_opening
+      | _ -> None
 
-  let parse = function
-    | "0" -> Some Session
-    | "1" -> Some Good_till_cancel
-    | "2" -> Some At_the_opening
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "TimeInForce.parse"
-    | Some v -> v
-
-  let print = function
-    | Session -> "0"
-    | Good_till_cancel -> "1"
-    | At_the_opening -> "2"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    let print = function
+      | Session -> "0"
+      | Good_till_cancel -> "1"
+      | At_the_opening -> "2"
+  end
+  include T
+  include Make(T)
 end
 
 module YesOrNo = struct
-  let parse = function
-    | "Y" -> Some true
-    | "N" -> Some false
-    | _ -> None
+  module T = struct
+    type t = bool [@@deriving sexp]
 
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "YesOrNo.parse"
-    | Some v -> v
+    let parse = function
+      | "Y" -> Some true
+      | "N" -> Some false
+      | _ -> None
 
-  let print = function
-    | true -> "Y"
-    | false -> "N"
+    let print = function
+      | true -> "Y"
+      | false -> "N"
+  end
+  include T
+  include Make(T)
+end
 
-  let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+module SecurityListRequestType = struct
+  module T = struct
+    type t =
+      | Symbol
+      | SecurityType
+      | Product
+      | TradingSessionID
+      | AllSecurities
+      | MarketID
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some Symbol
+      | "1" -> Some SecurityType
+      | "2" -> Some Product
+      | "3" -> Some TradingSessionID
+      | "4" -> Some AllSecurities
+      | "5" -> Some MarketID
+      | _ -> None
+
+    let print = function
+      | Symbol -> "0"
+      | SecurityType -> "1"
+      | Product -> "2"
+      | TradingSessionID -> "3"
+      | AllSecurities -> "4"
+      | MarketID -> "5"
+  end
+  include T
+  include Make(T)
+end
+
+module SecurityRequestResult = struct
+  module T = struct
+    type t =
+      | Valid
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some Valid
+      | _ -> None
+
+    let print = function
+      | Valid -> "0"
+
+  end
+  include T
+  include Make(T)
+end
+
+module SecurityType = struct
+  module T = struct
+    type t =
+      | Future
+      | Option
+    [@@deriving sexp]
+
+    let parse = function
+      | "FUT" -> Some Future
+      | "OPT" -> Some Option
+      | _ -> None
+
+    let print = function
+      | Future -> "FUT"
+      | Option -> "OPT"
+  end
+  include T
+  include Make(T)
 end
 
 module Version = struct
-  type t =
-    | FIX of int * int
-    | FIXT of int * int
-  [@@deriving sexp]
+  module T = struct
+    type t =
+      | FIX of int * int
+      | FIXT of int * int
+    [@@deriving sexp]
 
-  let v40 = FIX (4, 0)
-  let v41 = FIX (4, 1)
-  let v42 = FIX (4, 2)
-  let v43 = FIX (4, 3)
-  let v44 = FIX (4, 4)
-  let v5  = FIXT (1, 1)
+    let v40 = FIX (4, 0)
+    let v41 = FIX (4, 1)
+    let v42 = FIX (4, 2)
+    let v43 = FIX (4, 3)
+    let v44 = FIX (4, 4)
+    let v5  = FIXT (1, 1)
 
-  let pp ppf = function
-    | FIX  (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
-    | FIXT (major, minor) -> Format.fprintf ppf "FIXT.%d.%d" major minor
+    let pp ppf = function
+      | FIX  (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
+      | FIXT (major, minor) -> Format.fprintf ppf "FIXT.%d.%d" major minor
 
-  let print t = Format.asprintf "%a" pp t
+    let print t = Format.asprintf "%a" pp t
 
-  let parse s =
-    match String.cuts ~sep:"." s with
-    | [ "FIX" ; major ; minor ] ->
-      Some (FIX (int_of_string major, int_of_string minor))
-    | [ "FIXT" ; major ; minor ] ->
-      Some (FIXT (int_of_string major, int_of_string minor))
-    | _ -> None
-
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "Version.parse"
-    | Some v -> v
+    let parse s =
+      match String.cuts ~sep:"." s with
+      | [ "FIX" ; major ; minor ] ->
+        Some (FIX (int_of_string major, int_of_string minor))
+      | [ "FIXT" ; major ; minor ] ->
+        Some (FIXT (int_of_string major, int_of_string minor))
+      | _ -> None
+  end
+  include T
+  include Make(T)
 end
 
 module MsgType = struct
@@ -398,7 +452,22 @@ module MsgType = struct
     | Logout
     | Logon
     | NewOrderSingle
+    | NewOrderList
+    | OrderCancelRequest
+    | OrderCancelReplaceRequest
+    | OrderStatusRequest
     | MarketDataRequest
+    | MarketDataSnapshotFullRefresh
+    | MarketDataIncrementalRefresh
+    | MarketDataRequestReject
+    | SecurityListRequest
+    | SecurityList
+    | DerivativeSecurityListRequest
+    | OrderMassStatusRequest
+    | RequestForPositions
+    | PositionReport
+    | UserRequest
+    | UserResponse
   [@@deriving sexp]
 
   let pp_sexp ppf t =
@@ -413,22 +482,52 @@ module MsgType = struct
     | "5" -> Logout
     | "A" -> Logon
     | "D" -> NewOrderSingle
+    | "E" -> NewOrderList
+    | "F" -> OrderCancelRequest
+    | "G" -> OrderCancelReplaceRequest
+    | "H" -> OrderStatusRequest
     | "V" -> MarketDataRequest
+    | "W" -> MarketDataSnapshotFullRefresh
+    | "X" -> MarketDataIncrementalRefresh
+    | "Y" -> MarketDataRequestReject
+    | "x" -> SecurityListRequest
+    | "y" -> SecurityList
+    | "z" -> DerivativeSecurityListRequest
+    | "AF" -> OrderMassStatusRequest
+    | "AN" -> RequestForPositions
+    | "AP" -> PositionReport
+    | "BE" -> UserRequest
+    | "BF" -> UserResponse
     | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
 
   let parse s =
     try Some (parse_exn s) with _ -> None
 
   let print = function
-    | Heartbeat         -> "0"
-    | TestRequest       -> "1"
-    | ResendRequest     -> "2"
-    | Reject            -> "3"
-    | SequenceReset     -> "4"
-    | Logout            -> "5"
-    | Logon             -> "A"
-    | NewOrderSingle    -> "D"
-    | MarketDataRequest -> "V"
+    | Heartbeat                     -> "0"
+    | TestRequest                   -> "1"
+    | ResendRequest                 -> "2"
+    | Reject                        -> "3"
+    | SequenceReset                 -> "4"
+    | Logout                        -> "5"
+    | Logon                         -> "A"
+    | NewOrderSingle                -> "D"
+    | NewOrderList                  -> "E"
+    | OrderCancelRequest            -> "F"
+    | OrderCancelReplaceRequest     -> "G"
+    | OrderStatusRequest            -> "H"
+    | MarketDataRequest             -> "V"
+    | MarketDataSnapshotFullRefresh -> "W"
+    | MarketDataIncrementalRefresh  -> "X"
+    | MarketDataRequestReject       -> "Y"
+    | SecurityListRequest           -> "x"
+    | SecurityList                  -> "y"
+    | DerivativeSecurityListRequest -> "z"
+    | OrderMassStatusRequest        -> "AF"
+    | RequestForPositions           -> "AN"
+    | PositionReport                -> "AP"
+    | UserRequest                   -> "BE"
+    | UserResponse                  -> "BF"
 
   let pp ppf t =
     Format.fprintf ppf "%s" (print t)

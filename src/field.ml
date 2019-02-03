@@ -473,92 +473,179 @@ module EndSeqNo = Make(struct
   end)
 let () = register_field (module EndSeqNo)
 
-(* type _ typ += Account                 : string typ
- * type _ typ += BeginSeqNo              : int typ
- * type _ typ += BeginString             : Version.t typ
- * type _ typ += BodyLength              : int typ
- * type _ typ += CheckSum                : string typ
- * type _ typ += ClOrdID                 : string typ
- * type _ typ += EndSeqNo                : int typ
- * type _ typ += HandlInst               : HandlInst.t typ
- * type _ typ += MsgSeqNum               : int typ
- * type _ typ += MsgType                 : MsgType.t typ
- * type _ typ += NewSeqNo                : int typ
- * type _ typ += OrderID                 : string typ
- * type _ typ += OrderQty                : float typ
- * type _ typ += OrdStatus               : OrdStatus.t typ
- * type _ typ += OrdType                 : OrdType.t typ
- * type _ typ += Price                   : float typ
- * type _ typ += RefSeqNum               : int typ
- * type _ typ += SenderCompID            : string typ
- * type _ typ += SendingTime             : Ptime.t typ
- * type _ typ += Side                    : Side.t typ
- * type _ typ += Symbol                  : string typ
- * type _ typ += TargetCompID            : string typ
- * type _ typ += Text                    : string typ
- * type _ typ += TimeInForce             : TimeInForce.t typ
- * type _ typ += RawData                 : string typ
- * type _ typ += EncryptMethod           : EncryptMethod.t typ
- * type _ typ += HeartBtInt              : int typ
- * type _ typ += TestReqID               : string typ
- * type _ typ += ResetSeqNumFlag         : bool typ
- * type _ typ += NoRelatedSym            : int typ
- * type _ typ += MDReqID                 : string typ
- * type _ typ += SubscriptionRequestType : SubscriptionRequestType.t typ
- * type _ typ += MarketDepth             : int typ
- * type _ typ += MDUpdateType            : MdUpdateType.t typ
- * type _ typ += NoMDEntryTypes          : int typ
- * type _ typ += MDEntryType             : MdEntryType.t typ
- * type _ typ += RefTagID                : int typ
- * type _ typ += RefMsgType              : MsgType.t typ
- * type _ typ += Username                : string typ
- * type _ typ += Password                : string typ
- * type _ typ += TradeRequestID          : string typ
- * type _ typ += DefaultApplVerID        : string typ *)
+type _ typ += SecurityReqID : string typ
+module SecurityReqID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SecurityReqID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 320
+    let name = "SecurityReqID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityReqID, SecurityReqID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityReqID)
 
+type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
+module SecurityListRequestType = Make(struct
+    type t = SecurityListRequestType.t [@@deriving sexp]
+    let t = SecurityListRequestType
+    let pp = SecurityListRequestType.pp
+    let parse = SecurityListRequestType.parse
+    let tag = 559
+    let name = "SecurityListRequestType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityListRequestType, SecurityListRequestType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityListRequestType)
 
-(* let tag_of_typ_exn (type a) (typ : a typ) =
- *   match typ with
- *   | Account                 -> 1
- *   | BeginSeqNo              -> 7
- *   | BeginString             -> 8
- *   | BodyLength              -> 9
- *   | CheckSum                -> 10
- *   | ClOrdID                 -> 11
- *   | EndSeqNo                -> 16
- *   | HandlInst               -> 21
- *   | MsgSeqNum               -> 34
- *   | MsgType                 -> 35
- *   | NewSeqNo                -> 36
- *   | OrderID                 -> 37
- *   | OrderQty                -> 38
- *   | OrdStatus               -> 39
- *   | OrdType                 -> 40
- *   | Price                   -> 44
- *   | RefSeqNum               -> 45
- *   | SenderCompID            -> 49
- *   | SendingTime             -> 52
- *   | Side                    -> 54
- *   | Symbol                  -> 55
- *   | TargetCompID            -> 56
- *   | Text                    -> 58
- *   | TimeInForce             -> 59
- *   | RawData                 -> 96
- *   | EncryptMethod           -> 98
- *   | HeartBtInt              -> 108
- *   | TestReqID               -> 112
- *   | ResetSeqNumFlag         -> 141
- *   | NoRelatedSym            -> 146
- *   | MDReqID                 -> 262
- *   | SubscriptionRequestType -> 263
- *   | MarketDepth             -> 264
- *   | MDUpdateType            -> 265
- *   | NoMDEntryTypes          -> 267
- *   | MDEntryType             -> 269
- *   | RefTagID                -> 371
- *   | RefMsgType              -> 372
- *   | Username                -> 553
- *   | Password                -> 554
- *   | TradeRequestID          -> 568
- *   | DefaultApplVerID        -> 1137
- *   | _ -> invalid_arg "tag_of_typ" *)
+type _ typ += SecurityResponseID : string typ
+module SecurityResponseID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SecurityResponseID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 322
+    let name = "SecurityResponseID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityResponseID, SecurityResponseID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityResponseID)
+
+type _ typ += SecurityRequestResult : SecurityRequestResult.t typ
+module SecurityRequestResult = Make(struct
+    type t = SecurityRequestResult.t [@@deriving sexp]
+    let t = SecurityRequestResult
+    let pp = SecurityRequestResult.pp
+    let parse = SecurityRequestResult.parse
+    let tag = 560
+    let name = "SecurityRequestResult"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityRequestResult, SecurityRequestResult -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityRequestResult)
+
+type _ typ += NoRelatedSym : int typ
+module NoRelatedSym = Make(struct
+    type t = int [@@deriving sexp]
+    let t = NoRelatedSym
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 146
+    let name = "NoRelatedSym"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoRelatedSym, NoRelatedSym -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoRelatedSym)
+
+type _ typ += Symbol : string typ
+module Symbol = Make(struct
+    type t = string [@@deriving sexp]
+    let t = Symbol
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 55
+    let name = "Symbol"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Symbol, Symbol -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module Symbol)
+
+type _ typ += SecurityDesc : string typ
+module SecurityDesc = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SecurityDesc
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 107
+    let name = "SecurityDesc"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityDesc, SecurityDesc -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityDesc)
+
+type _ typ += SecurityType : SecurityType.t typ
+module SecurityType = Make(struct
+    type t = SecurityType.t [@@deriving sexp]
+    let t = SecurityType
+    let pp = SecurityType.pp
+    let parse = SecurityType.parse
+    let tag = 167
+    let name = "SecurityType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityType, SecurityType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityType)
+
+type _ typ += PutOrCall : PutOrCall.t typ
+module PutOrCall = Make(struct
+    type t = PutOrCall.t [@@deriving sexp]
+    let t = PutOrCall
+    let pp = PutOrCall.pp
+    let parse = PutOrCall.parse
+    let tag = 201
+    let name = "PutOrCall"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PutOrCall, PutOrCall -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PutOrCall)
+
+type _ typ += StrikePrice : float typ
+module StrikePrice = Make(struct
+    type t = float [@@deriving sexp]
+    let t = StrikePrice
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 202
+    let name = "StrikePrice"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | StrikePrice, StrikePrice -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module StrikePrice)
+
+type _ typ += StrikeCurrency : string typ
+module StrikeCurrency = Make(struct
+    type t = string [@@deriving sexp]
+    let t = StrikeCurrency
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 947
+    let name = "StrikeCurrency"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | StrikeCurrency, StrikeCurrency -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module StrikeCurrency)
+

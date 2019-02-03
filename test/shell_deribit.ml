@@ -21,6 +21,12 @@ let on_client_cmd w words =
   | "testreq" ->
     let fields = [Field.TestReqID.create "a"] in
     Pipe.write w (Fix.create ~fields MsgType.TestRequest)
+  | "seclist" ->
+    let fields = [
+      Field.SecurityReqID.create "a" ;
+      Field.SecurityListRequestType.create SecurityListRequestType.Symbol ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.SecurityListRequest)
   | command ->
     Logs_async.app ~src (fun m -> m "Unsupported command: %s" command)
   (* | "BUY" ->
