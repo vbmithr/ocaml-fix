@@ -138,7 +138,10 @@ module TimeInForce : sig
 end
 
 module Version : sig
-  type t
+  type t =
+    | FIX of int * int
+    | FIXT of int * int
+  [@@deriving sexp]
 
   val v40 : t
   val v41 : t

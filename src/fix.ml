@@ -10,27 +10,36 @@ open Fixtypes
 (* let src = Logs.Src.create "fix.core" *)
 
 type t = {
+  version : Version.t ;
   typ : MsgType.t ;
   sid : string ;
   tid : string ;
   seqnum : int ;
   ts : Ptime.t option ;
-  fields : Field.field list ;
+  fields : Field.Set.t ;
 } [@@deriving sexp]
 
-let create ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=[]) typ =
-  { typ ; sid ; tid ; seqnum ; ts ; fields }
+let create
+    ?(version=Version.FIXT (1,1))
+    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=[])  typ =
+  { version ; typ ; sid ; tid ; seqnum ; ts ; fields = Field.Set.of_list fields }
 
-let heartbeat ?ts ?sid ?tid ?seqnum ?(testReqID="") () =
+let create_set
+  ?(version=Version.FIXT (1,1))
+  ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=Field.Set.empty) typ =
+  { version ; typ ; sid ; tid ; seqnum ; ts ; fields }
+
+let heartbeat
+    ?(version=Version.FIXT (1,1)) ?ts ?sid ?tid ?seqnum ?(testReqID="") () =
   let fields = match testReqID with
-    | "" -> []
-    | s -> [Field.TestReqID.create s] in
-  create ?ts ?sid ?tid ?seqnum ~fields Fixtypes.MsgType.Heartbeat
+    | "" -> Field.Set.empty
+    | s -> Field.(Set.singleton (TestReqID.create s)) in
+  create_set ?ts ?sid ?tid ?seqnum ~fields ~version Fixtypes.MsgType.Heartbeat
 
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-let to_bytes ?(buf = Buffer.create 128) ~version { typ ; sid ; tid ; seqnum ; ts ; fields } =
+let to_bytes ?(buf = Buffer.create 128) { version ; typ ; sid ; tid ; seqnum ; ts ; fields } =
   let add_field buf tag value =
     Buffer.add_string buf tag;
     Buffer.add_char buf '=';
@@ -40,15 +49,15 @@ let to_bytes ?(buf = Buffer.create 128) ~version { typ ; sid ; tid ; seqnum ; ts
   let fields =
     match ts with
     | None -> fields
-    | Some ts -> Field.SendingTime.create ts :: fields in
+    | Some ts -> Field.Set.add (Field.SendingTime.create ts) fields in
   add_field buf "35" @@ MsgType.print typ ;
   add_field buf "49" sid ;
   add_field buf "56" tid ;
   add_field buf "34" @@ string_of_int seqnum ;
-  ListLabels.iter fields ~f:begin fun f ->
+  Field.Set.iter begin fun f ->
     Field.add_to_buffer buf f ;
     Buffer.add_char buf '\x01'
-  end ;
+  end fields ;
   let fieldslen = Buffer.length buf in
   let fields = Buffer.contents buf in
   Buffer.clear buf ;
@@ -85,19 +94,34 @@ let read ?pos ?len buf =
   | Error _ as e -> e
   | Ok [] -> R.error_msg "empty message"
   | Ok (chksum :: fields) ->
-    match Field.(CheckSum.find CheckSum chksum),
-          Field.find_list Field.MsgType fields,
-          Field.find_list Field.MsgSeqNum fields,
-          Field.find_list Field.SenderCompID fields,
-          Field.find_list Field.TargetCompID fields
-    with
-    | None, _, _, _, _ -> R.error_msg "missing checksum"
-    | Some _, None, _, _, _ -> R.error_msg "missing MsgType"
-    | Some _, Some _, None, _, _ -> R.error_msg "missing MsgSeqNum"
-    | Some _, Some _, Some _, None, _ -> R.error_msg "missing SenderCompID"
-    | Some _, Some _, Some _, Some _, None -> R.error_msg "missing targetCompID"
-    | Some ck, Some typ, Some seqnum, Some sid, Some tid ->
-      if computed_chksum <> (int_of_string ck) then R.error_msg "bad checksum"
-      else
-        let ts = Field.find_list Field.SendingTime fields in
-        R.ok (create ?ts ~fields ~seqnum ~sid ~tid typ)
+    let open R.Infix in
+    let fields = Field.Set.of_list fields in
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing CheckSum")
+      (Field.CheckSum.find Field.CheckSum chksum) >>= fun ck ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing BeginString")
+      (Field.find_set Field.BeginString fields) >>= fun version ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing MsgType")
+      (Field.find_set Field.MsgType fields) >>= fun typ ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing MsgSeqNum")
+      (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing SenderCompID")
+      (Field.find_set Field.SenderCompID fields) >>= fun sid ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing TargetCompID")
+      (Field.find_set Field.TargetCompID fields) >>= fun tid ->
+    if computed_chksum <> (int_of_string ck) then R.error_msg "bad checksum"
+    else
+      let ts = Field.find_set Field.SendingTime fields in
+      let fields = Field.(remove_set BeginString fields) in
+      let fields = Field.(remove_set BodyLength fields) in
+      let fields = Field.(remove_set MsgType fields) in
+      let fields = Field.(remove_set MsgSeqNum fields) in
+      let fields = Field.(remove_set SenderCompID fields) in
+      let fields = Field.(remove_set TargetCompID fields) in
+      let fields = Field.(remove_set SendingTime fields) in
+      R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)

@@ -24,14 +24,16 @@ type t = field
 
 let create typ m v = F (typ, m, v)
 
-module type FIELD = sig
-  include T
-  val create : t -> field
-  val find : 'a typ -> field -> 'a option
-  val parse : int -> string -> field option
-end
+let pp ppf (F (_, m, v)) =
+  let module F = (val m) in
+  Format.fprintf ppf "@[<v 1>%s: %a@]"
+    F.name Sexplib.Sexp.pp (F.sexp_of_t v)
 
-module SMap = Map.Make(String)
+let print (F (_, m, v)) =
+  let module F = (val m) in
+  Format.asprintf "%d=%a" F.tag F.pp v
+
+let sexp_of_field t = sexp_of_string (print t)
 
 let parse_raw str =
   match String.cut ~sep:"=" str with
@@ -41,10 +43,41 @@ let parse_raw str =
     | None -> R.error_msg "Tag is not an int value"
     | Some tag -> R.ok (tag, value)
 
-let field_mods = ref SMap.empty
+module SMap = Map.Make(String)
 
+module type FIELD = sig
+  include T
+  val create : t -> field
+  val find : 'a typ -> field -> 'a option
+  val parse : int -> string -> field option
+end
+
+let field_mods = ref SMap.empty
 let register_field (module F : FIELD) =
   field_mods := SMap.add F.name (module F : FIELD) !field_mods
+
+let field_of_sexp sexp =
+  match parse_raw (string_of_sexp sexp) with
+  | Error _ as e -> R.failwith_error_msg e
+  | Ok (tag, v) ->
+    SMap.fold begin fun _ m a ->
+      let module F = (val m : FIELD) in
+      match F.parse tag v with
+      | None -> a
+      | Some t -> Some t
+    end !field_mods None |> function
+    | None -> failwith "field_of_sexp"
+    | Some v -> v
+
+module Set = struct
+  include Set.Make(struct
+    type t = field
+    let compare = Pervasives.compare
+  end)
+
+  let sexp_of_t t = sexp_of_list sexp_of_field (elements t)
+  let t_of_sexp s = of_list (list_of_sexp field_of_sexp s)
+end
 
 let find :
   type a. a typ -> field -> a option = fun typ field ->
@@ -55,13 +88,32 @@ let find :
     | Some aa -> Some aa
   end !field_mods None
 
-let find_list :
-  type a. a typ -> field list -> a option = fun typ fields ->
-  List.fold_left begin fun a f ->
+let find_set :
+  type a. a typ -> Set.t -> a option = fun typ fields ->
+  Set.fold begin fun f a ->
     match find typ f with
     | None -> a
     | Some v -> Some v
-  end None fields
+  end fields None
+
+let find_and_remove_set :
+  type a. a typ -> Set.t -> (a * Set.t) option = fun typ fields ->
+  Set.fold begin fun f a ->
+    match find typ f with
+    | None -> a
+    | Some v -> Some (v, Set.remove f fields)
+  end fields None
+
+exception Removed of Set.t
+let remove_set :
+  type a. a typ -> Set.t -> Set.t = fun typ fields ->
+  try
+    Set.fold begin fun f a ->
+      match find typ f with
+      | None -> a
+      | Some _ -> raise (Removed (Set.remove f a))
+    end fields fields
+  with Removed s -> s
 
 exception Parsed_ok of t
 let parse str =
@@ -77,36 +129,12 @@ let parse str =
     None
   with Parsed_ok t -> Some t
 
-let pp ppf (F (_, m, v)) =
-  let module F = (val m) in
-  Format.fprintf ppf "@[<v 1>%s: %a@]"
-    F.name Sexplib.Sexp.pp (F.sexp_of_t v)
-
-let print (F (_, m, v)) =
-  let module F = (val m) in
-  Format.asprintf "%d=%a" F.tag F.pp v
-
 let add_to_buffer buf (F (_, m, v)) =
   let module F = (val m) in
   let open Buffer in
   add_string buf (string_of_int F.tag) ;
   add_char buf '=' ;
   add_string buf (Format.asprintf "%a" F.pp v)
-
-let sexp_of_field t = sexp_of_string (print t)
-
-let field_of_sexp sexp =
-  match parse_raw (string_of_sexp sexp) with
-  | Error _ as e -> R.failwith_error_msg e
-  | Ok (tag, v) ->
-    SMap.fold begin fun _ m a ->
-      let module F = (val m : FIELD) in
-      match F.parse tag v with
-      | None -> a
-      | Some t -> Some t
-    end !field_mods None |> function
-    | None -> failwith "field_of_sexp"
-    | Some v -> v
 
 module Make (T : T) = struct
   include T
@@ -141,12 +169,12 @@ module Account = Make(struct
   end)
 let () = register_field (module Account)
 
-type _ typ += BeginString : string typ
+type _ typ += BeginString : Version.t typ
 module BeginString = Make(struct
-    type t = string [@@deriving sexp]
+    type t = Version.t [@@deriving sexp]
     let t = BeginString
-    let pp = Format.pp_print_string
-    let parse s = Some s
+    let pp = Version.pp
+    let parse = Version.parse
     let tag = 8
     let name = "BeginString"
     let eq :
@@ -157,12 +185,12 @@ module BeginString = Make(struct
   end)
 let () = register_field (module BeginString)
 
-type _ typ += BodyLength : string typ
+type _ typ += BodyLength : int typ
 module BodyLength = Make(struct
-    type t = string [@@deriving sexp]
+    type t = int [@@deriving sexp]
     let t = BodyLength
-    let pp = Format.pp_print_string
-    let parse s = Some s
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
     let tag = 9
     let name = "BodyLength"
     let eq :

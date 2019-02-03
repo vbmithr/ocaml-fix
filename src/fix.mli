@@ -4,16 +4,18 @@ module Fixtypes : module type of Fixtypes
 module Field : module type of Field
 
 type t = {
+  version : Fixtypes.Version.t ;
   typ : Fixtypes.MsgType.t ;
   sid : string ;
   tid : string ;
   seqnum : int ;
   ts : Ptime.t option ;
-  fields : Field.field list ;
+  fields : Field.Set.t ;
 } [@@deriving sexp]
 
 val pp : Format.formatter -> t -> unit
 val create :
+  ?version:Fixtypes.Version.t ->
   ?ts:Ptime.t ->
   ?sid:string ->
   ?tid:string ->
@@ -22,11 +24,12 @@ val create :
   Fixtypes.MsgType.t -> t
 
 val heartbeat :
+  ?version:Fixtypes.Version.t ->
   ?ts:Ptime.t ->
   ?sid:string ->
   ?tid:string ->
   ?seqnum:int ->
   ?testReqID:string -> unit -> t
 
-val to_bytes : ?buf:Buffer.t -> version:Fixtypes.Version.t -> t -> string
+val to_bytes : ?buf:Buffer.t -> t -> string
 val read : ?pos:int -> ?len:int -> string -> (t, R.msg) result

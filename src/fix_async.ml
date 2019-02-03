@@ -8,8 +8,7 @@ open Fix
 let src = Logs.Src.create "fix.async"
 
 let with_connection
-  ?(tmpbuf=Bytes.create 4096)
-  ~version uri =
+  ?(tmpbuf=Bytes.create 4096) uri =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
   let cleanup () =
@@ -43,7 +42,7 @@ let with_connection
     don't_wait_for @@
     Pipe.transfer msg_read Writer.(pipe w) ~f:begin fun msg ->
       Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
-      Fix.to_bytes ~version msg
+      Fix.to_bytes msg
     end ;
     Reader.read_one_chunk_at_a_time r ~handle_chunk >>= fun _ ->
     (* TODO: cases *)
@@ -120,9 +119,9 @@ let with_connection_ez
   let last_sent     = ref (Time_stamp_counter.now ()) in
   let count = ref 1 in
   let hb = Time_ns.Span.to_int63_ns heartbeat in
-  with_connection ?tmpbuf ~version uri >>= fun (r, w) ->
+  with_connection ?tmpbuf uri >>= fun (r, w) ->
   let s msg =
-    let msg = { msg with seqnum = !count ; sid ; tid } in
+    let msg = { msg with version ; seqnum = !count ; sid ; tid } in
     history := BoundedIntMap.add !history ~key:!count ~data:msg ;
     incr count ;
     last_sent := Time_stamp_counter.now () ;
@@ -167,13 +166,13 @@ let with_connection_ez
         return None
       | Heartbeat
       | TestRequest ->
-        let testReqID = Field.(find_list TestReqID m.fields) in
+        let testReqID = Field.(find_set TestReqID m.fields) in
         s (Fix.heartbeat ?testReqID ~sid ~tid ()) >>= fun () ->
         return None
       | ResendRequest ->
         (* TODO implement *)
-        let bsn = Field.(find_list BeginSeqNo m.fields) in
-        let esn = Field.(find_list EndSeqNo m.fields) in
+        let bsn = Field.(find_set BeginSeqNo m.fields) in
+        let esn = Field.(find_set EndSeqNo m.fields) in
         begin match bsn, esn with
         | Some _, Some _ -> s (reject m.seqnum)
         | _ -> s (reject m.seqnum)

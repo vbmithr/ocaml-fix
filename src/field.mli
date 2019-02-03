@@ -19,6 +19,12 @@ type field =
     F : 'a typ * (module T with type t = 'a) * 'a -> field [@@deriving sexp]
 type t = field
 
+module Set : sig
+  include Set.S with type elt := field
+  val t_of_sexp : Sexplib.Sexp.t -> t
+  val sexp_of_t :t -> Sexplib.Sexp.t
+end
+
 val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
 
 val pp : Format.formatter -> t -> unit
@@ -27,7 +33,9 @@ val add_to_buffer : Buffer.t -> field -> unit
 val parse : string -> (t option, R.msg) result
 
 val find : 'a typ -> field -> 'a option
-val find_list : 'a typ -> field list -> 'a option
+val find_set : 'a typ -> Set.t -> 'a option
+val find_and_remove_set : 'a typ -> Set.t -> ('a * Set.t) option
+val remove_set : 'a typ -> Set.t -> Set.t
 
 module type FIELD = sig
   include T
@@ -40,6 +48,8 @@ val register_field : (module FIELD) -> unit
 
 module Make (T : T) : FIELD with type t = T.t
 
+type _ typ += BeginString : Version.t typ
+type _ typ += BodyLength : int typ
 type _ typ += Account : string typ
 type _ typ += CheckSum : string typ
 type _ typ += MsgType : Fixtypes.MsgType.t typ
