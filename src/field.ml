@@ -561,6 +561,22 @@ module NoRelatedSym = Make(struct
   end)
 let () = register_field (module NoRelatedSym)
 
+type _ typ += RawDataLength : int typ
+module RawDataLength = Make(struct
+    type t = int [@@deriving sexp]
+    let t = RawDataLength
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 95
+    let name = "RawDataLength"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | RawDataLength, RawDataLength -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module RawDataLength)
+
 type _ typ += Symbol : string typ
 module Symbol = Make(struct
     type t = string [@@deriving sexp]
@@ -576,6 +592,22 @@ module Symbol = Make(struct
       | _ -> None
   end)
 let () = register_field (module Symbol)
+
+type _ typ += UnderlyingSymbol : string typ
+module UnderlyingSymbol = Make(struct
+    type t = string [@@deriving sexp]
+    let t = UnderlyingSymbol
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 311
+    let name = "UnderlyingSymbol"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | UnderlyingSymbol, UnderlyingSymbol -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module UnderlyingSymbol)
 
 type _ typ += SecurityDesc : string typ
 module SecurityDesc = Make(struct
@@ -656,4 +688,20 @@ module StrikeCurrency = Make(struct
       | _ -> None
   end)
 let () = register_field (module StrikeCurrency)
+
+type _ typ += Currency : string typ
+module Currency = Make(struct
+    type t = string [@@deriving sexp]
+    let t = Currency
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 15
+    let name = "Currency"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Currency, Currency -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module Currency)
 

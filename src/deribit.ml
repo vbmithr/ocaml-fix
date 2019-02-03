@@ -19,6 +19,22 @@ module CancelOnDisconnect = Make(struct
 end)
 let () = register_field (module CancelOnDisconnect)
 
+type _ typ += InstrumentPricePrecision : int typ
+module InstrumentPricePrecision = Make(struct
+    type t = int [@@deriving sexp]
+    let t = InstrumentPricePrecision
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 2576
+    let name = "InstrumentPricePrecision"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | InstrumentPricePrecision, InstrumentPricePrecision -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module InstrumentPricePrecision)
+
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"
 

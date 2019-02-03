@@ -66,6 +66,8 @@ type _ typ += EndSeqNo : int typ
 type _ typ += SendingTime : Ptime.t typ
 type _ typ += SecurityReqID : string typ
 type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
+type _ typ += Currency : string typ
+type _ typ += StrikeCurrency : string typ
 
 module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string
@@ -87,3 +89,5 @@ module SessionRejectReason : FIELD with type t := int
 module SendingTime : FIELD with type t := Ptime.t
 module SecurityReqID : FIELD with type t := string
 module SecurityListRequestType : FIELD with type t := SecurityListRequestType.t
+module StrikeCurrency : FIELD with type t := string
+module Currency : FIELD with type t := string
