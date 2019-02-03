@@ -118,7 +118,7 @@ let remove_set :
 exception Parsed_ok of t
 let parse str =
   let open R.Infix in
-  parse_raw str >>| fun (tag, v) ->
+  parse_raw str >>= fun (tag, v) ->
   try
     SMap.iter begin fun _ m ->
       let module F = (val m : FIELD) in
@@ -126,8 +126,16 @@ let parse str =
       | None -> ()
       | Some v -> raise (Parsed_ok v)
     end !field_mods ;
-    None
-  with Parsed_ok t -> Some t
+    R.error_msgf "Unknown tag %d" tag
+  with Parsed_ok t -> R.ok t
+
+let parser =
+  let open Angstrom in
+  let lift_f s =
+    let open R.Infix in
+    let chk = String.fold_left (fun a c -> a + Char.to_int c) 1 s in
+    parse s >>| fun t -> (t, chk mod 256) in
+  lift lift_f @@ take_while1 (fun c -> c <> '\x01') <* char '\x01'
 
 let add_to_buffer buf (F (_, m, v)) =
   let module F = (val m) in

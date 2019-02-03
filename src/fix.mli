@@ -32,4 +32,5 @@ val heartbeat :
   ?testReqID:string -> unit -> t
 
 val to_bytes : ?buf:Buffer.t -> t -> string
+val of_fields : Field.t list -> (t, R.msg) result
 val read : ?pos:int -> ?len:int -> string -> (t, R.msg) result

@@ -77,6 +77,34 @@ let compute_chksum fields =
     end in
   (global - local) mod 256
 
+let of_fields fields =
+  let open R.Infix in
+  let fields = Field.Set.of_list fields in
+  R.of_option
+    ~none:(fun () -> R.error_msg "missing BeginString")
+    (Field.find_set Field.BeginString fields) >>= fun version ->
+  R.of_option
+    ~none:(fun () -> R.error_msg "missing MsgType")
+    (Field.find_set Field.MsgType fields) >>= fun typ ->
+  R.of_option
+    ~none:(fun () -> R.error_msg "missing MsgSeqNum")
+    (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
+  R.of_option
+    ~none:(fun () -> R.error_msg "missing SenderCompID")
+    (Field.find_set Field.SenderCompID fields) >>= fun sid ->
+  R.of_option
+    ~none:(fun () -> R.error_msg "missing TargetCompID")
+    (Field.find_set Field.TargetCompID fields) >>= fun tid ->
+  let ts = Field.find_set Field.SendingTime fields in
+  let fields = Field.(remove_set BeginString fields) in
+  let fields = Field.(remove_set BodyLength fields) in
+  let fields = Field.(remove_set MsgType fields) in
+  let fields = Field.(remove_set MsgSeqNum fields) in
+  let fields = Field.(remove_set SenderCompID fields) in
+  let fields = Field.(remove_set TargetCompID fields) in
+  let fields = Field.(remove_set SendingTime fields) in
+  R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)
+
 let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
   let fields = String.Sub.cuts ~empty:false ~sep:(String.Sub.of_char '\x01') buf in
@@ -86,8 +114,7 @@ let read ?pos ?len buf =
       ListLabels.fold_left fields ~init:[] ~f:begin fun a f ->
         match Field.parse (String.Sub.to_string f) with
         | Error _ as e -> R.failwith_error_msg e
-        | Ok None -> a
-        | Ok (Some v) -> v :: a
+        | Ok v -> v :: a
       end |> R.ok
     with Failure msg -> R.error_msg msg
   end |> function
@@ -95,33 +122,11 @@ let read ?pos ?len buf =
   | Ok [] -> R.error_msg "empty message"
   | Ok (chksum :: fields) ->
     let open R.Infix in
-    let fields = Field.Set.of_list fields in
     R.of_option
       ~none:(fun () -> R.error_msg "missing CheckSum")
       (Field.CheckSum.find Field.CheckSum chksum) >>= fun ck ->
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing BeginString")
-      (Field.find_set Field.BeginString fields) >>= fun version ->
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing MsgType")
-      (Field.find_set Field.MsgType fields) >>= fun typ ->
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing MsgSeqNum")
-      (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing SenderCompID")
-      (Field.find_set Field.SenderCompID fields) >>= fun sid ->
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing TargetCompID")
-      (Field.find_set Field.TargetCompID fields) >>= fun tid ->
-    if computed_chksum <> (int_of_string ck) then R.error_msg "bad checksum"
-    else
-      let ts = Field.find_set Field.SendingTime fields in
-      let fields = Field.(remove_set BeginString fields) in
-      let fields = Field.(remove_set BodyLength fields) in
-      let fields = Field.(remove_set MsgType fields) in
-      let fields = Field.(remove_set MsgSeqNum fields) in
-      let fields = Field.(remove_set SenderCompID fields) in
-      let fields = Field.(remove_set TargetCompID fields) in
-      let fields = Field.(remove_set SendingTime fields) in
-      R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)
+    begin if computed_chksum <> (int_of_string ck)
+      then R.error_msg "bad checksum"
+      else R.ok ()
+    end >>= fun () ->
+    of_fields fields

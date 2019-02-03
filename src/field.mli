@@ -30,7 +30,8 @@ val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
 val pp : Format.formatter -> t -> unit
 val print : t -> string
 val add_to_buffer : Buffer.t -> field -> unit
-val parse : string -> (t option, R.msg) result
+val parse : string -> (t, R.msg) result
+val parser : (t * int, R.msg) result Angstrom.t
 
 val find : 'a typ -> field -> 'a option
 val find_set : 'a typ -> Set.t -> 'a option

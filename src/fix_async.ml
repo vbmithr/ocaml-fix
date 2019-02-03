@@ -7,8 +7,7 @@ open Fix
 
 let src = Logs.Src.create "fix.async"
 
-let with_connection
-  ?(tmpbuf=Bytes.create 4096) uri =
+let with_connection uri =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
   let cleanup () =
@@ -18,35 +17,38 @@ let with_connection
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
   let run r w =
-    let handle_chunk msgbuf ~pos ~len =
-      if len > Bytes.length tmpbuf then
-        failwith "Message bigger than tmpbuf" ;
-      Bigstring.To_bytes.blito
-        ~src:msgbuf ~src_pos:pos ~src_len:len ~dst:tmpbuf () ;
-      let msg_str =
-        Bytes.unsafe_to_string
-          ~no_mutation_while_string_reachable:tmpbuf in
-      begin match Fix.read msg_str ~len with
-      | Error msg ->
-        Logs_async.err ~src begin fun m ->
-          m "<- Invalid message received (%a): %s" R.pp_msg msg msg_str
-        end
-      | Ok msg ->
-        Logs_async.debug ~src begin fun m ->
-          m "<- %a" pp msg
-        end >>= fun () ->
-        Pipe.write msg_write msg
-      end >>| fun () ->
-      `Consumed (len, `Need_unknown)
-    in
-    don't_wait_for @@
-    Pipe.transfer msg_read Writer.(pipe w) ~f:begin fun msg ->
-      Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
-      Fix.to_bytes msg
+    don't_wait_for begin
+      Pipe.transfer msg_read Writer.(pipe w) ~f:begin fun msg ->
+        Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
+        Fix.to_bytes msg
+      end
     end ;
-    Reader.read_one_chunk_at_a_time r ~handle_chunk >>= fun _ ->
-    (* TODO: cases *)
-    Deferred.unit
+    let fields = ref [] in
+    Angstrom_async.parse_many Field.parser begin fun field ->
+      match field with
+      | Error _ as e -> R.failwith_error_msg e
+      | Ok ((field, _) as e) ->
+        match Field.(find CheckSum field) with
+        | None ->
+          fields := e :: !fields ;
+          Deferred.unit
+        | Some chk ->
+          match int_of_string_opt chk with
+          | None -> failwith "checksum is not an integer"
+          | Some chk ->
+            let chk' =
+              List.fold_left !fields ~init:0 ~f:(fun a (_, c) -> a + c) in
+            if chk <> (chk' mod 256) then failwith "checksum failed"
+            else
+              match Fix.of_fields (List.rev_map !fields ~f:fst) with
+              | Error _ as e -> R.failwith_error_msg e
+              | Ok msg ->
+                fields := [] ;
+                Logs_async.debug (fun m -> m "<- %a" pp msg) >>= fun () ->
+                Pipe.write msg_write msg
+    end r >>= function
+    | Error msg -> failwith msg
+    | Ok () -> Deferred.unit
   in
   don't_wait_for begin
     addr_of_uri uri >>= fun addr ->
@@ -91,7 +93,6 @@ end = struct
 end
 
 let with_connection_ez
-    ?tmpbuf
     ?(history_size=10)
     ?(heartbeat=Time_ns.Span.of_int_sec 30)
     ?(logon_fields=[])
@@ -119,7 +120,7 @@ let with_connection_ez
   let last_sent     = ref (Time_stamp_counter.now ()) in
   let count = ref 1 in
   let hb = Time_ns.Span.to_int63_ns heartbeat in
-  with_connection ?tmpbuf uri >>= fun (r, w) ->
+  with_connection uri >>= fun (r, w) ->
   let s msg =
     let msg = { msg with version ; seqnum = !count ; sid ; tid } in
     history := BoundedIntMap.add !history ~key:!count ~data:msg ;
