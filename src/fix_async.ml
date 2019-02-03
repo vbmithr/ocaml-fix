@@ -12,7 +12,13 @@ let with_connection
   ~version uri =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
-  let run (r, w) =
+  let cleanup () =
+      Logs_async.warn
+        (fun m -> m "with_connection: cleanup up") >>| fun () ->
+      Pipe.close_read msg_read ;
+      Pipe.close msg_write in
+  don't_wait_for (Pipe.closed client_write >>= cleanup) ;
+  let run r w =
     let handle_chunk msgbuf ~pos ~len =
       if len > Bytes.length tmpbuf then
         failwith "Message bigger than tmpbuf" ;
@@ -39,24 +45,23 @@ let with_connection
       Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
       Fix.to_bytes ~version msg
     end ;
-    Reader.read_one_chunk_at_a_time r ~handle_chunk
+    Reader.read_one_chunk_at_a_time r ~handle_chunk >>= fun _ ->
+    (* TODO: cases *)
+    Deferred.unit
   in
   don't_wait_for begin
     addr_of_uri uri >>= fun addr ->
     Monitor.try_with_or_error begin fun () ->
-      Conduit_async.V2.connect addr >>=
-      run >>= fun _ ->
-      (* TODO: cases *)
-      Deferred.unit
+      Conduit_async.V2.with_connection addr run
     end >>= function
     | Error e ->
-      Logs_async.err ~src (fun m -> m "%a" Error.pp e)
+      Logs_async.err ~src (fun m -> m "%a" Error.pp e) >>=
+      cleanup
     | Ok _ ->
       Logs_async.info ~src
-        (fun m -> m "TCP connection terminated") >>= fun () ->
-      Pipe.close client_write ;
-      Deferred.unit
-    end;
+        (fun m -> m "TCP connection terminated") >>=
+      cleanup
+  end;
   return (client_read, client_write)
 
 module BoundedIntMap : sig
@@ -94,27 +99,56 @@ let with_connection_ez
     ~sid
     ~tid
     ~version uri =
+  let do_cleanup = Ivar.create () in
+  Clock_ns.every (Time_ns.Span.of_int_sec 60)
+    Time_stamp_counter.Calibrator.calibrate
+    ~stop:(Ivar.read do_cleanup)
+    ~continue_on_error:false ;
   let logon =
     let fields =
       (Field.HeartBtInt.create
          (Time_ns.Span.to_int_sec heartbeat)) :: logon_fields
     in
-    Fix.create ~sid ~tid ~fields Fixtypes.MsgType.Logon in
+    Fix.create ~fields Fixtypes.MsgType.Logon in
   let reject ?reason:_ ?text:_ rsn =
     let fields = [ Field.RefSeqNum.create rsn ] in
     Fix.create ~fields Fixtypes.MsgType.Reject in
   let history = ref (BoundedIntMap.empty history_size) in
   let last_received = ref (Time_stamp_counter.now ()) in
-  let last_send     = ref (Time_stamp_counter.now ()) in
+  let last_sent     = ref (Time_stamp_counter.now ()) in
   let count = ref 1 in
+  let hb = Time_ns.Span.to_int63_ns heartbeat in
   with_connection ?tmpbuf ~version uri >>= fun (r, w) ->
   let s msg =
-    let msg = { msg with seqnum = !count } in
+    let msg = { msg with seqnum = !count ; sid ; tid } in
     history := BoundedIntMap.add !history ~key:!count ~data:msg ;
     incr count ;
-    last_send := Time_stamp_counter.now () ;
+    last_sent := Time_stamp_counter.now () ;
     Pipe.write w msg in
+  let watchdog () =
+    let open Time_stamp_counter in
+    let now = now () in
+    let span_last_received = Span.to_ns (diff now !last_received) in
+    let span_last_sent = Span.to_ns (diff now !last_sent) in
+    let open Int63 in
+    Logs_async.debug ~src begin fun m ->
+      m "watchdog %a %a" pp span_last_received pp span_last_sent
+    end >>= fun () ->
+    if span_last_received > of_int 2 * hb then begin
+      Ivar.fill_if_empty do_cleanup () ;
+      Deferred.unit end
+    else if span_last_received > hb then
+      if span_last_sent > hb then
+        s (Fix.heartbeat ())
+      else
+        s (Fix.create Fixtypes.MsgType.TestRequest)
+    else
+      Deferred.unit in
   s logon >>= fun () ->
+  Clock_ns.every' (Time_ns.Span.of_int_sec 5)
+    watchdog
+    ~continue_on_error:false
+    ~stop:(Ivar.read do_cleanup) ;
   let r = Pipe.filter_map' r ~f:begin fun m ->
       last_received := Time_stamp_counter.now () ;
       match m.typ with
@@ -128,12 +162,20 @@ let with_connection_ez
         let bsn = Field.(find_list BeginSeqNo m.fields) in
         let esn = Field.(find_list EndSeqNo m.fields) in
         begin match bsn, esn with
-        | Some _, Some _ -> Pipe.write w (reject m.seqnum)
-        | _ -> Pipe.write w (reject m.seqnum)
+        | Some _, Some _ -> s (reject m.seqnum)
+        | _ -> s (reject m.seqnum)
         end >>= fun () ->
         return None
       | _ -> return (Some m)
     end in
   let rr, ww = Pipe.create () in
   don't_wait_for (Pipe.iter rr ~f:s) ;
+  let cleanup () =
+    Ivar.read do_cleanup >>= fun () ->
+    Logs_async.warn
+      (fun m -> m "with_connection_ez: cleaning up") >>| fun () ->
+    Pipe.close w ;
+    Pipe.close_read rr in
+  don't_wait_for (cleanup ()) ;
+  don't_wait_for (Pipe.closed ww >>| Ivar.fill_if_empty do_cleanup) ;
   return (r, ww)
