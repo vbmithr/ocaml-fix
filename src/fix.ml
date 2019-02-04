@@ -25,8 +25,8 @@ let create
   { version ; typ ; sid ; tid ; seqnum ; ts ; fields = Field.Set.of_list fields }
 
 let create_set
-  ?(version=Version.FIXT (1,1))
-  ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=Field.Set.empty) typ =
+    ?(version=Version.FIXT (1,1))
+    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=Field.Set.empty) typ =
   { version ; typ ; sid ; tid ; seqnum ; ts ; fields }
 
 let heartbeat
