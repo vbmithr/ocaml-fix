@@ -54,7 +54,11 @@ end
 
 let field_mods = ref SMap.empty
 let register_field (module F : FIELD) =
-  field_mods := SMap.add F.name (module F : FIELD) !field_mods
+  field_mods := SMap.update F.name begin function
+      | None -> Some (module F : FIELD)
+      | Some _ ->
+        invalid_arg "register field: already registered"
+    end !field_mods
 
 let field_of_sexp sexp =
   match parse_raw (string_of_sexp sexp) with
@@ -126,7 +130,7 @@ let parse str =
       | None -> ()
       | Some v -> raise (Parsed_ok v)
     end !field_mods ;
-    R.error_msgf "Unknown tag %d" tag
+    R.error_msgf "Unknown tag %d=%s" tag v
   with Parsed_ok t -> R.ok t
 
 let parser =
@@ -272,6 +276,54 @@ module SendingTime = Make(struct
       | _ -> None
   end)
 let () = register_field (module SendingTime)
+
+type _ typ += IssueDate : Ptime.t typ
+module IssueDate = Make(struct
+    type t = Ptime.t [@@deriving sexp]
+    let t = IssueDate
+    let pp = Fixtypes.UTCTimestamp.pp
+    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let tag = 225
+    let name = "IssueDate"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | IssueDate, IssueDate -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module IssueDate)
+
+type _ typ += MaturityDate : Ptime.date typ
+module MaturityDate = Make(struct
+    type t = Ptime.date [@@deriving sexp]
+    let t = MaturityDate
+    let pp = Fixtypes.Date.pp
+    let parse = Fixtypes.Date.parse
+    let tag = 541
+    let name = "MaturityDate"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MaturityDate, MaturityDate -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MaturityDate)
+
+type _ typ += MaturityTime : Ptime.time typ
+module MaturityTime = Make(struct
+    type t = Ptime.time [@@deriving sexp]
+    let t = MaturityTime
+    let pp = Fixtypes.TZTimeOnly.pp
+    let parse = Fixtypes.TZTimeOnly.parse
+    let tag = 1079
+    let name = "MaturityTime"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MaturityTime, MaturityTime -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MaturityTime)
 
 type _ typ += SenderCompID : string typ
 module SenderCompID = Make(struct
@@ -673,6 +725,38 @@ module StrikePrice = Make(struct
   end)
 let () = register_field (module StrikePrice)
 
+type _ typ += MinTradeVol : float typ
+module MinTradeVol = Make(struct
+    type t = float [@@deriving sexp]
+    let t = MinTradeVol
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 562
+    let name = "MinTradeVol"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MinTradeVol, MinTradeVol -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MinTradeVol)
+
+type _ typ += ContratMultiplier : float typ
+module ContratMultiplier = Make(struct
+    type t = float [@@deriving sexp]
+    let t = ContratMultiplier
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 231
+    let name = "ContratMultiplier"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ContratMultiplier, ContratMultiplier -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ContratMultiplier)
+
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
     type t = string [@@deriving sexp]
@@ -704,4 +788,52 @@ module Currency = Make(struct
       | _ -> None
   end)
 let () = register_field (module Currency)
+
+type _ typ += SettlType : string typ
+module SettlType = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SettlType
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 63
+    let name = "SettlType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SettlType, SettlType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SettlType)
+
+type _ typ += SettlCurrency : string typ
+module SettlCurrency = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SettlCurrency
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 120
+    let name = "SettlCurrency"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SettlCurrency, SettlCurrency -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SettlCurrency)
+
+type _ typ += CommCurrency : string typ
+module CommCurrency = Make(struct
+    type t = string [@@deriving sexp]
+    let t = CommCurrency
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 479
+    let name = "CommCurrency"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CommCurrency, CommCurrency -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CommCurrency)
 

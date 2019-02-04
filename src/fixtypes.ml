@@ -38,10 +38,113 @@ module Ptime = struct
     let sexp_str = string_of_sexp sexp in
     match of_rfc3339 sexp_str with
     | Ok (t, _, _) -> t
-    | _ -> invalid_arg "Timestamp.t_of_sexp"
+    | _ -> invalid_arg "Ptime.t_of_sexp"
 
   let sexp_of_t t =
     sexp_of_string (to_rfc3339 t)
+
+  let date_of_string s =
+    match String.(Sub.to_int (sub_with_range s ~first:0 ~len:4)),
+          String.(Sub.to_int (sub_with_range s ~first:4 ~len:2)),
+          String.(Sub.to_int (sub_with_range s ~first:6 ~len:2))
+    with
+    | Some y, Some m, Some d -> Some (y, m, d)
+    | _ -> None
+
+  let string_of_date (y, m, d) =
+    Printf.sprintf "%04d%02d%02d" y m d
+
+  let date_of_sexp sexp =
+    let sexp_str = string_of_sexp sexp in
+    match date_of_string sexp_str with
+    | Some v -> v
+    | _ -> invalid_arg "Ptime.date_of_sexp"
+
+  let sexp_of_date d =
+    sexp_of_string (string_of_date d)
+
+  let tzspec =
+    let open Tyre in
+    let col = char ':' in
+    let num2 = conv int_of_string string_of_int (pcre "\\d{2}") in
+    let tz_offset_of_int i =
+      let r = (i mod 3600) / 60 in
+      (i / 3600, if r <> 0 then Some r else None) in
+    conv
+      begin function
+        | `Left () -> 0
+        | `Right ((`Left (), hh), None) -> hh * 3600
+        | `Right ((`Left (), hh), Some mm) -> hh * 3600 + mm * 60
+        | `Right ((`Right (), hh), None) -> ~- hh * 3600
+        | `Right ((`Right (), hh), Some mm) -> ~- hh * 3600 + mm * 60
+      end
+      begin function
+        | 0 -> `Left ()
+        | off when off > 0 ->
+          let hh, mm = tz_offset_of_int off in
+          `Right (((`Left (), hh), mm))
+        | off ->
+          let hh, mm = tz_offset_of_int (~- off) in
+          `Right (((`Right (), hh), mm))
+      end
+      (char 'Z' <|>
+       ((char '+' <|> char '-') <&> num2 <&> opt (col *> num2)))
+
+  let time =
+    let open Tyre in
+    let col = char ':' in
+    let num2 = conv int_of_string string_of_int (pcre "\\d{2}") in
+    conv
+      begin function
+        | (((hh, mm), None), None) -> (hh, mm, 0), 0
+        | (((hh, mm), Some ss), None) -> (hh, mm, ss), 0
+        | (((hh, mm), None), Some off) -> (hh, mm, 0), off
+        | (((hh, mm), Some ss), Some off) -> (hh, mm, ss), off
+      end
+      begin function
+        | ((hh, mm, 0), 0) -> (((hh, mm), None), None)
+        | ((hh, mm, ss), 0) -> (((hh, mm), Some ss), None)
+        | ((hh, mm, 0), off) -> (((hh, mm), None), Some off)
+        | ((hh, mm, ss), off) -> (((hh, mm), Some ss), Some off)
+      end
+      (num2 <* col <&> num2 <&> opt (col *> num2) <&> opt tzspec)
+
+  let time_re = Tyre.compile time
+
+  let time_of_string s = Tyre.exec time_re s
+  let time_of_string_opt s = R.to_option (time_of_string s)
+
+  let time_of_sexp s =
+    match time_of_string (string_of_sexp s) with
+    | Ok time -> time
+    | Error _  -> invalid_arg "time_of_sexp"
+
+  let string_of_time t = Tyre.eval time t
+
+  let sexp_of_time t =
+    sexp_of_string (string_of_time t)
+end
+
+module Date = struct
+  module T = struct
+    type t = Ptime.date [@@deriving sexp]
+
+    let parse = Ptime.date_of_string
+    let print = Ptime.string_of_date
+  end
+  include T
+  include Make(T)
+end
+
+module TZTimeOnly = struct
+  module T = struct
+    type t = Ptime.time [@@deriving sexp]
+
+    let parse = Ptime.time_of_string_opt
+    let print = Ptime.string_of_time
+  end
+  include T
+  include Make(T)
 end
 
 module UTCTimestamp = struct
@@ -395,16 +498,19 @@ module SecurityType = struct
     type t =
       | Future
       | Option
+      | Index
     [@@deriving sexp]
 
     let parse = function
       | "FUT" -> Some Future
       | "OPT" -> Some Option
+      | "INDEX" -> Some Index
       | _ -> None
 
     let print = function
       | Future -> "FUT"
       | Option -> "OPT"
+      | Index -> "INDEX"
   end
   include T
   include Make(T)

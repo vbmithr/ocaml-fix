@@ -16,7 +16,14 @@ module Ptime : sig
      and type span = Ptime.span
   val t_of_sexp : Sexp.t -> t
   val sexp_of_t : t -> Sexp.t
+  val date_of_sexp : Sexp.t -> date
+  val sexp_of_date : date -> Sexp.t
+  val time_of_sexp : Sexp.t -> time
+  val sexp_of_time : time -> Sexp.t
 end
+
+module Date : IO with type t := Ptime.date
+module TZTimeOnly : IO with type t := Ptime.time
 
 module UTCTimestamp : sig
   val parse : string -> (Ptime.t option, Ptime.t option Tyre.error) result
@@ -209,6 +216,7 @@ module SecurityType : sig
   type t =
     | Future
     | Option
+    | Index
   [@@deriving sexp]
   include IO with type t := t
 end
