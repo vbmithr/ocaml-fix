@@ -17,17 +17,19 @@ type t = {
   seqnum : int ;
   ts : Ptime.t option ;
   fields : Field.Set.t ;
+  groups : (Field.field * Field.field list list) option ;
 } [@@deriving sexp]
 
 let create
     ?(version=Version.FIXT (1,1))
-    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=[])  typ =
-  { version ; typ ; sid ; tid ; seqnum ; ts ; fields = Field.Set.of_list fields }
+    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=[]) ?groups typ =
+  { version ; typ ; sid ; tid ; seqnum ; ts ;
+    fields = Field.Set.of_list fields ; groups }
 
 let create_set
     ?(version=Version.FIXT (1,1))
-    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=Field.Set.empty) typ =
-  { version ; typ ; sid ; tid ; seqnum ; ts ; fields }
+    ?ts ?(sid="") ?(tid="") ?(seqnum=0) ?(fields=Field.Set.empty) ?groups typ =
+  { version ; typ ; sid ; tid ; seqnum ; ts ; fields ; groups }
 
 let heartbeat
     ?(version=Version.FIXT (1,1)) ?ts ?sid ?tid ?seqnum ?(testReqID="") () =
@@ -39,7 +41,8 @@ let heartbeat
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-let to_bytes ?(buf = Buffer.create 128) { version ; typ ; sid ; tid ; seqnum ; ts ; fields } =
+let to_bytes ?(buf = Buffer.create 128) { version ; typ ; sid ; tid ;
+                                          seqnum ; ts ; fields ; groups } =
   let add_field buf tag value =
     Buffer.add_string buf tag;
     Buffer.add_char buf '=';
@@ -58,6 +61,18 @@ let to_bytes ?(buf = Buffer.create 128) { version ; typ ; sid ; tid ; seqnum ; t
     Field.add_to_buffer buf f ;
     Buffer.add_char buf '\x01'
   end fields ;
+  begin match groups with
+    | None -> ()
+    | Some (sep, groups) ->
+      Field.add_to_buffer buf sep ;
+      Buffer.add_char buf '\x01' ;
+      List.iter begin fun group ->
+        List.iter begin fun f ->
+          Field.add_to_buffer buf f ;
+          Buffer.add_char buf '\x01'
+        end group
+      end groups
+  end ;
   let fieldslen = Buffer.length buf in
   let fields = Buffer.contents buf in
   Buffer.clear buf ;
@@ -77,6 +92,26 @@ let compute_chksum fields =
     end in
   (global - local) mod 256
 
+let fields_groups fields =
+  let s, sep, _, groups =
+    List.fold_left begin fun (s, sep, first_in_group, groups) f ->
+      match
+        Field.find Field.NoRelatedSym f = None &&
+        Field.find Field.NoMDEntries f = None &&
+        Field.find Field.NoPositions f = None,
+        first_in_group,
+        groups
+      with
+      | true, None, _ -> Field.Set.add f s, sep, first_in_group, groups
+      | true, Some f', _ when Field.same_kind f f' -> s, sep, first_in_group, [f] :: groups
+      | true, Some _, [] -> s, sep, Some f, [[f]]
+      | true, Some _, h :: t -> s, sep, first_in_group, (f :: h) :: t
+      | false, _, _ -> s, Some f, Some f, groups
+    end (Field.Set.empty, None, None, []) fields in
+  match sep with
+  | None -> s, None
+  | Some sep -> s, Some (sep, List.rev_map List.rev groups)
+
 let of_fields fields =
   let open R.Infix in
   match fields with
@@ -90,7 +125,7 @@ let of_fields fields =
     R.of_option
       ~none:(fun () -> R.error_msg "missing MsgType")
       (Field.find Field.MsgType msgType) >>= fun typ ->
-    let fields = Field.Set.of_list fields in
+    let fields, groups = fields_groups fields in
     R.of_option
       ~none:(fun () -> R.error_msg "missing MsgSeqNum")
       (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
@@ -108,7 +143,7 @@ let of_fields fields =
     let fields = Field.(remove_set SenderCompID fields) in
     let fields = Field.(remove_set TargetCompID fields) in
     let fields = Field.(remove_set SendingTime fields) in
-    R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)
+    R.ok (create_set ?ts ~fields ?groups ~seqnum ~sid ~tid ~version typ)
   | _ ->
     R.error_msg "missing standard header"
 

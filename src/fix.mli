@@ -11,6 +11,7 @@ type t = {
   seqnum : int ;
   ts : Ptime.t option ;
   fields : Field.Set.t ;
+  groups : (Field.t * Field.field list list) option ;
 } [@@deriving sexp]
 
 val pp : Format.formatter -> t -> unit
@@ -21,6 +22,7 @@ val create :
   ?tid:string ->
   ?seqnum:int ->
   ?fields:Field.t list ->
+  ?groups:(Field.t * Field.t list list) ->
   Fixtypes.MsgType.t -> t
 
 val heartbeat :

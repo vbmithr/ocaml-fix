@@ -97,6 +97,14 @@ let find :
     | Some aa -> Some aa
   end !field_mods None
 
+let same_kind ((F (typ, _, _)) as f1) ((F (typ', _, _)) as f2) =
+  SMap.fold begin fun _ m a ->
+    let module F = (val m : FIELD) in
+    match F.find typ f1, F.find typ' f2 with
+    | Some _, Some _ -> true
+    | _ -> a
+  end !field_mods false
+
 let find_set :
   type a. a typ -> Set.t -> a option = fun typ fields ->
   Set.fold begin fun f a ->
@@ -617,6 +625,38 @@ module NoRelatedSym = Make(struct
       | _ -> None
   end)
 let () = register_field (module NoRelatedSym)
+
+type _ typ += NoMDEntries : int typ
+module NoMDEntries = Make(struct
+    type t = int [@@deriving sexp]
+    let t = NoMDEntries
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 268
+    let name = "NoMDEntries"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoMDEntries, NoMDEntries -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoMDEntries)
+
+type _ typ += NoPositions : int typ
+module NoPositions = Make(struct
+    type t = int [@@deriving sexp]
+    let t = NoPositions
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 702
+    let name = "NoPositions"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoPositions, NoPositions -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoPositions)
 
 type _ typ += RawDataLength : int typ
 module RawDataLength = Make(struct

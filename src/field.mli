@@ -34,6 +34,7 @@ val parse : string -> (t, R.msg) result
 val parser : (t * int, R.msg) result Angstrom.t
 
 val find : 'a typ -> field -> 'a option
+val same_kind : field -> field -> bool
 val find_set : 'a typ -> Set.t -> 'a option
 val find_and_remove_set : 'a typ -> Set.t -> ('a * Set.t) option
 val remove_set : 'a typ -> Set.t -> Set.t
@@ -68,6 +69,9 @@ type _ typ += SecurityReqID : string typ
 type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
 type _ typ += Currency : string typ
 type _ typ += StrikeCurrency : string typ
+type _ typ += NoRelatedSym : int typ
+type _ typ += NoMDEntries : int typ
+type _ typ += NoPositions : int typ
 
 module Account : FIELD with type t := string
 module CheckSum : FIELD with type t := string
