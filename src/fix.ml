@@ -79,31 +79,38 @@ let compute_chksum fields =
 
 let of_fields fields =
   let open R.Infix in
-  let fields = Field.Set.of_list fields in
-  R.of_option
-    ~none:(fun () -> R.error_msg "missing BeginString")
-    (Field.find_set Field.BeginString fields) >>= fun version ->
-  R.of_option
-    ~none:(fun () -> R.error_msg "missing MsgType")
-    (Field.find_set Field.MsgType fields) >>= fun typ ->
-  R.of_option
-    ~none:(fun () -> R.error_msg "missing MsgSeqNum")
-    (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
-  R.of_option
-    ~none:(fun () -> R.error_msg "missing SenderCompID")
-    (Field.find_set Field.SenderCompID fields) >>= fun sid ->
-  R.of_option
-    ~none:(fun () -> R.error_msg "missing TargetCompID")
-    (Field.find_set Field.TargetCompID fields) >>= fun tid ->
-  let ts = Field.find_set Field.SendingTime fields in
-  let fields = Field.(remove_set BeginString fields) in
-  let fields = Field.(remove_set BodyLength fields) in
-  let fields = Field.(remove_set MsgType fields) in
-  let fields = Field.(remove_set MsgSeqNum fields) in
-  let fields = Field.(remove_set SenderCompID fields) in
-  let fields = Field.(remove_set TargetCompID fields) in
-  let fields = Field.(remove_set SendingTime fields) in
-  R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)
+  match fields with
+  | beginString :: bodyLength :: msgType :: fields ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing BeginString")
+      (Field.find Field.BeginString beginString) >>= fun version ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing BodyLength")
+      (Field.find Field.BodyLength bodyLength) >>= fun _ ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing MsgType")
+      (Field.find Field.MsgType msgType) >>= fun typ ->
+    let fields = Field.Set.of_list fields in
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing MsgSeqNum")
+      (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing SenderCompID")
+      (Field.find_set Field.SenderCompID fields) >>= fun sid ->
+    R.of_option
+      ~none:(fun () -> R.error_msg "missing TargetCompID")
+      (Field.find_set Field.TargetCompID fields) >>= fun tid ->
+    let ts = Field.find_set Field.SendingTime fields in
+    let fields = Field.(remove_set BeginString fields) in
+    let fields = Field.(remove_set BodyLength fields) in
+    let fields = Field.(remove_set MsgType fields) in
+    let fields = Field.(remove_set MsgSeqNum fields) in
+    let fields = Field.(remove_set SenderCompID fields) in
+    let fields = Field.(remove_set TargetCompID fields) in
+    let fields = Field.(remove_set SendingTime fields) in
+    R.ok (create_set ?ts ~fields ~seqnum ~sid ~tid ~version typ)
+  | _ ->
+    R.error_msg "missing standard header"
 
 let read ?pos ?len buf =
   let buf = String.sub_with_range ?first:pos ?len buf in
