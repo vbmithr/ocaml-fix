@@ -22,6 +22,15 @@ type field =
     F : 'a typ * (module T with type t = 'a) * 'a -> field
 type t = field
 
+type printable = (string * Sexplib.Sexp.t) [@@deriving sexp]
+
+let to_printable (F (_, m, v)) =
+  let module F = (val m) in
+  F.name, (F.sexp_of_t v)
+
+let sexp_of_field t =
+  sexp_of_printable (to_printable t)
+
 let create typ m v = F (typ, m, v)
 
 let pp ppf (F (_, m, v)) =
@@ -32,8 +41,6 @@ let pp ppf (F (_, m, v)) =
 let print (F (_, m, v)) =
   let module F = (val m) in
   Format.asprintf "%d=%a" F.tag F.pp v
-
-let sexp_of_field t = sexp_of_string (print t)
 
 let parse_raw str =
   match String.cut ~sep:"=" str with
@@ -61,17 +68,15 @@ let register_field (module F : FIELD) =
     end !field_mods
 
 let field_of_sexp sexp =
-  match parse_raw (string_of_sexp sexp) with
-  | Error _ as e -> R.failwith_error_msg e
-  | Ok (tag, v) ->
-    SMap.fold begin fun _ m a ->
-      let module F = (val m : FIELD) in
-      match F.parse tag v with
-      | None -> a
-      | Some t -> Some t
-    end !field_mods None |> function
-    | None -> failwith "field_of_sexp"
-    | Some v -> v
+  let name, s = printable_of_sexp sexp in
+  SMap.fold begin fun _ m a ->
+    let module F = (val m : FIELD) in
+    match F.name = name, F.parse F.tag (Sexplib.Sexp.to_string s) with
+    | true, Some t -> Some t
+    | _ -> a
+  end !field_mods None |> function
+  | None -> failwith "field_of_sexp"
+  | Some v -> v
 
 module Set = struct
   include Set.Make(struct
