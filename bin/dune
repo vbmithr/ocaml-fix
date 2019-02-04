@@ -1,0 +1,6 @@
+(executable
+ (name shell_deribit)
+ (public_name fix-deribit-shell)
+ (package fix-deribit)
+ (preprocess (pps ppx_let ppx_sexp_conv))
+ (libraries ptime.clock.os logs-async-reporter fix-async deribit))

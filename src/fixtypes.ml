@@ -96,18 +96,14 @@ module Ptime = struct
     let num2 = conv int_of_string string_of_int (pcre "\\d{2}") in
     conv
       begin function
-        | (((hh, mm), None), None) -> (hh, mm, 0), 0
-        | (((hh, mm), Some ss), None) -> (hh, mm, ss), 0
-        | (((hh, mm), None), Some off) -> (hh, mm, 0), off
-        | (((hh, mm), Some ss), Some off) -> (hh, mm, ss), off
+        | ((hh, mm), None), off -> (hh, mm, 0), off
+        | ((hh, mm), Some ss), off -> (hh, mm, ss), off
       end
       begin function
-        | ((hh, mm, 0), 0) -> (((hh, mm), None), None)
-        | ((hh, mm, ss), 0) -> (((hh, mm), Some ss), None)
-        | ((hh, mm, 0), off) -> (((hh, mm), None), Some off)
-        | ((hh, mm, ss), off) -> (((hh, mm), Some ss), Some off)
+        | (hh, mm, 0), off -> ((hh, mm), None), off
+        | (hh, mm, ss), off -> ((hh, mm), Some ss), off
       end
-      (num2 <* col <&> num2 <&> opt (col *> num2) <&> opt tzspec)
+      (num2 <* col <&> num2 <&> opt (col *> num2) <&> tzspec)
 
   let time_re = Tyre.compile time
 
@@ -119,7 +115,44 @@ module Ptime = struct
     | Ok time -> time
     | Error _  -> invalid_arg "time_of_sexp"
 
-  let string_of_time t = Tyre.eval time t
+  let pp_time ppf = function
+    | (hh, mm, 0), 0 -> Format.fprintf ppf "%02d:%02dZ" hh mm
+    | (hh, mm, ss), 0 -> Format.fprintf ppf "%02d:%02d:%02dZ" hh mm ss
+    | (hh, mm, 0), off when off > 0 -> begin
+        match off / 3600, off mod 3600 with
+        | hhhh, 0 ->
+          Format.fprintf ppf "%02d:%02d+%02d" hh mm hhhh
+        | hhhh, _ ->
+          let mmmm = hhhh / 60 in
+          Format.fprintf ppf "%02d:%02d+%02d:%02d" hh mm hhhh mmmm
+      end
+    | (hh, mm, 0), off -> begin
+        match off / 3600, off mod 3600 with
+        | hhhh, 0 ->
+          Format.fprintf ppf "%02d:%02d-%02d" hh mm hhhh
+        | hhhh, _ ->
+          let mmmm = hhhh / 60 in
+          Format.fprintf ppf "%02d:%02d-%02d:%02d" hh mm hhhh mmmm
+      end
+    | (hh, mm, ss), off when off > 0 -> begin
+        match off / 3600, off mod 3600 with
+        | hhhh, 0 ->
+          Format.fprintf ppf "%02d:%02d:%02d+%02d" hh mm ss hhhh
+        | hhhh, _ ->
+          let mmmm = hhhh / 60 in
+          Format.fprintf ppf "%02d:%02d:%02d+%02d:%02d" hh mm ss hhhh mmmm
+      end
+    | (hh, mm, ss), off -> begin
+        match off / 3600, off mod 3600 with
+        | hhhh, 0 ->
+          Format.fprintf ppf "%02d:%02d:%02d-%02d" hh mm ss hhhh
+        | hhhh, _ ->
+          let mmmm = hhhh / 60 in
+          Format.fprintf ppf "%02d:%02d:%02d-%02d:%02d" hh mm ss hhhh mmmm
+      end
+
+  let string_of_time t =
+    Format.asprintf "%a" pp_time t
 
   let sexp_of_time t =
     sexp_of_string (string_of_time t)
