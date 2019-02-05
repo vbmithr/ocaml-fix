@@ -592,6 +592,22 @@ module TestReqID = Make(struct
   end)
 let () = register_field (module TestReqID)
 
+type _ typ += UserRequestID : string typ
+module UserRequestID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = UserRequestID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 923
+    let name = "UserRequestID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | UserRequestID, UserRequestID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module UserRequestID)
+
 type _ typ += HeartBtInt : int typ
 module HeartBtInt = Make(struct
     type t = int [@@deriving sexp]
@@ -671,6 +687,38 @@ module SecurityListRequestType = Make(struct
       | _ -> None
   end)
 let () = register_field (module SecurityListRequestType)
+
+type _ typ += UserRequestType : UserRequestType.t typ
+module UserRequestType = Make(struct
+    type t = UserRequestType.t [@@deriving sexp]
+    let t = UserRequestType
+    let pp = UserRequestType.pp
+    let parse = UserRequestType.parse
+    let tag = 924
+    let name = "UserRequestType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | UserRequestType, UserRequestType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module UserRequestType)
+
+type _ typ += UserStatus : UserStatus.t typ
+module UserStatus = Make(struct
+    type t = UserStatus.t [@@deriving sexp]
+    let t = UserStatus
+    let pp = UserStatus.pp
+    let parse = UserStatus.parse
+    let tag = 926
+    let name = "UserStatus"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | UserStatus, UserStatus -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module UserStatus)
 
 type _ typ += SecurityResponseID : string typ
 module SecurityResponseID = Make(struct

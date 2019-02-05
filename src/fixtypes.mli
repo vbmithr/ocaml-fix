@@ -317,3 +317,29 @@ module OrdRejReason : sig
   [@@deriving sexp]
   include IO with type t := t
 end
+
+module UserRequestType : sig
+  type t =
+    | Logon
+    | Logoff
+    | ChangePassword
+    | RequestStatus
+
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module UserStatus : sig
+  type t =
+    | LoggedIn
+    | LoggedOff
+    | NotRecognized
+    | PasswordIncorrect
+    | PasswordChanged
+    | Other
+    | ForcedLogout
+    | SessionShutdownWarning
+
+  [@@deriving sexp]
+  include IO with type t := t
+end

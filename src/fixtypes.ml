@@ -237,6 +237,70 @@ module UTCTimestamp = struct
     | Some ts -> ts
 end
 
+module UserRequestType = struct
+  module T = struct
+    type t =
+      | Logon
+      | Logoff
+      | ChangePassword
+      | RequestStatus
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some Logon
+      | "2" -> Some Logoff
+      | "3" -> Some ChangePassword
+      | "4" -> Some RequestStatus
+      | _ -> None
+
+    let print = function
+      | Logon          -> "1"
+      | Logoff         -> "2"
+      | ChangePassword -> "3"
+      | RequestStatus  -> "4"
+  end
+  include T
+  include Make(T)
+end
+
+module UserStatus = struct
+  module T = struct
+    type t =
+      | LoggedIn
+      | LoggedOff
+      | NotRecognized
+      | PasswordIncorrect
+      | PasswordChanged
+      | Other
+      | ForcedLogout
+      | SessionShutdownWarning
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some LoggedIn
+      | "2" -> Some LoggedOff
+      | "3" -> Some NotRecognized
+      | "4" -> Some PasswordIncorrect
+      | "5" -> Some PasswordChanged
+      | "6" -> Some Other
+      | "7" -> Some ForcedLogout
+      | "8" -> Some SessionShutdownWarning
+      | _ -> None
+
+    let print = function
+      | LoggedIn               -> "1"
+      | LoggedOff              -> "2"
+      | NotRecognized          -> "3"
+      | PasswordIncorrect      -> "4"
+      | PasswordChanged        -> "5"
+      | Other                  -> "6"
+      | ForcedLogout           -> "7"
+      | SessionShutdownWarning -> "8"
+  end
+  include T
+  include Make(T)
+end
+
 module HandlInst = struct
   module T = struct
     type t =

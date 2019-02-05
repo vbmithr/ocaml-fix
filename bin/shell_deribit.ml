@@ -15,7 +15,7 @@ let hb msg =
 let on_server_msg _w msg = match msg.Fix.typ with
   | _ -> Deferred.unit
 
-let on_client_cmd w words =
+let on_client_cmd username w words =
   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
   match words with
   | "testreq" :: _ ->
@@ -48,6 +48,13 @@ let on_client_cmd w words =
       Field.SubscriptionRequestType.create Snapshot ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.RequestForPositions)
+  | "info" :: _ ->
+    let fields = [
+      Field.UserRequestID.create "a" ;
+      Field.UserRequestType.create RequestStatus ;
+      Field.Username.create username ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.UserRequest)
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
   (* | "BUY" ->
@@ -80,7 +87,7 @@ let main cfg =
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
   Deferred.any [
     Pipe.iter r ~f:(on_server_msg w);
-    Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
+    Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd key w);
     closed
   ]
 

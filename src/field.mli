@@ -109,3 +109,5 @@ module StrikeCurrency : FIELD with type t := string
 module Currency : FIELD with type t := string
 module PosReqID : FIELD with type t := string
 module PosReqType : FIELD with type t := PosReqType.t
+module UserRequestID : FIELD with type t := string
+module UserRequestType : FIELD with type t := UserRequestType.t
