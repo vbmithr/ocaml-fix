@@ -107,3 +107,5 @@ module SecurityReqID : FIELD with type t := string
 module SecurityListRequestType : FIELD with type t := SecurityListRequestType.t
 module StrikeCurrency : FIELD with type t := string
 module Currency : FIELD with type t := string
+module PosReqID : FIELD with type t := string
+module PosReqType : FIELD with type t := PosReqType.t

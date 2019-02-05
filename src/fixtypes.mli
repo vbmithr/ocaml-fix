@@ -54,9 +54,38 @@ module OrdStatus : sig
   include IO with type t := t
 end
 
+module PosReqType : sig
+  type t =
+    | Positions
+    | Trades
+    | Exercises
+    | Assignments
+    | SettlementActivity
+    | BackoutMessage
+    | DeltaPositions
+
+  include IO with type t := t
+end
+
+module PosReqResult : sig
+  type t =
+    | ValidRequest
+    | InvalidRequest
+    | NoPositionsFound
+    | NotAuthorized
+    | Unsupported
+
+  include IO with type t := t
+end
+
 module OrdType : sig
   type t =
     | Market
+    | Limit
+    | Stop
+    | StopLimit
+    | MarketOnClose
+    | WithOrWithout
 
   include IO with type t := t
 end
@@ -153,6 +182,10 @@ module MsgType : sig
     | Reject
     | SequenceReset
     | Logout
+    | IOI
+    | Advertisement
+    | ExecutionReport
+    | OrderCancelReject
     | Logon
     | NewOrderSingle
     | NewOrderList
@@ -233,6 +266,54 @@ module SecurityType : sig
     | Future
     | Option
     | Index
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module QtyType : sig
+  type t =
+    | Units
+    | Contracts
+    | UnitsPerTime
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module ExecType : sig
+  type t =
+    | New
+    | DoneForDay
+    | Canceled
+    | Replaced
+    | PendingCancel
+    | Stopped
+    | Rejected
+    | Suspended
+    | PendingNew
+    | Calculated
+    | Expired
+    | Restated
+    | PendingReplace
+    | Trade
+    | TradeCorrect
+    | TradeCancel
+    | OrderStatus
+    | TradeInClearingHold
+    | TradeReleasedToClearing
+    | Triggered
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module OrdRejReason : sig
+  type t =
+    | Broker
+    | UnknownSymbol
+    | ExchangeClosed
+    | OrderExceedsLimit
+    | TooLateToEnter
+    | UnknownOrder
+    | DuplicateOrder
   [@@deriving sexp]
   include IO with type t := t
 end

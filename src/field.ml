@@ -59,8 +59,22 @@ module type FIELD = sig
   val parse : int -> string -> field option
 end
 
+module IntSet = Set.Make(struct
+    type t = int
+    let compare = Pervasives.compare
+  end)
+
 let field_mods = ref SMap.empty
+let registered_tags = ref IntSet.empty
+
 let register_field (module F : FIELD) =
+  begin
+    registered_tags :=
+      match IntSet.find_opt F.tag !registered_tags with
+      | Some _ ->
+        invalid_arg (Printf.sprintf "register_field: tag %d already registered" F.tag)
+      | None -> IntSet.add F.tag !registered_tags
+  end ;
   field_mods := SMap.update F.name begin function
       | None -> Some (module F : FIELD)
       | Some _ ->
@@ -242,6 +256,54 @@ module CheckSum = Make(struct
   end)
 let () = register_field (module CheckSum)
 
+type _ typ += ClOrdID : string typ
+module ClOrdID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = ClOrdID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 11
+    let name = "ClOrdID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ClOrdID, ClOrdID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ClOrdID)
+
+type _ typ += OrigClOrdID : string typ
+module OrigClOrdID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = OrigClOrdID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 41
+    let name = "OrigClOrdID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | OrigClOrdID, OrigClOrdID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module OrigClOrdID)
+
+type _ typ += ExecType : ExecType.t typ
+module ExecType = Make(struct
+    type t = ExecType.t [@@deriving sexp]
+    let t = ExecType
+    let pp = ExecType.pp
+    let parse = ExecType.parse
+    let tag = 150
+    let name = "ExecType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ExecType, ExecType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ExecType)
+
 type _ typ += MsgType : Fixtypes.MsgType.t typ
 module MsgType = Make(struct
     type t = Fixtypes.MsgType.t [@@deriving sexp]
@@ -289,6 +351,22 @@ module SendingTime = Make(struct
       | _ -> None
   end)
 let () = register_field (module SendingTime)
+
+type _ typ += TransactTime : Ptime.t typ
+module TransactTime = Make(struct
+    type t = Ptime.t [@@deriving sexp]
+    let t = TransactTime
+    let pp = Fixtypes.UTCTimestamp.pp
+    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let tag = 60
+    let name = "TransactTime"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TransactTime, TransactTime -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TransactTime)
 
 type _ typ += MDEntryDate : Ptime.t typ
 module MDEntryDate = Make(struct
@@ -658,6 +736,70 @@ module MDReqID = Make(struct
   end)
 let () = register_field (module MDReqID)
 
+type _ typ += PosReqID : string typ
+module PosReqID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = PosReqID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 710
+    let name = "PosReqID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PosReqID, PosReqID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PosReqID)
+
+type _ typ += PosMaintRptID : string typ
+module PosMaintRptID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = PosMaintRptID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 721
+    let name = "PosMaintRptID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PosMaintRptID, PosMaintRptID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PosMaintRptID)
+
+type _ typ += PosReqType : PosReqType.t typ
+module PosReqType = Make(struct
+    type t = PosReqType.t [@@deriving sexp]
+    let t = PosReqType
+    let pp = PosReqType.pp
+    let parse = PosReqType.parse
+    let tag = 724
+    let name = "PosReqType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PosReqType, PosReqType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PosReqType)
+
+type _ typ += PosReqResult : PosReqResult.t typ
+module PosReqResult = Make(struct
+    type t = PosReqResult.t [@@deriving sexp]
+    let t = PosReqResult
+    let pp = PosReqResult.pp
+    let parse = PosReqResult.parse
+    let tag = 728
+    let name = "PosReqResult"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PosReqResult, PosReqResult -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PosReqResult)
+
 type _ typ += SubscriptionRequestType : SubscriptionRequestType.t typ
 module SubscriptionRequestType = Make(struct
     type t = SubscriptionRequestType.t [@@deriving sexp]
@@ -673,6 +815,22 @@ module SubscriptionRequestType = Make(struct
       | _ -> None
   end)
 let () = register_field (module SubscriptionRequestType)
+
+type _ typ += RefTagID : int typ
+module RefTagID = Make(struct
+    type t = int [@@deriving sexp]
+    let t = RefTagID
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 371
+    let name = "RefTagID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | RefTagID, RefTagID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module RefTagID)
 
 type _ typ += MarketDepth : int typ
 module MarketDepth = Make(struct
@@ -946,6 +1104,54 @@ module PutOrCall = Make(struct
   end)
 let () = register_field (module PutOrCall)
 
+type _ typ += QtyType : QtyType.t typ
+module QtyType = Make(struct
+    type t = QtyType.t [@@deriving sexp]
+    let t = QtyType
+    let pp = QtyType.pp
+    let parse = QtyType.parse
+    let tag = 854
+    let name = "QtyType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | QtyType, QtyType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module QtyType)
+
+type _ typ += OrdType : OrdType.t typ
+module OrdType = Make(struct
+    type t = OrdType.t [@@deriving sexp]
+    let t = OrdType
+    let pp = OrdType.pp
+    let parse = OrdType.parse
+    let tag = 40
+    let name = "OrdType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | OrdType, OrdType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module OrdType)
+
+type _ typ += OrdRejReason : OrdRejReason.t typ
+module OrdRejReason = Make(struct
+    type t = OrdRejReason.t [@@deriving sexp]
+    let t = OrdRejReason
+    let pp = OrdRejReason.pp
+    let parse = OrdRejReason.parse
+    let tag = 103
+    let name = "OrdRejReason"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | OrdRejReason, OrdRejReason -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module OrdRejReason)
+
 type _ typ += Price : float typ
 module Price = Make(struct
     type t = float [@@deriving sexp]
@@ -961,6 +1167,38 @@ module Price = Make(struct
       | _ -> None
   end)
 let () = register_field (module Price)
+
+type _ typ += AvgPx : float typ
+module AvgPx = Make(struct
+    type t = float [@@deriving sexp]
+    let t = AvgPx
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 6
+    let name = "AvgPx"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | AvgPx, AvgPx -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module AvgPx)
+
+type _ typ += MaxShow : float typ
+module MaxShow = Make(struct
+    type t = float [@@deriving sexp]
+    let t = MaxShow
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 210
+    let name = "MaxShow"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MaxShow, MaxShow -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MaxShow)
 
 type _ typ += StrikePrice : float typ
 module StrikePrice = Make(struct
@@ -1010,6 +1248,38 @@ module UnderlyingPx = Make(struct
   end)
 let () = register_field (module UnderlyingPx)
 
+type _ typ += UnderlyingEndPrice : float typ
+module UnderlyingEndPrice = Make(struct
+    type t = float [@@deriving sexp]
+    let t = UnderlyingEndPrice
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 883
+    let name = "UnderlyingEndPrice"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | UnderlyingEndPrice, UnderlyingEndPrice -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module UnderlyingEndPrice)
+
+type _ typ += SettlPrice : float typ
+module SettlPrice = Make(struct
+    type t = float [@@deriving sexp]
+    let t = SettlPrice
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 730
+    let name = "SettlPrice"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SettlPrice, SettlPrice -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SettlPrice)
+
 type _ typ += MDEntrySize : float typ
 module MDEntrySize = Make(struct
     type t = float [@@deriving sexp]
@@ -1042,21 +1312,101 @@ module MinTradeVol = Make(struct
   end)
 let () = register_field (module MinTradeVol)
 
-type _ typ += ContratMultiplier : float typ
-module ContratMultiplier = Make(struct
+type _ typ += ContractMultiplier : float typ
+module ContractMultiplier = Make(struct
     type t = float [@@deriving sexp]
-    let t = ContratMultiplier
+    let t = ContractMultiplier
     let pp = Format.pp_print_float
     let parse = float_of_string_opt
     let tag = 231
-    let name = "ContratMultiplier"
+    let name = "ContractMultiplier"
     let eq :
       type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
       match a, b with
-      | ContratMultiplier, ContratMultiplier -> Some Eq
+      | ContractMultiplier, ContractMultiplier -> Some Eq
       | _ -> None
   end)
-let () = register_field (module ContratMultiplier)
+let () = register_field (module ContractMultiplier)
+
+type _ typ += LongQty : float typ
+module LongQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = LongQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 704
+    let name = "LongQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | LongQty, LongQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module LongQty)
+
+type _ typ += ShortQty : float typ
+module ShortQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = ShortQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 705
+    let name = "ShortQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ShortQty, ShortQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ShortQty)
+
+type _ typ += LeavesQty : float typ
+module LeavesQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = LeavesQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 151
+    let name = "LeavesQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | LeavesQty, LeavesQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module LeavesQty)
+
+type _ typ += CumQty : float typ
+module CumQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = CumQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 14
+    let name = "CumQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CumQty, CumQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CumQty)
+
+type _ typ += OrderQty : float typ
+module OrderQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = OrderQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 38
+    let name = "OrderQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | OrderQty, OrderQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module OrderQty)
 
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
@@ -1137,4 +1487,20 @@ module CommCurrency = Make(struct
       | _ -> None
   end)
 let () = register_field (module CommCurrency)
+
+type _ typ += SecurityExchange : string typ
+module SecurityExchange = Make(struct
+    type t = string [@@deriving sexp]
+    let t = SecurityExchange
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 207
+    let name = "SecurityExchange"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | SecurityExchange, SecurityExchange -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module SecurityExchange)
 

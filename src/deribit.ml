@@ -103,6 +103,38 @@ module TradeVolume24h = Make(struct
   end)
 let () = register_field (module TradeVolume24h)
 
+type _ typ += DeribitLiquidationPrice : float typ
+module DeribitLiquidationPrice = Make(struct
+    type t = float [@@deriving sexp]
+    let t = DeribitLiquidationPrice
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 100_088
+    let name = "DeribitLiquidationPrice"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitLiquidationPrice, DeribitLiquidationPrice -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitLiquidationPrice)
+
+type _ typ += DeribitBTCSize : float typ
+module DeribitBTCSize = Make(struct
+    type t = float [@@deriving sexp]
+    let t = DeribitBTCSize
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 100_089
+    let name = "DeribitBTCSize"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitBTCSize, DeribitBTCSize -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitBTCSize)
+
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"
 

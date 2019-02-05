@@ -41,6 +41,13 @@ let on_client_cmd w words =
         [ Field.MDEntryType.create Trade ] ;
       ] in
     Pipe.write w (Fix.create ~groups ~fields MsgType.MarketDataRequest)
+  | "positions" :: _ ->
+    let fields = [
+      Field.PosReqID.create "a" ;
+      Field.PosReqType.create Positions ;
+      Field.SubscriptionRequestType.create Snapshot ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.RequestForPositions)
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
   (* | "BUY" ->

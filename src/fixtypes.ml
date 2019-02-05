@@ -289,23 +289,137 @@ module OrdStatus = struct
   include Make(T)
 end
 
-module OrdType = struct
+module PosReqType = struct
   module T = struct
     type t =
-      | Market
+      | Positions
+      | Trades
+      | Exercises
+      | Assignments
+      | SettlementActivity
+      | BackoutMessage
+      | DeltaPositions
     [@@deriving sexp]
 
     let parse = function
-      | "1" -> Some Market
+      | "0" -> Some Positions
+      | "1" -> Some Trades
+      | "2" -> Some Exercises
+      | "3" -> Some Assignments
+      | "4" -> Some SettlementActivity
+      | "5" -> Some BackoutMessage
+      | "6" -> Some DeltaPositions
       | _ -> None
 
     let print = function
-      | Market -> "1"
+      | Positions          -> "0"
+      | Trades             -> "1"
+      | Exercises          -> "2"
+      | Assignments        -> "3"
+      | SettlementActivity -> "4"
+      | BackoutMessage     -> "5"
+      | DeltaPositions     -> "6"
   end
   include T
   include Make(T)
 end
 
+module PosReqResult = struct
+  module T = struct
+    type t =
+      | ValidRequest
+      | InvalidRequest
+      | NoPositionsFound
+      | NotAuthorized
+      | Unsupported
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some ValidRequest
+      | "1" -> Some InvalidRequest
+      | "2" -> Some NoPositionsFound
+      | "3" -> Some NotAuthorized
+      | "4" -> Some Unsupported
+      | _ -> None
+
+    let print = function
+      | ValidRequest     -> "0"
+      | InvalidRequest   -> "1"
+      | NoPositionsFound -> "2"
+      | NotAuthorized    -> "3"
+      | Unsupported      -> "4"
+  end
+  include T
+  include Make(T)
+end
+
+module OrdType = struct
+  module T = struct
+    type t =
+      | Market
+      | Limit
+      | Stop
+      | StopLimit
+      | MarketOnClose
+      | WithOrWithout
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some Market
+      | "2" -> Some Market
+      | "3" -> Some Market
+      | "4" -> Some Market
+      | "5" -> Some Market
+      | "6" -> Some Market
+      | _ -> None
+
+    let print = function
+      | Market        -> "1"
+      | Limit         -> "2"
+      | Stop          -> "3"
+      | StopLimit     -> "4"
+      | MarketOnClose -> "5"
+      | WithOrWithout -> "6"
+  end
+  include T
+  include Make(T)
+end
+
+module OrdRejReason = struct
+  module T = struct
+    type t =
+      | Broker
+      | UnknownSymbol
+      | ExchangeClosed
+      | OrderExceedsLimit
+      | TooLateToEnter
+      | UnknownOrder
+      | DuplicateOrder
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some Broker
+      | "1" -> Some UnknownSymbol
+      | "2" -> Some ExchangeClosed
+      | "3" -> Some OrderExceedsLimit
+      | "4" -> Some TooLateToEnter
+      | "5" -> Some UnknownOrder
+      | "6" -> Some DuplicateOrder
+      | _ -> None
+
+    let print = function
+      | Broker            -> "0"
+      | UnknownSymbol     -> "1"
+      | ExchangeClosed    -> "2"
+      | OrderExceedsLimit -> "3"
+      | TooLateToEnter    -> "4"
+      | UnknownOrder      -> "5"
+      | DuplicateOrder    -> "6"
+
+  end
+  include T
+  include Make(T)
+end
 
 module PutOrCall = struct
   module T = struct
@@ -593,6 +707,29 @@ module SecurityType = struct
   include Make(T)
 end
 
+module QtyType = struct
+  module T = struct
+    type t =
+      | Units
+      | Contracts
+      | UnitsPerTime
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some Units
+      | "1" -> Some Contracts
+      | "2" -> Some UnitsPerTime
+      | _ -> None
+
+    let print = function
+      | Units -> "0"
+      | Contracts -> "1"
+      | UnitsPerTime -> "2"
+  end
+  include T
+  include Make(T)
+end
+
 module Version = struct
   module T = struct
     type t =
@@ -633,6 +770,10 @@ module MsgType = struct
     | Reject
     | SequenceReset
     | Logout
+    | IOI
+    | Advertisement
+    | ExecutionReport
+    | OrderCancelReject
     | Logon
     | NewOrderSingle
     | NewOrderList
@@ -663,6 +804,10 @@ module MsgType = struct
     | "3" -> Reject
     | "4" -> SequenceReset
     | "5" -> Logout
+    | "6" -> IOI
+    | "7" -> Advertisement
+    | "8" -> ExecutionReport
+    | "9" -> OrderCancelReject
     | "A" -> Logon
     | "D" -> NewOrderSingle
     | "E" -> NewOrderList
@@ -693,6 +838,10 @@ module MsgType = struct
     | Reject                        -> "3"
     | SequenceReset                 -> "4"
     | Logout                        -> "5"
+    | IOI                           -> "6"
+    | Advertisement                 -> "7"
+    | ExecutionReport               -> "8"
+    | OrderCancelReject             -> "9"
     | Logon                         -> "A"
     | NewOrderSingle                -> "D"
     | NewOrderList                  -> "E"
@@ -778,4 +927,79 @@ module SessionRejectReason = struct
   let print t = string_of_int (to_int t)
 
   let pp ppf t = Format.pp_print_int ppf (to_int t)
+end
+
+module ExecType = struct
+  module T = struct
+    type t =
+      | New
+      | DoneForDay
+      | Canceled
+      | Replaced
+      | PendingCancel
+      | Stopped
+      | Rejected
+      | Suspended
+      | PendingNew
+      | Calculated
+      | Expired
+      | Restated
+      | PendingReplace
+      | Trade
+      | TradeCorrect
+      | TradeCancel
+      | OrderStatus
+      | TradeInClearingHold
+      | TradeReleasedToClearing
+      | Triggered
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some New
+      | "3" -> Some DoneForDay
+      | "4" -> Some Canceled
+      | "5" -> Some Replaced
+      | "6" -> Some PendingCancel
+      | "7" -> Some Stopped
+      | "8" -> Some Rejected
+      | "9" -> Some Suspended
+      | "A" -> Some PendingNew
+      | "B" -> Some Calculated
+      | "C" -> Some Expired
+      | "D" -> Some Restated
+      | "E" -> Some PendingReplace
+      | "F" -> Some Trade
+      | "G" -> Some TradeCorrect
+      | "H" -> Some TradeCancel
+      | "I" -> Some OrderStatus
+      | "J" -> Some TradeInClearingHold
+      | "K" -> Some TradeReleasedToClearing
+      | "L" -> Some Triggered
+      | _ -> None
+
+    let print = function
+      | New                     -> "0"
+      | DoneForDay              -> "3"
+      | Canceled                -> "4"
+      | Replaced                -> "5"
+      | PendingCancel           -> "6"
+      | Stopped                 -> "7"
+      | Rejected                -> "8"
+      | Suspended               -> "9"
+      | PendingNew              -> "A"
+      | Calculated              -> "B"
+      | Expired                 -> "C"
+      | Restated                -> "D"
+      | PendingReplace          -> "E"
+      | Trade                   -> "F"
+      | TradeCorrect            -> "G"
+      | TradeCancel             -> "H"
+      | OrderStatus             -> "I"
+      | TradeInClearingHold     -> "J"
+      | TradeReleasedToClearing -> "K"
+      | Triggered               -> "L"
+
+  end
+  include T
+  include Make(T)
 end
