@@ -55,24 +55,26 @@ let on_client_cmd username w words =
       Field.Username.create username ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.UserRequest)
+  | "buy" :: symbol :: _ ->
+    let fields = [
+      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.Side.create Buy ;
+      Field.OrderQty.create 1. ;
+      Field.OrdType.create Market ;
+      Field.Symbol.create symbol ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
+  | "sell" :: symbol :: _ ->
+    let fields = [
+      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.Side.create Sell ;
+      Field.OrderQty.create 1. ;
+      Field.OrdType.create Market ;
+      Field.Symbol.create symbol ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
-  (* | "BUY" ->
-   *   let symbol = List.nth_exn words 1 in
-   *   let p = List.nth_exn words 2 |> Float.of_string in
-   *   let v = List.nth_exn words 3 |> Float.of_string in
-   *   send_msg w
-   *     (new_order
-   *        ~uuid:Uuid.(create () |> to_string)
-   *        ~symbol ~p ~v ~side:Buy)
-   * | "SELL" ->
-   *   let symbol = List.nth_exn words 1 in
-   *   let p = List.nth_exn words 2 |> Float.of_string in
-   *   let v = List.nth_exn words 3 |> Float.of_string in
-   *   send_msg w
-   *     (new_order
-   *        ~uuid:Uuid.(create () |> to_string)
-   *        ~symbol ~p ~v ~side:Sell) *)
 
 let main cfg =
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->

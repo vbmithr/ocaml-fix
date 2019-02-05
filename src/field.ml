@@ -1008,6 +1008,38 @@ module NoPositions = Make(struct
   end)
 let () = register_field (module NoPositions)
 
+type _ typ += NoFills : int typ
+module NoFills = Make(struct
+    type t = int [@@deriving sexp]
+    let t = NoFills
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 1362
+    let name = "NoFills"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoFills, NoFills -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoFills)
+
+type _ typ += FillExecID : string typ
+module FillExecID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = FillExecID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 1363
+    let name = "FillExecID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | FillExecID, FillExecID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module FillExecID)
+
 type _ typ += RawDataLength : int typ
 module RawDataLength = Make(struct
     type t = int [@@deriving sexp]
@@ -1231,6 +1263,38 @@ module AvgPx = Make(struct
       | _ -> None
   end)
 let () = register_field (module AvgPx)
+
+type _ typ += FillPx : float typ
+module FillPx = Make(struct
+    type t = float [@@deriving sexp]
+    let t = FillPx
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 1364
+    let name = "FillPx"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | FillPx, FillPx -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module FillPx)
+
+type _ typ += FillQty : float typ
+module FillQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = FillQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 1365
+    let name = "FillQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | FillQty, FillQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module FillQty)
 
 type _ typ += MaxShow : float typ
 module MaxShow = Make(struct

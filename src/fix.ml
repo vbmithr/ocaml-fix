@@ -98,7 +98,9 @@ let fields_groups fields =
       match
         Field.find Field.NoRelatedSym f = None &&
         Field.find Field.NoMDEntries f = None &&
-        Field.find Field.NoPositions f = None,
+        Field.find Field.NoPositions f = None &&
+        Field.find Field.NoFills f = None &&
+        true,
         first_in_group,
         groups
       with

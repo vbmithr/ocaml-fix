@@ -231,21 +231,21 @@ module DeribitRealizedPl = Make(struct
   end)
 let () = register_field (module DeribitRealizedPl)
 
-type _ typ += DeribitCustom11 : float typ
-module DeribitCustom11 = Make(struct
+type _ typ += DeribitTotalPl : float typ
+module DeribitTotalPl = Make(struct
     type t = float [@@deriving sexp]
-    let t = DeribitCustom11
+    let t = DeribitTotalPl
     let pp = Format.pp_print_float
     let parse = float_of_string_opt
     let tag = 100_011
-    let name = "DeribitCustom11"
+    let name = "DeribitTotalPl"
     let eq :
       type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
       match a, b with
-      | DeribitCustom11, DeribitCustom11 -> Some Eq
+      | DeribitTotalPl, DeribitTotalPl -> Some Eq
       | _ -> None
   end)
-let () = register_field (module DeribitCustom11)
+let () = register_field (module DeribitTotalPl)
 
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"

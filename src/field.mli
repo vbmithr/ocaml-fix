@@ -73,11 +73,13 @@ type _ typ += NoRelatedSym : int typ
 type _ typ += NoMDEntryTypes : int typ
 type _ typ += NoMDEntries : int typ
 type _ typ += NoPositions : int typ
+type _ typ += NoFills : int typ
 
 module NoRelatedSym : FIELD with type t := int
 module NoMDEntryTypes : FIELD with type t := int
 module NoMDEntries : FIELD with type t := int
 module NoPositions : FIELD with type t := int
+module NoFills : FIELD with type t := int
 
 module Account : FIELD with type t := string
 module Symbol : FIELD with type t := string
@@ -111,3 +113,7 @@ module PosReqID : FIELD with type t := string
 module PosReqType : FIELD with type t := PosReqType.t
 module UserRequestID : FIELD with type t := string
 module UserRequestType : FIELD with type t := UserRequestType.t
+module ClOrdID : FIELD with type t := string
+module Side : FIELD with type t := Side.t
+module OrderQty : FIELD with type t := float
+module OrdType : FIELD with type t := OrdType.t
