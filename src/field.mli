@@ -70,10 +70,22 @@ type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
 type _ typ += Currency : string typ
 type _ typ += StrikeCurrency : string typ
 type _ typ += NoRelatedSym : int typ
+type _ typ += NoMDEntryTypes : int typ
 type _ typ += NoMDEntries : int typ
 type _ typ += NoPositions : int typ
 
+module NoRelatedSym : FIELD with type t := int
+module NoMDEntryTypes : FIELD with type t := int
+module NoMDEntries : FIELD with type t := int
+module NoPositions : FIELD with type t := int
+
 module Account : FIELD with type t := string
+module Symbol : FIELD with type t := string
+module MDReqID : FIELD with type t := string
+module MDEntryType : FIELD with type t := Fixtypes.MDEntryType.t
+module MDUpdateType : FIELD with type t := Fixtypes.MDUpdateType.t
+module MarketDepth : FIELD with type t := int
+module SubscriptionRequestType : FIELD with type t := Fixtypes.SubscriptionRequestType.t
 module CheckSum : FIELD with type t := string
 module MsgType : FIELD with type t := Fixtypes.MsgType.t
 module RefMsgType : FIELD with type t := Fixtypes.MsgType.t

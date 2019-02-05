@@ -35,6 +35,74 @@ module InstrumentPricePrecision = Make(struct
   end)
 let () = register_field (module InstrumentPricePrecision)
 
+type _ typ += DeribitTradeAmount : int typ
+module DeribitTradeAmount = Make(struct
+    type t = int [@@deriving sexp]
+    let t = DeribitTradeAmount
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 100_007
+    let name = "DeribitTradeAmount"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitTradeAmount, DeribitTradeAmount -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitTradeAmount)
+
+type _ typ += DeribitTradeID : int typ
+module DeribitTradeID = Make(struct
+    type t = int [@@deriving sexp]
+    let t = DeribitTradeID
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 100_009
+    let name = "DeribitTradeID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitTradeID, DeribitTradeID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitTradeID)
+
+type _ typ += DeribitSinceTimestamp : Ptime.t typ
+module DeribitSinceTimestamp = Make(struct
+    type t = Ptime.t [@@deriving sexp]
+    let t = DeribitSinceTimestamp
+    let pp ppf t =
+      Format.fprintf ppf "%.0f" (Ptime.to_float_s t *. 1e3)
+    let parse s =
+      match float_of_string_opt s with
+      | None -> None
+      | Some ts -> Ptime.of_float_s (ts /. 1e3)
+    let tag = 100_008
+    let name = "DeribitSinceTimestamp"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitSinceTimestamp, DeribitSinceTimestamp -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitSinceTimestamp)
+
+type _ typ += TradeVolume24h : float typ
+module TradeVolume24h = Make(struct
+    type t = float [@@deriving sexp]
+    let t = TradeVolume24h
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 100_087
+    let name = "TradeVolume24h"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TradeVolume24h, TradeVolume24h -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TradeVolume24h)
+
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"
 

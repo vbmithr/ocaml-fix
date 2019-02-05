@@ -264,14 +264,26 @@ module OrdStatus = struct
   module T = struct
     type t =
       | New
+      | PartiallyFilled
+      | Filled
+      | DoneForDay
+      | Canceled
     [@@deriving sexp]
 
     let parse = function
       | "0" -> Some New
+      | "1" -> Some PartiallyFilled
+      | "2" -> Some Filled
+      | "3" -> Some DoneForDay
+      | "4" -> Some Canceled
       | _ -> None
 
     let print = function
       | New -> "0"
+      | PartiallyFilled -> "1"
+      | Filled -> "2"
+      | DoneForDay -> "3"
+      | Canceled -> "4"
   end
   include T
   include Make(T)
@@ -373,7 +385,7 @@ module SubscriptionRequestType = struct
   include Make(T)
 end
 
-module MdUpdateType = struct
+module MDUpdateType = struct
   module T = struct
     type t =
       | Full
@@ -393,7 +405,39 @@ module MdUpdateType = struct
   include Make(T)
 end
 
-module MdEntryType = struct
+module MDUpdateAction = struct
+  module T = struct
+    type t =
+      | New
+      | Change
+      | Delete
+      | DeleteThru
+      | DeleteFrom
+      | Overlay
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some New
+      | "1" -> Some Change
+      | "2" -> Some Delete
+      | "3" -> Some DeleteThru
+      | "4" -> Some DeleteFrom
+      | "5" -> Some Overlay
+      | _ -> None
+
+    let print = function
+      | New -> "0"
+      | Change -> "1"
+      | Delete -> "2"
+      | DeleteThru -> "3"
+      | DeleteFrom -> "4"
+      | Overlay -> "5"
+  end
+  include T
+  include Make(T)
+end
+
+module MDEntryType = struct
   module T = struct
     type t =
       | Bid
@@ -424,13 +468,13 @@ module Side = struct
     [@@deriving sexp]
 
     let parse = function
-      | "0" -> Some Buy
-      | "1" -> Some Sell
+      | "1" -> Some Buy
+      | "2" -> Some Sell
       | _ -> None
 
     let print = function
-      | Buy -> "0"
-      | Sell -> "1"
+      | Buy -> "1"
+      | Sell -> "2"
   end
   include T
   include Make(T)

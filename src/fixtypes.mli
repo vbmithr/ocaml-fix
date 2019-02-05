@@ -46,6 +46,10 @@ end
 module OrdStatus : sig
   type t =
     | New
+    | PartiallyFilled
+    | Filled
+    | DoneForDay
+    | Canceled
 
   include IO with type t := t
 end
@@ -79,7 +83,7 @@ module SubscriptionRequestType : sig
   include IO with type t := t
 end
 
-module MdUpdateType : sig
+module MDUpdateType : sig
   type t =
     | Full
     | Incremental
@@ -87,7 +91,19 @@ module MdUpdateType : sig
   include IO with type t := t
 end
 
-module MdEntryType : sig
+module MDUpdateAction : sig
+  type t =
+    | New
+    | Change
+    | Delete
+    | DeleteThru
+    | DeleteFrom
+    | Overlay
+
+  include IO with type t := t
+end
+
+module MDEntryType : sig
   type t =
     | Bid
     | Offer

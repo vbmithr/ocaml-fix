@@ -17,18 +17,32 @@ let on_server_msg _w msg = match msg.Fix.typ with
 
 let on_client_cmd w words =
   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
-  match String.lowercase (List.hd_exn words) with
-  | "testreq" ->
+  match words with
+  | "testreq" :: _ ->
     let fields = [Field.TestReqID.create "a"] in
     Pipe.write w (Fix.create ~fields MsgType.TestRequest)
-  | "seclist" ->
+  | "seclist" :: _ ->
     let fields = [
       Field.SecurityReqID.create "a" ;
-      Field.SecurityListRequestType.create SecurityListRequestType.Symbol ;
+      Field.SecurityListRequestType.create Symbol ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.SecurityListRequest)
-  | command ->
-    Logs_async.app ~src (fun m -> m "Unsupported command: %s" command)
+  | "snapshot" :: symbol :: _ ->
+    let fields = [
+      Field.Symbol.create symbol ;
+      Field.MDReqID.create "a" ;
+      Field.SubscriptionRequestType.create Snapshot ;
+      Field.MarketDepth.create 0 ;
+    ] in
+    let groups =
+      Field.NoMDEntryTypes.create 3, [
+        [ Field.MDEntryType.create Bid ] ;
+        [ Field.MDEntryType.create Offer ] ;
+        [ Field.MDEntryType.create Trade ] ;
+      ] in
+    Pipe.write w (Fix.create ~groups ~fields MsgType.MarketDataRequest)
+  | _ ->
+    Logs_async.app ~src (fun m -> m "Unsupported command")
   (* | "BUY" ->
    *   let symbol = List.nth_exn words 1 in
    *   let p = List.nth_exn words 2 |> Float.of_string in
