@@ -59,10 +59,9 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~groups ~fields MsgType.MarketDataRequest)
   | "orders" :: _ ->
     let fields = [
-      Field.MassStatusReqID.create Uuid.(create () |> to_string) ;
-      Field.MassStatusReqType.create AllOrders ;
+      Field.OrderID.create "*" ;
     ] in
-    Pipe.write w (Fix.create ~fields MsgType.OrderMassStatusRequest)
+    Pipe.write w (Fix.create ~fields MsgType.OrderStatusRequest)
   | "positions" :: _ ->
     let fields = [
       Field.PosReqID.create Uuid.(create () |> to_string) ;
@@ -79,24 +78,27 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.UserRequest)
   | "buy" :: symbol :: qty :: [] ->
     let fields = [
+      Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Buy ;
-      Field.OrderQty.create (float_of_string qty) ;
+      Field.CashOrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
       Field.Symbol.create symbol ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "sell" :: symbol :: qty :: [] ->
     let fields = [
+      Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Sell ;
-      Field.OrderQty.create (float_of_string qty) ;
+      Field.CashOrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
       Field.Symbol.create symbol ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "buy" :: symbol :: qty :: price :: _ ->
     let fields = [
+      Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Buy ;
       Field.OrderQty.create (float_of_string qty) ;
@@ -107,6 +109,7 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "sell" :: symbol :: qty :: price :: _ ->
     let fields = [
+      Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Sell ;
       Field.OrderQty.create (float_of_string qty) ;

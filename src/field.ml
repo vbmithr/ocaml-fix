@@ -293,6 +293,22 @@ module OrigClOrdID = Make(struct
   end)
 let () = register_field (module OrigClOrdID)
 
+type _ typ += HandlInst : HandlInst.t typ
+module HandlInst = Make(struct
+    type t = HandlInst.t [@@deriving sexp]
+    let t = HandlInst
+    let pp = HandlInst.pp
+    let parse = HandlInst.parse
+    let tag = 21
+    let name = "HandlInst"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | HandlInst, HandlInst -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module HandlInst)
+
 type _ typ += ExecType : ExecType.t typ
 module ExecType = Make(struct
     type t = ExecType.t [@@deriving sexp]
@@ -1588,6 +1604,22 @@ module OrderQty = Make(struct
       | _ -> None
   end)
 let () = register_field (module OrderQty)
+
+type _ typ += CashOrderQty : float typ
+module CashOrderQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = CashOrderQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 152
+    let name = "CashOrderQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CashOrderQty, CashOrderQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CashOrderQty)
 
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct

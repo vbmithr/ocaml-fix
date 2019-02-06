@@ -90,6 +90,7 @@ module TotNumReports : FIELD with type t := int
 
 module Account : FIELD with type t := string
 module EncryptMethod : FIELD with type t := Fixtypes.EncryptMethod.t
+module HandlInst : FIELD with type t := Fixtypes.HandlInst.t
 module Symbol : FIELD with type t := string
 module MDReqID : FIELD with type t := string
 module MDEntryType : FIELD with type t := Fixtypes.MDEntryType.t
@@ -125,8 +126,10 @@ module UserRequestID : FIELD with type t := string
 module UserRequestType : FIELD with type t := UserRequestType.t
 module ClOrdID : FIELD with type t := string
 module OrigClOrdID : FIELD with type t := string
+module OrderID : FIELD with type t := string
 module Side : FIELD with type t := Side.t
 module OrderQty : FIELD with type t := float
+module CashOrderQty : FIELD with type t := float
 module OrdType : FIELD with type t := OrdType.t
 module Price : FIELD with type t := float
 
