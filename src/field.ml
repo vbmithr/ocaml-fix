@@ -789,6 +789,22 @@ module MDReqID = Make(struct
   end)
 let () = register_field (module MDReqID)
 
+type _ typ += MassStatusReqID : string typ
+module MassStatusReqID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = MassStatusReqID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 584
+    let name = "MassStatusReqID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MassStatusReqID, MassStatusReqID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MassStatusReqID)
+
 type _ typ += PosReqID : string typ
 module PosReqID = Make(struct
     type t = string [@@deriving sexp]
@@ -836,6 +852,22 @@ module PosReqType = Make(struct
       | _ -> None
   end)
 let () = register_field (module PosReqType)
+
+type _ typ += MassStatusReqType : MassStatusReqType.t typ
+module MassStatusReqType = Make(struct
+    type t = MassStatusReqType.t [@@deriving sexp]
+    let t = MassStatusReqType
+    let pp = MassStatusReqType.pp
+    let parse = MassStatusReqType.parse
+    let tag = 585
+    let name = "MassStatusReqType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MassStatusReqType, MassStatusReqType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MassStatusReqType)
 
 type _ typ += PosReqResult : PosReqResult.t typ
 module PosReqResult = Make(struct

@@ -114,14 +114,18 @@ module SecurityReqID : FIELD with type t := string
 module SecurityListRequestType : FIELD with type t := SecurityListRequestType.t
 module StrikeCurrency : FIELD with type t := string
 module Currency : FIELD with type t := string
+module MassStatusReqID : FIELD with type t := string
 module PosReqID : FIELD with type t := string
 module PosReqType : FIELD with type t := PosReqType.t
+module MassStatusReqType : FIELD with type t := MassStatusReqType.t
 module UserRequestID : FIELD with type t := string
 module UserRequestType : FIELD with type t := UserRequestType.t
 module ClOrdID : FIELD with type t := string
+module OrigClOrdID : FIELD with type t := string
 module Side : FIELD with type t := Side.t
 module OrderQty : FIELD with type t := float
 module OrdType : FIELD with type t := OrdType.t
+module Price : FIELD with type t := float
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

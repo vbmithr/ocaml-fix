@@ -337,6 +337,16 @@ module OrdStatus = struct
       | Filled
       | DoneForDay
       | Canceled
+      | Replaced
+      | PendingCancel
+      | Stopped
+      | Rejected
+      | Suspended
+      | PendingNew
+      | Calculated
+      | Expired
+      | AcceptedForBidding
+      | PendingReplace
     [@@deriving sexp]
 
     let parse = function
@@ -345,14 +355,34 @@ module OrdStatus = struct
       | "2" -> Some Filled
       | "3" -> Some DoneForDay
       | "4" -> Some Canceled
+      | "5" -> Some Replaced
+      | "6" -> Some PendingCancel
+      | "7" -> Some Stopped
+      | "8" -> Some Rejected
+      | "9" -> Some Suspended
+      | "A" -> Some PendingNew
+      | "B" -> Some Calculated
+      | "C" -> Some Expired
+      | "D" -> Some AcceptedForBidding
+      | "E" -> Some PendingReplace
       | _ -> None
 
     let print = function
-      | New -> "0"
-      | PartiallyFilled -> "1"
-      | Filled -> "2"
-      | DoneForDay -> "3"
-      | Canceled -> "4"
+      | New                -> "0"
+      | PartiallyFilled    -> "1"
+      | Filled             -> "2"
+      | DoneForDay         -> "3"
+      | Canceled           -> "4"
+      | Replaced           -> "5"
+      | PendingCancel      -> "6"
+      | Stopped            -> "7"
+      | Rejected           -> "8"
+      | Suspended          -> "9"
+      | PendingNew         -> "A"
+      | Calculated         -> "B"
+      | Expired            -> "C"
+      | AcceptedForBidding -> "D"
+      | PendingReplace     -> "E"
   end
   include T
   include Make(T)
@@ -388,6 +418,50 @@ module PosReqType = struct
       | SettlementActivity -> "4"
       | BackoutMessage     -> "5"
       | DeltaPositions     -> "6"
+  end
+  include T
+  include Make(T)
+end
+
+module MassStatusReqType = struct
+  module T = struct
+    type t =
+      | Security
+      | UnderlyingSecurity
+      | Product
+      | CFICode
+      | SecurityType
+      | TradingSession
+      | AllOrders
+      | PartyID
+      | SecurityIssuer
+      | UssuerOfUnderlyingSecurity
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some Security
+      | "2" -> Some UnderlyingSecurity
+      | "3" -> Some Product
+      | "4" -> Some CFICode
+      | "5" -> Some SecurityType
+      | "6" -> Some TradingSession
+      | "7" -> Some AllOrders
+      | "8" -> Some PartyID
+      | "9" -> Some SecurityIssuer
+      | "10" -> Some UssuerOfUnderlyingSecurity
+      | _ -> None
+
+    let print = function
+      | Security                   -> "1"
+      | UnderlyingSecurity         -> "2"
+      | Product                    -> "3"
+      | CFICode                    -> "4"
+      | SecurityType               -> "5"
+      | TradingSession             -> "6"
+      | AllOrders                  -> "7"
+      | PartyID                    -> "8"
+      | SecurityIssuer             -> "9"
+      | UssuerOfUnderlyingSecurity -> "10"
   end
   include T
   include Make(T)

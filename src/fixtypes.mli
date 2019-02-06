@@ -55,6 +55,16 @@ module OrdStatus : sig
     | Filled
     | DoneForDay
     | Canceled
+    | Replaced
+    | PendingCancel
+    | Stopped
+    | Rejected
+    | Suspended
+    | PendingNew
+    | Calculated
+    | Expired
+    | AcceptedForBidding
+    | PendingReplace
 
   include IO with type t := t
 end
@@ -344,6 +354,23 @@ module UserStatus : sig
     | Other
     | ForcedLogout
     | SessionShutdownWarning
+
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module MassStatusReqType : sig
+  type t =
+    | Security
+    | UnderlyingSecurity
+    | Product
+    | CFICode
+    | SecurityType
+    | TradingSession
+    | AllOrders
+    | PartyID
+    | SecurityIssuer
+    | UssuerOfUnderlyingSecurity
 
   [@@deriving sexp]
   include IO with type t := t
