@@ -18,11 +18,13 @@
  (preprocess (pps ppx_sexp_conv))
  (libraries ptime fix base64 monocypher digestif.c))
 
-;; (library
-;;  ((name coinbase)
-;;   (public_name fix.coinbase)
-;;   (modules (coinbase))
-;;   (libraries (fix base64 digestif))))
+(library
+ (name coinbase)
+ (public_name fix-coinbase)
+ (modules coinbase)
+ (preprocess (pps ppx_sexp_conv))
+ (libraries ptime fix base64 monocypher digestif.c))
+
 
 ;; (library
 ;;  ((name okcoin)

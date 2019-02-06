@@ -89,6 +89,7 @@ module NoFills : FIELD with type t := int
 module TotNumReports : FIELD with type t := int
 
 module Account : FIELD with type t := string
+module EncryptMethod : FIELD with type t := Fixtypes.EncryptMethod.t
 module Symbol : FIELD with type t := string
 module MDReqID : FIELD with type t := string
 module MDEntryType : FIELD with type t := Fixtypes.MDEntryType.t

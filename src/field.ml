@@ -677,6 +677,22 @@ module SecurityReqID = Make(struct
   end)
 let () = register_field (module SecurityReqID)
 
+type _ typ += EncryptMethod : EncryptMethod.t typ
+module EncryptMethod = Make(struct
+    type t = EncryptMethod.t [@@deriving sexp]
+    let t = EncryptMethod
+    let pp = EncryptMethod.pp
+    let parse = EncryptMethod.parse
+    let tag = 98
+    let name = "EncryptMethod"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | EncryptMethod, EncryptMethod -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module EncryptMethod)
+
 type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
 module SecurityListRequestType = Make(struct
     type t = SecurityListRequestType.t [@@deriving sexp]

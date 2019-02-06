@@ -5,6 +5,15 @@
 
 open Sexplib
 
+module type IOMIN = sig
+  type t
+
+  val t_of_sexp : Sexplib.Sexp.t -> t
+  val sexp_of_t : t -> Sexplib.Sexp.t
+  val parse : string -> t option
+  val print : t -> string
+end
+
 module type IO = sig
   type t [@@deriving sexp]
 
@@ -13,6 +22,12 @@ module type IO = sig
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
+end
+
+module Make (T : IOMIN) : sig
+  val parse_exn : string -> T.t
+  val pp : Format.formatter -> T.t -> unit
+  val pp_sexp : Format.formatter -> T.t -> unit
 end
 
 module Ptime : sig
