@@ -7,8 +7,8 @@ open Fixtypes
 open Coinbase
 
 let src = Logs.Src.create "fix.coinbase.shell"
-let uri = Uri.make ~scheme:"https" ~host:"fix-public.sandbox.pro.coinbase.com" ~port:4198 ()
-(* let uri = Uri.make ~host:"127.0.0.1" ~port:4199 () *)
+(* let uri = Uri.make ~scheme:"https" ~host:"fix-public.sandbox.pro.coinbase.com" ~port:4198 () *)
+let uri = Uri.make ~host:"127.0.0.1" ~port:4199 ()
 
 let hb msg =
   Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
@@ -62,6 +62,11 @@ let on_client_cmd username w words =
       Field.OrderID.create "*" ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.OrderStatusRequest)
+  | "order" :: id :: _ ->
+    let fields = [
+      Field.OrderID.create id ;
+    ] in
+    Pipe.write w (Fix.create ~fields MsgType.OrderStatusRequest)
   | "positions" :: _ ->
     let fields = [
       Field.PosReqID.create Uuid.(create () |> to_string) ;
@@ -81,7 +86,7 @@ let on_client_cmd username w words =
       Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Buy ;
-      Field.CashOrderQty.create (float_of_string qty) ;
+      Field.OrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
       Field.Symbol.create symbol ;
     ] in
@@ -91,7 +96,7 @@ let on_client_cmd username w words =
       Field.HandlInst.create Private ;
       Field.ClOrdID.create Uuid.(create () |> to_string) ;
       Field.Side.create Sell ;
-      Field.CashOrderQty.create (float_of_string qty) ;
+      Field.OrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
       Field.Symbol.create symbol ;
     ] in
@@ -104,6 +109,7 @@ let on_client_cmd username w words =
       Field.OrderQty.create (float_of_string qty) ;
       Field.Price.create (float_of_string price) ;
       Field.OrdType.create Limit ;
+      Field.TimeInForce.create GoodTillCancel ;
       Field.Symbol.create symbol ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
@@ -115,13 +121,13 @@ let on_client_cmd username w words =
       Field.OrderQty.create (float_of_string qty) ;
       Field.Price.create (float_of_string price) ;
       Field.OrdType.create Limit ;
+      Field.TimeInForce.create GoodTillCancel ;
       Field.Symbol.create symbol ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "cancel" :: srvOrdID :: _ ->
     let fields = [
-      Field.ClOrdID.create "" ;
-      Field.OrigClOrdID.create srvOrdID ;
+      Field.OrderID.create srvOrdID ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.OrderCancelRequest)
   | _ ->
@@ -132,10 +138,11 @@ let main cfg =
   let { Cfg.key ; secret ; passphrase ; _ } =
     List.Assoc.find_exn ~equal:String.equal cfg "COINBASE-SANDBOX2" in
   let secret = B64.decode secret in
-  let ts = Ptime_clock.now () in
+  let logon_ts = Ptime_clock.now () in
   let logon_fields =
-    logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~ts in
+    logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
   Fix_async.with_connection_ez
+    ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version:Version.v42 ~logon_fields uri >>= fun (closed, r, w) ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;

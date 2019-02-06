@@ -309,6 +309,22 @@ module HandlInst = Make(struct
   end)
 let () = register_field (module HandlInst)
 
+type _ typ += TimeInForce : TimeInForce.t typ
+module TimeInForce = Make(struct
+    type t = TimeInForce.t [@@deriving sexp]
+    let t = TimeInForce
+    let pp = TimeInForce.pp
+    let parse = TimeInForce.parse
+    let tag = 59
+    let name = "TimeInForce"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TimeInForce, TimeInForce -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TimeInForce)
+
 type _ typ += ExecType : ExecType.t typ
 module ExecType = Make(struct
     type t = ExecType.t [@@deriving sexp]
@@ -949,6 +965,22 @@ module RefTagID = Make(struct
   end)
 let () = register_field (module RefTagID)
 
+type _ typ += TradeID : int typ
+module TradeID = Make(struct
+    type t = int [@@deriving sexp]
+    let t = TradeID
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 1003
+    let name = "TradeID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TradeID, TradeID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TradeID)
+
 type _ typ += MarketDepth : int typ
 module MarketDepth = Make(struct
     type t = int [@@deriving sexp]
@@ -1012,6 +1044,54 @@ module OrdStatus = Make(struct
       | _ -> None
   end)
 let () = register_field (module OrdStatus)
+
+type _ typ += MiscFeeType : MiscFeeType.t typ
+module MiscFeeType = Make(struct
+    type t = MiscFeeType.t [@@deriving sexp]
+    let t = MiscFeeType
+    let pp = MiscFeeType.pp
+    let parse = MiscFeeType.parse
+    let tag = 139
+    let name = "MiscFeeType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MiscFeeType, MiscFeeType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MiscFeeType)
+
+type _ typ += CxlRejReason : CxlRejReason.t typ
+module CxlRejReason = Make(struct
+    type t = CxlRejReason.t [@@deriving sexp]
+    let t = CxlRejReason
+    let pp = CxlRejReason.pp
+    let parse = CxlRejReason.parse
+    let tag = 102
+    let name = "CxlRejReason"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CxlRejReason, CxlRejReason -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CxlRejReason)
+
+type _ typ += CxlRejResponseTo : CxlRejResponseTo.t typ
+module CxlRejResponseTo = Make(struct
+    type t = CxlRejResponseTo.t [@@deriving sexp]
+    let t = CxlRejResponseTo
+    let pp = CxlRejResponseTo.pp
+    let parse = CxlRejResponseTo.parse
+    let tag = 434
+    let name = "CxlRejResponseTo"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CxlRejResponseTo, CxlRejResponseTo -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CxlRejResponseTo)
 
 type _ typ += NoMDEntryTypes : int typ
 module NoMDEntryTypes = Make(struct
@@ -1109,6 +1189,22 @@ module TotNumReports = Make(struct
   end)
 let () = register_field (module TotNumReports)
 
+type _ typ += NoMiscFees : int typ
+module NoMiscFees = Make(struct
+    type t = int [@@deriving sexp]
+    let t = NoMiscFees
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 136
+    let name = "NoMiscFees"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoMiscFees, NoMiscFees -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoMiscFees)
+
 type _ typ += FillExecID : string typ
 module FillExecID = Make(struct
     type t = string [@@deriving sexp]
@@ -1140,6 +1236,22 @@ module RawDataLength = Make(struct
       | _ -> None
   end)
 let () = register_field (module RawDataLength)
+
+type _ typ += ExecID : string typ
+module ExecID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = ExecID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 17
+    let name = "ExecID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ExecID, ExecID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ExecID)
 
 type _ typ += OrderID : string typ
 module OrderID = Make(struct
@@ -1317,6 +1429,22 @@ module OrdRejReason = Make(struct
   end)
 let () = register_field (module OrdRejReason)
 
+type _ typ += ExecTransType : ExecTransType.t typ
+module ExecTransType = Make(struct
+    type t = ExecTransType.t [@@deriving sexp]
+    let t = ExecTransType
+    let pp = ExecTransType.pp
+    let parse = ExecTransType.parse
+    let tag = 20
+    let name = "ExecTransType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ExecTransType, ExecTransType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ExecTransType)
+
 type _ typ += Price : float typ
 module Price = Make(struct
     type t = float [@@deriving sexp]
@@ -1349,6 +1477,22 @@ module AvgPx = Make(struct
   end)
 let () = register_field (module AvgPx)
 
+type _ typ += LastPx : float typ
+module LastPx = Make(struct
+    type t = float [@@deriving sexp]
+    let t = LastPx
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 31
+    let name = "LastPx"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | LastPx, LastPx -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module LastPx)
+
 type _ typ += FillPx : float typ
 module FillPx = Make(struct
     type t = float [@@deriving sexp]
@@ -1380,6 +1524,22 @@ module FillQty = Make(struct
       | _ -> None
   end)
 let () = register_field (module FillQty)
+
+type _ typ += LastQty : float typ
+module LastQty = Make(struct
+    type t = float [@@deriving sexp]
+    let t = LastQty
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 32
+    let name = "LastQty"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | LastQty, LastQty -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module LastQty)
 
 type _ typ += MaxShow : float typ
 module MaxShow = Make(struct
@@ -1621,6 +1781,22 @@ module CashOrderQty = Make(struct
   end)
 let () = register_field (module CashOrderQty)
 
+type _ typ += MiscFeeAmt : float typ
+module MiscFeeAmt = Make(struct
+    type t = float [@@deriving sexp]
+    let t = MiscFeeAmt
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 137
+    let name = "MiscFeeAmt"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MiscFeeAmt, MiscFeeAmt -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MiscFeeAmt)
+
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
     type t = string [@@deriving sexp]
@@ -1716,6 +1892,22 @@ module SecurityExchange = Make(struct
       | _ -> None
   end)
 let () = register_field (module SecurityExchange)
+
+type _ typ += AggressorIndicator : bool typ
+module AggressorIndicator = Make(struct
+    type t = bool [@@deriving sexp]
+    let t = AggressorIndicator
+    let pp = YesOrNo.pp
+    let parse = YesOrNo.parse
+    let tag = 1057
+    let name = "AggressorIndicator"
+  let eq :
+    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+    match a, b with
+    | AggressorIndicator, AggressorIndicator -> Some Eq
+    | _ -> None
+end)
+let () = register_field (module AggressorIndicator)
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

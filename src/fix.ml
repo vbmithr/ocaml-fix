@@ -106,6 +106,7 @@ let fields_groups fields =
         Field.find Field.NoPositions f = None &&
         Field.find Field.NoFills f = None &&
         Field.find Field.TotNumReports f = None &&
+        Field.find Field.NoMiscFees f = None &&
         true,
         first_in_group,
         groups

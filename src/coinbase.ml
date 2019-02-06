@@ -43,19 +43,17 @@ let logon_fields
     ~key
     ~secret
     ~passphrase
-    ~ts =
+    ~logon_ts =
   let prehash = String.concat "\x01" [
-    Format.asprintf "%a" Fixtypes.UTCTimestamp.pp ts ;
+    Format.asprintf "%a" Fixtypes.UTCTimestamp.pp logon_ts ;
     Format.asprintf "%a" MsgType.pp Logon ;
     "1" ; key ; tid ; passphrase ;
   ] in
   let rawdata =
     B64.encode Digestif.SHA256.(hmac_string ~key:secret prehash |> to_raw_string) in
   List.rev_append [
-    SendingTime.create ts ;
     EncryptMethod.create Other ;
     RawData.create rawdata ;
-    SendingTime.create ts ;
     Password.create passphrase ;
   ]
     begin

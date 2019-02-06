@@ -12,7 +12,7 @@ val logon_fields :
   key:string ->
   secret:string ->
   passphrase:string ->
-  ts:Ptime.t -> Field.t list
+  logon_ts:Ptime.t -> Field.t list
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

@@ -619,6 +619,32 @@ module EncryptMethod = struct
   include Make(T)
 end
 
+module ExecTransType = struct
+  module T = struct
+    type t =
+      | New
+      | Cancel
+      | Correct
+      | Status
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some New
+      | "1" -> Some Cancel
+      | "2" -> Some Correct
+      | "3" -> Some Status
+      | _ -> None
+
+    let print = function
+      | New     -> "0"
+      | Cancel  -> "1"
+      | Correct -> "2"
+      | Status  -> "3"
+  end
+  include T
+  include Make(T)
+end
+
 module SubscriptionRequestType = struct
   module T = struct
     type t =
@@ -741,20 +767,20 @@ module TimeInForce = struct
   module T = struct
     type t =
       | Session
-      | Good_till_cancel
-      | At_the_opening
+      | GoodTillCancel
+      | AtTheOpening
     [@@deriving sexp]
 
     let parse = function
       | "0" -> Some Session
-      | "1" -> Some Good_till_cancel
-      | "2" -> Some At_the_opening
+      | "1" -> Some GoodTillCancel
+      | "2" -> Some AtTheOpening
       | _ -> None
 
     let print = function
       | Session -> "0"
-      | Good_till_cancel -> "1"
-      | At_the_opening -> "2"
+      | GoodTillCancel -> "1"
+      | AtTheOpening -> "2"
   end
   include T
   include Make(T)
@@ -1076,6 +1102,8 @@ module ExecType = struct
   module T = struct
     type t =
       | New
+      | PartialFill
+      | Fill
       | DoneForDay
       | Canceled
       | Replaced
@@ -1099,6 +1127,8 @@ module ExecType = struct
 
     let parse = function
       | "0" -> Some New
+      | "1" -> Some PartialFill
+      | "2" -> Some Fill
       | "3" -> Some DoneForDay
       | "4" -> Some Canceled
       | "5" -> Some Replaced
@@ -1122,6 +1152,8 @@ module ExecType = struct
 
     let print = function
       | New                     -> "0"
+      | PartialFill             -> "1"
+      | Fill                    -> "2"
       | DoneForDay              -> "3"
       | Canceled                -> "4"
       | Replaced                -> "5"
@@ -1142,6 +1174,78 @@ module ExecType = struct
       | TradeReleasedToClearing -> "K"
       | Triggered               -> "L"
 
+  end
+  include T
+  include Make(T)
+end
+
+module MiscFeeType = struct
+  module T = struct
+    type t =
+      | Regulatory
+      | Tax
+      | LocalCommission
+      | ExchangeFees
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some Regulatory
+      | "2" -> Some Tax
+      | "3" -> Some LocalCommission
+      | "4" -> Some ExchangeFees
+      | _ -> None
+
+    let print = function
+      | Regulatory      -> "1"
+      | Tax             -> "2"
+      | LocalCommission -> "3"
+      | ExchangeFees    -> "4"
+  end
+  include T
+  include Make(T)
+end
+
+module CxlRejReason = struct
+  module T = struct
+    type t =
+      | TooLateToCancel
+      | UnknownOrder
+      | BrokerExchangeOption
+      | PendingCancelOrReplace
+    [@@deriving sexp]
+
+    let parse = function
+      | "0" -> Some TooLateToCancel
+      | "1" -> Some UnknownOrder
+      | "2" -> Some BrokerExchangeOption
+      | "3" -> Some PendingCancelOrReplace
+      | _ -> None
+
+    let print = function
+      | TooLateToCancel        -> "0"
+      | UnknownOrder           -> "1"
+      | BrokerExchangeOption   -> "2"
+      | PendingCancelOrReplace -> "3"
+  end
+  include T
+  include Make(T)
+end
+
+module CxlRejResponseTo = struct
+  module T = struct
+    type t =
+      | OrderCancelRequest
+      | OrderReplaceRequest
+    [@@deriving sexp]
+
+    let parse = function
+      | "1" -> Some OrderCancelRequest
+      | "2" -> Some OrderReplaceRequest
+      | _ -> None
+
+    let print = function
+      | OrderCancelRequest  -> "1"
+      | OrderReplaceRequest -> "2"
   end
   include T
   include Make(T)

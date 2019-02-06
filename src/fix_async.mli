@@ -15,6 +15,7 @@ val with_connection_ez :
   ?history_size:int ->
   ?heartbeat:Time_ns.Span.t ->
   ?logon_fields:Field.t list ->
+  ?logon_ts:Ptime.t ->
   sid:string ->
   tid:string ->
   version:Fixtypes.Version.t ->

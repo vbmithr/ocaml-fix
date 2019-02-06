@@ -101,6 +101,7 @@ let with_connection_ez
     ?(history_size=10)
     ?(heartbeat=Time_ns.Span.of_int_sec 30)
     ?(logon_fields=[])
+    ?logon_ts
     ~sid
     ~tid
     ~version uri =
@@ -127,10 +128,20 @@ let with_connection_ez
   let hb = Time_ns.Span.to_int63_ns heartbeat in
   with_connection uri >>= fun (r, w) ->
   let s msg =
-    let msg = { msg with version ; seqnum = !count ; sid ; tid } in
+    last_sent := Time_stamp_counter.now () ;
+    let ts = begin
+      match msg.typ, logon_ts with
+      | Logon, Some ts -> Some ts
+      | _, Some _ ->
+        let open Int63 in
+        Time_ns.to_int63_ns_since_epoch
+          (Time_stamp_counter.to_time_ns !last_sent) / of_int 1_000_000_000 |> to_float |>
+        Ptime.of_float_s
+      | _, None -> None
+    end in
+    let msg = { msg with version ; seqnum = !count ; sid ; tid ; ts } in
     history := BoundedIntMap.add !history ~key:!count ~data:msg ;
     incr count ;
-    last_sent := Time_stamp_counter.now () ;
     Pipe.write w msg in
   let watchdog () =
     let open Time_stamp_counter in

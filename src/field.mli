@@ -80,6 +80,7 @@ type _ typ += NoMDEntries : int typ
 type _ typ += NoPositions : int typ
 type _ typ += NoFills : int typ
 type _ typ += TotNumReports : int typ
+type _ typ += NoMiscFees : int typ
 
 module NoRelatedSym : FIELD with type t := int
 module NoMDEntryTypes : FIELD with type t := int
@@ -87,6 +88,7 @@ module NoMDEntries : FIELD with type t := int
 module NoPositions : FIELD with type t := int
 module NoFills : FIELD with type t := int
 module TotNumReports : FIELD with type t := int
+module NoMiscFees : FIELD with type t := int
 
 module Account : FIELD with type t := string
 module EncryptMethod : FIELD with type t := Fixtypes.EncryptMethod.t
@@ -132,6 +134,7 @@ module OrderQty : FIELD with type t := float
 module CashOrderQty : FIELD with type t := float
 module OrdType : FIELD with type t := OrdType.t
 module Price : FIELD with type t := float
+module TimeInForce : FIELD with type t := TimeInForce.t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

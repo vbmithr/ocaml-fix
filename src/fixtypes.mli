@@ -63,6 +63,16 @@ module HandlInst : sig
   include IO with type t := t
 end
 
+module ExecTransType : sig
+  type t =
+    | New
+    | Cancel
+    | Correct
+    | Status
+
+  include IO with type t := t
+end
+
 module OrdStatus : sig
   type t =
     | New
@@ -182,8 +192,8 @@ end
 module TimeInForce : sig
   type t =
     | Session
-    | Good_till_cancel
-    | At_the_opening
+    | GoodTillCancel
+    | AtTheOpening
 
   include IO with type t := t
 end
@@ -312,6 +322,8 @@ end
 module ExecType : sig
   type t =
     | New
+    | PartialFill
+    | Fill
     | DoneForDay
     | Canceled
     | Replaced
@@ -386,6 +398,37 @@ module MassStatusReqType : sig
     | PartyID
     | SecurityIssuer
     | UssuerOfUnderlyingSecurity
+
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module MiscFeeType : sig
+  type t =
+    | Regulatory
+    | Tax
+    | LocalCommission
+    | ExchangeFees
+
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module CxlRejReason : sig
+  type t =
+    | TooLateToCancel
+    | UnknownOrder
+    | BrokerExchangeOption
+    | PendingCancelOrReplace
+
+  [@@deriving sexp]
+  include IO with type t := t
+end
+
+module CxlRejResponseTo : sig
+  type t =
+    | OrderCancelRequest
+    | OrderReplaceRequest
 
   [@@deriving sexp]
   include IO with type t := t
