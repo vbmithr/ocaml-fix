@@ -1061,6 +1061,22 @@ module NoFills = Make(struct
   end)
 let () = register_field (module NoFills)
 
+type _ typ += TotNumReports : int typ
+module TotNumReports = Make(struct
+    type t = int [@@deriving sexp]
+    let t = TotNumReports
+    let pp = Format.pp_print_int
+    let parse = int_of_string_opt
+    let tag = 911
+    let name = "TotNumReports"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TotNumReports, TotNumReports -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TotNumReports)
+
 type _ typ += FillExecID : string typ
 module FillExecID = Make(struct
     type t = string [@@deriving sexp]
