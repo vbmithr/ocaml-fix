@@ -3,13 +3,13 @@
  (public_name fix)
  (modules fixtypes field fix)
  (preprocess (pps ppx_sexp_conv))
- (libraries rresult astring ptime logs sexplib tyre angstrom))
+ (libraries rresult astring ptime logs sexplib tyre angstrom faraday))
 
 (library
  (name fix_async)
  (public_name fix-async)
  (modules fix_async)
- (libraries fix async angstrom-async conduit-async uri logs-async))
+ (libraries fix async angstrom-async faraday-async conduit-async uri logs-async))
 
 (library
  (name deribit)

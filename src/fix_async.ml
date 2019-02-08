@@ -20,11 +20,18 @@ let with_connection uri =
       Pipe.close_read msg_read ;
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
-  let run _ r w =
+  let stream = Faraday.create 4096 in
+  let run (Conduit_async.V2.Inet_sock s) r _ =
+    let fd = Socket.fd s in
+    let writev = Faraday_async.writev_of_fd fd in
     don't_wait_for begin
-      Pipe.transfer msg_read Writer.(pipe w) ~f:begin fun msg ->
-        Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
-        Fix.to_bytes msg
+      Faraday_async.serialize
+        stream ~writev ~yield:(fun _ -> Scheduler.yield ())
+    end ;
+    don't_wait_for begin
+      Pipe.iter_without_pushback msg_read ~f:begin fun msg ->
+        Logs.debug ~src (fun m -> m "-> %a" Fix.pp msg) ;
+        Fix.serialize stream msg
       end
     end ;
     let fields = ref [] in

@@ -32,9 +32,11 @@ end
 
 val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
 
+val sum_string : string -> int
 val pp : Format.formatter -> t -> unit
 val print : t -> string
-val add_to_buffer : Buffer.t -> field -> unit
+val add_to_buffer : int * int -> Buffer.t -> field -> int * int
+val serialize : ((unit -> unit) -> int -> int -> 'a) -> Faraday.t -> t -> 'a
 val parse : string -> (t, R.msg) result
 val parser : (t * int, R.msg) result Angstrom.t
 

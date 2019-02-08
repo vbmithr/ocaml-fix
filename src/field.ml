@@ -38,6 +38,9 @@ let sexp_of_field t =
 
 let create typ m v = F (typ, m, v)
 
+let sum_string s =
+  String.fold_left (fun a c -> a + Char.to_int c) 0 s
+
 let pp ppf (F (_, m, v)) =
   let module F = (val m) in
   Format.fprintf ppf "@[<v 1>%s: %a@]"
@@ -173,12 +176,29 @@ let parser =
     parse s >>| fun t -> (t, chk mod 256) in
   lift lift_f @@ take_while1 (fun c -> c <> '\x01') <* char '\x01'
 
-let add_to_buffer buf (F (_, m, v)) =
+let add_to_buffer (len, sum) buf (F (_, m, v)) =
   let module F = (val m) in
   let open Buffer in
-  add_string buf (string_of_int F.tag) ;
+  let tag = string_of_int F.tag in
+  let v = Format.asprintf "%a" F.pp v in
+  add_string buf tag ;
   add_char buf '=' ;
-  add_string buf (Format.asprintf "%a" F.pp v)
+  add_string buf v ;
+  len + String.length tag + String.length v + 1,
+  sum + sum_string tag + Char.to_int '=' + sum_string v
+
+let serialize k t (F (_, m, v)) =
+  let open Faraday in
+  let module F = (val m) in
+  let tag = string_of_int F.tag in
+  let v = Format.asprintf "%a" F.pp v in
+  k (begin fun () ->
+    write_string t tag ;
+    write_char t '=' ;
+    write_string t v
+  end)
+    (String.length tag + String.length v + 1)
+    (sum_string tag + Char.to_int '=' + sum_string v)
 
 module Make (T : T) = struct
   include T

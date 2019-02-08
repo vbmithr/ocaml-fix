@@ -46,56 +46,61 @@ let heartbeat
 let pp ppf t =
   Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-let to_bytes ?(buf = Buffer.create 128) { version ; typ ; sid ; tid ;
-                                          seqnum ; ts ; fields ; groups } =
-  let add_field buf tag value =
-    Buffer.add_string buf tag;
-    Buffer.add_char buf '=';
-    Buffer.add_string buf value;
-    Buffer.add_char buf '\x01'
+let serialize t
+    { version ; typ ; sid ; tid ;
+      seqnum ; ts ; fields ; groups } =
+  let open Faraday in
+  let effects = ref [] in
+  let len = ref 0 in
+  let sum = ref 0 in
+  let k a b c =
+    effects := a :: !effects ;
+    len := !len + b ;
+    sum := !sum + c in
+  let write_kchar c =
+    k (fun () -> write_char t c) 1 (Char.to_int c) in
+  let add_field k tag value =
+    let open Faraday in
+    k begin fun () ->
+      write_string t tag ;
+      write_char t '=' ;
+      write_string t value ;
+      write_char t '\x01'
+    end
+      (String.length tag + String.length value + 2)
+      (Field.sum_string tag + Field.sum_string value + Char.to_int '=' + 1)
   in
-  let fields =
-    match ts with
-    | None -> fields
-    | Some ts -> Field.Set.add (Field.SendingTime.create ts) fields in
-  add_field buf "35" @@ MsgType.print typ ;
-  add_field buf "49" sid ;
-  add_field buf "56" tid ;
-  add_field buf "34" @@ string_of_int seqnum ;
-  Field.Set.iter begin fun f ->
-    Field.add_to_buffer buf f ;
-    Buffer.add_char buf '\x01'
-  end fields ;
-  begin match groups with
-    | None -> ()
-    | Some (sep, groups) ->
-      Field.add_to_buffer buf sep ;
-      Buffer.add_char buf '\x01' ;
-      List.iter begin fun group ->
-        List.iter begin fun f ->
-          Field.add_to_buffer buf f ;
-          Buffer.add_char buf '\x01'
-        end group
-      end groups
-  end ;
-  let fieldslen = Buffer.length buf in
-  let fields = Buffer.contents buf in
-  Buffer.clear buf ;
-  add_field buf "8" @@ Version.print version ;
-  add_field buf "9" @@ String.of_int fieldslen ;
-  Buffer.add_string buf fields ;
-  let sum = String.fold_left (fun a c -> a + Char.to_int c) 0 @@ Buffer.contents buf in
-  add_field buf "10" @@ Printf.sprintf "%03d" (sum mod 256);
-  Buffer.contents buf
-
-(* Compute checksum on all but the last field *)
-let compute_chksum fields =
-  let global, local =
-    ListLabels.fold_left fields ~init:(0, 0) ~f:begin fun (global, _local) sub ->
-      let count = String.Sub.fold_left (fun a c -> a + Char.to_int c) 1 sub in
-      global + count, count
-    end in
-  (global - local) mod 256
+  let inner () =
+    let fields =
+      match ts with
+      | None -> fields
+      | Some ts -> Field.Set.add (Field.SendingTime.create ts) fields in
+    add_field k "35" @@ MsgType.print typ ;
+    add_field k "49" sid ;
+    add_field k "56" tid ;
+    add_field k "34" (string_of_int seqnum) ;
+    Field.Set.iter begin fun f ->
+      Field.serialize k t f ;
+      write_kchar '\x01'
+    end fields ;
+    begin match groups with
+      | None -> ()
+      | Some (sep, groups) ->
+        Field.serialize k t sep ;
+        write_kchar '\x01' ;
+        List.iter begin fun group ->
+          List.iter begin fun f ->
+            Field.serialize k t f ;
+            write_kchar '\x01' ;
+          end group
+        end groups
+    end
+  in
+  inner () ;
+  add_field (fun e _ s -> sum := !sum + s ; e ()) "8" (Version.print version) ;
+  add_field (fun e _ s -> sum := !sum + s ; e ()) "9" (String.of_int !len) ;
+  add_field k "10" (Printf.sprintf "%03d" (!sum mod 256)) ;
+  List.fold_right (fun e () -> e ()) !effects ()
 
 let fields_groups fields =
   let s, sep, _, groups =
@@ -155,32 +160,6 @@ let of_fields fields =
     R.ok (create_set ?ts ~fields ?groups ~seqnum ~sid ~tid ~version typ)
   | _ ->
     R.error_msg "missing standard header"
-
-let read ?pos ?len buf =
-  let buf = String.sub_with_range ?first:pos ?len buf in
-  let fields = String.Sub.cuts ~empty:false ~sep:(String.Sub.of_char '\x01') buf in
-  let computed_chksum = compute_chksum fields in
-  begin
-    try
-      ListLabels.fold_left fields ~init:[] ~f:begin fun a f ->
-        match Field.parse (String.Sub.to_string f) with
-        | Error _ as e -> R.failwith_error_msg e
-        | Ok v -> v :: a
-      end |> R.ok
-    with Failure msg -> R.error_msg msg
-  end |> function
-  | Error _ as e -> e
-  | Ok [] -> R.error_msg "empty message"
-  | Ok (chksum :: fields) ->
-    let open R.Infix in
-    R.of_option
-      ~none:(fun () -> R.error_msg "missing CheckSum")
-      (Field.CheckSum.find Field.CheckSum chksum) >>= fun ck ->
-    begin if computed_chksum <> (int_of_string ck)
-      then R.error_msg "bad checksum"
-      else R.ok ()
-    end >>= fun () ->
-    of_fields fields
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

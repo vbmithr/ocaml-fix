@@ -38,9 +38,8 @@ val heartbeat :
   ?seqnum:int ->
   ?testReqID:string -> unit -> t
 
-val to_bytes : ?buf:Buffer.t -> t -> string
+val serialize : Faraday.t -> t -> unit
 val of_fields : Field.t list -> (t, R.msg) result
-val read : ?pos:int -> ?len:int -> string -> (t, R.msg) result
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
