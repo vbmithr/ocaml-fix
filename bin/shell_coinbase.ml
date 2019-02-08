@@ -1,7 +1,6 @@
 open Core
 open Async
 
-open Bs_devkit
 open Fix
 open Fixtypes
 open Coinbase
@@ -134,6 +133,7 @@ let on_client_cmd username w words =
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
 let main cfg =
+  let open Bs_devkit in
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
   let { Cfg.key ; secret ; passphrase ; _ } =
     List.Assoc.find_exn ~equal:String.equal cfg "COINBASE-SANDBOX2" in
@@ -157,7 +157,7 @@ let command =
   Command.async ~summary:"Coinbase sandbox shell" begin
     let open Command.Let_syntax in
     [%map_open
-      let cfg = Cfg.param ()
+      let cfg = Bs_devkit.Cfg.param ()
       and () = Logs_async_reporter.set_level_via_param None in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;

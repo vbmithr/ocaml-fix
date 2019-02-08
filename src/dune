@@ -9,7 +9,7 @@
  (name fix_async)
  (public_name fix-async)
  (modules fix_async)
- (libraries bs-devkit fix async angstrom-async conduit-async uri logs-async))
+ (libraries fix async angstrom-async conduit-async uri logs-async))
 
 (library
  (name deribit)

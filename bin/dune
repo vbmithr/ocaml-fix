@@ -4,7 +4,7 @@
  (modules shell_deribit)
  (package fix-deribit)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries ptime.clock.os logs-async-reporter fix-async deribit))
+ (libraries bs-devkit ptime.clock.os logs-async-reporter fix-async deribit))
 
 (executable
  (name shell_coinbase)
@@ -12,4 +12,4 @@
  (modules shell_coinbase)
  (package fix-coinbase)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries ptime.clock.os logs-async-reporter fix-async coinbase))
+ (libraries bs-devkit ptime.clock.os logs-async-reporter fix-async coinbase))

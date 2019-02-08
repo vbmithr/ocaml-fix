@@ -7,7 +7,6 @@ open Rresult
 open Core
 open Async
 
-open Bs_devkit
 open Fix
 
 let src = Logs.Src.create "fix.async"
@@ -21,7 +20,7 @@ let with_connection uri =
       Pipe.close_read msg_read ;
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
-  let run r w =
+  let run _ r w =
     don't_wait_for begin
       Pipe.transfer msg_read Writer.(pipe w) ~f:begin fun msg ->
         Logs.debug ~src (fun m -> m "-> %a" pp msg) ;
@@ -56,9 +55,8 @@ let with_connection uri =
     | Ok () -> Deferred.unit
   in
   don't_wait_for begin
-    addr_of_uri uri >>= fun addr ->
     Monitor.try_with_or_error begin fun () ->
-      Conduit_async.V2.with_connection addr run
+      Conduit_async.V2.with_connection_uri uri run
     end >>= function
     | Error e ->
       Logs_async.err ~src (fun m -> m "%a" Error.pp e) >>=
