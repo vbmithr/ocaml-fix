@@ -261,11 +261,12 @@ let logon_fields
     ~secret
     ~ts =
   let b64rand =
-    B64.encode (Monocypher.Rand.gen 32 |> Bigstring.to_string) in
+    Base64.encode_exn (Monocypher.Rand.gen 32 |> Bigstring.to_string) in
   let rawdata =
     Format.asprintf "%.0f.%s" (Ptime.to_float_s ts *. 1e3) b64rand in
   let password =
-    B64.encode Digestif.SHA256.(digest_string (rawdata ^ secret) |> to_raw_string) in
+    Base64.encode_exn
+      Digestif.SHA256.(digest_string (rawdata ^ secret) |> to_raw_string) in
   [ RawData.create rawdata ;
     Username.create username ;
     Password.create password ;

@@ -21,7 +21,7 @@ let with_connection uri =
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
   let stream = Faraday.create 4096 in
-  let run (Conduit_async.V2.Inet_sock s) r _ =
+  let run (Conduit_async.V3.Inet_sock s) r _ =
     let fd = Socket.fd s in
     let writev = Faraday_async.writev_of_fd fd in
     don't_wait_for begin
@@ -63,7 +63,7 @@ let with_connection uri =
   in
   don't_wait_for begin
     Monitor.try_with_or_error begin fun () ->
-      Conduit_async.V2.with_connection_uri uri run
+      Conduit_async.V3.with_connection_uri uri run
     end >>= function
     | Error e ->
       Logs_async.err ~src (fun m -> m "%a" Error.pp e) >>=

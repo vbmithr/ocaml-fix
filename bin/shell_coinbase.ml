@@ -137,7 +137,7 @@ let main cfg =
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
   let { Cfg.key ; secret ; passphrase ; _ } =
     List.Assoc.find_exn ~equal:String.equal cfg "COINBASE-SANDBOX2" in
-  let secret = B64.decode secret in
+  let secret = Base64.decode_exn secret in
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in

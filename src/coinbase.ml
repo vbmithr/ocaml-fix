@@ -50,7 +50,8 @@ let logon_fields
     "1" ; key ; tid ; passphrase ;
   ] in
   let rawdata =
-    B64.encode Digestif.SHA256.(hmac_string ~key:secret prehash |> to_raw_string) in
+    Base64.encode_exn
+      Digestif.SHA256.(hmac_string ~key:secret prehash |> to_raw_string) in
   List.rev_append [
     EncryptMethod.create Other ;
     RawData.create rawdata ;
