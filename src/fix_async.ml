@@ -22,16 +22,23 @@ let with_connection uri =
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
   let stream = Faraday.create 4096 in
   let run (Conduit_async.V3.Inet_sock s) r _ =
-    let fd = Socket.fd s in
-    let writev = Faraday_async.writev_of_fd fd in
+    let writev = Faraday_async.writev_of_fd (Socket.fd s) in
+    let rec flush () =
+      match Faraday.operation stream with
+      | `Close -> raise Exit
+      | `Yield -> Deferred.unit
+      | `Writev iovecs ->
+        writev iovecs >>= function
+        | `Closed -> raise Exit
+        | `Ok n ->
+          Faraday.shift stream n ;
+          flush ()
+    in
     don't_wait_for begin
-      Faraday_async.serialize
-        stream ~writev ~yield:(fun _ -> Scheduler.yield ())
-    end ;
-    don't_wait_for begin
-      Pipe.iter_without_pushback msg_read ~f:begin fun msg ->
-        Logs.debug ~src (fun m -> m "-> %a" Fix.pp msg) ;
-        Fix.serialize stream msg
+      Pipe.iter msg_read ~f:begin fun msg ->
+        Fix.serialize stream msg ;
+        flush () >>= fun () ->
+        Logs_async.debug ~src (fun m -> m "-> %a" Fix.pp msg)
       end
     end ;
     let fields = ref [] in
@@ -62,11 +69,13 @@ let with_connection uri =
     | Ok () -> Deferred.unit
   in
   don't_wait_for begin
-    Monitor.try_with_or_error begin fun () ->
-      Conduit_async.V3.with_connection_uri uri run
-    end >>= function
+    Monitor.try_with ~extract_exn:true
+      (fun () -> Conduit_async.V3.with_connection_uri uri run) >>= function
+    | Error Exit ->
+      Logs_async.err ~src (fun m -> m "Serializer closed") >>=
+      cleanup
     | Error e ->
-      Logs_async.err ~src (fun m -> m "%a" Error.pp e) >>=
+      Logs_async.err ~src (fun m -> m "%a" Exn.pp e) >>=
       cleanup
     | Ok _ ->
       Logs_async.info ~src
