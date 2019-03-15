@@ -67,3 +67,8 @@ let logon_fields
       | Some `All -> [CancelOrdersOnDisconnect.create All] ;
       | Some `Session -> [CancelOrdersOnDisconnect.create Session] ;
     end
+
+let testreq ~testreqid =
+  let fields = [Field.TestReqID.create testreqid] in
+  Fix.create ~fields Fixtypes.MsgType.TestRequest
+

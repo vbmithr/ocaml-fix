@@ -16,6 +16,9 @@ val logon_fields :
   passphrase:string ->
   logon_ts:Ptime.t -> Field.t list
 
+val testreq : testreqid:string -> t
+
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

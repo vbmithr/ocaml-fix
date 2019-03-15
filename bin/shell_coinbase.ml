@@ -6,7 +6,7 @@ open Fixtypes
 open Fix_coinbasepro
 
 let src = Logs.Src.create "fix.coinbase.shell"
-let uri = Uri.make ~host:"127.0.0.1" ~port:4199 ()
+(* let uri = Uri.make ~host:"127.0.0.1" ~port:4197 () *)
 
 let hb msg =
   Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
@@ -17,9 +17,7 @@ let on_server_msg _w msg = match msg.Fix.typ with
 let on_client_cmd username w words =
   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
   match words with
-  | "testreq" :: _ ->
-    let fields = [Field.TestReqID.create "a"] in
-    Pipe.write w (Fix.create ~fields MsgType.TestRequest)
+  | "testreq" :: _ -> Pipe.write w (testreq ~testreqid:"a")
   | "seclist" :: _ ->
     let fields = [
       Field.SecurityReqID.create "a" ;
@@ -131,11 +129,11 @@ let on_client_cmd username w words =
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main cfg =
+let main sandbox cfg =
   let open Bs_devkit in
-  Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
+  let url = if sandbox then sandbox_url else url in
   let { Cfg.key ; secret ; passphrase ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg "COINBASE-SANDBOX2" in
+    List.Assoc.find_exn ~equal:String.equal cfg "CBPRO" in
   let secret = Base64.decode_exn secret in
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
@@ -143,7 +141,7 @@ let main cfg =
   Fix_async.connect_ez
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
-    ~sid:key ~tid ~version:Version.v42 ~logon_fields uri >>= fun (r, w) ->
+    ~sid:key ~tid ~version:Version.v42 ~logon_fields url >>= fun (r, w) ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
   Deferred.any [
@@ -157,10 +155,11 @@ let command =
     let open Command.Let_syntax in
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()
+      and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
       and () = Logs_async_reporter.set_level_via_param None in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main cfg
+        main sandbox cfg
     ]
   end
 
