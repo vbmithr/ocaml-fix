@@ -37,6 +37,10 @@ end)
 let () = register_field (module CancelOrdersOnDisconnect)
 
 let tid = "Coinbase"
+let url = Uri.make ~scheme:"https"
+    ~host:"fix.pro.coinbase.com" ~port:4198 ()
+let sandbox_url = Uri.make ~scheme:"https"
+    ~host:"fix-public.sandbox.pro.coinbase.com" ~port:4198 ()
 
 let logon_fields
     ?cancel_on_disconnect

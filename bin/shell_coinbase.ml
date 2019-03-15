@@ -6,7 +6,6 @@ open Fixtypes
 open Fix_coinbasepro
 
 let src = Logs.Src.create "fix.coinbase.shell"
-(* let uri = Uri.make ~scheme:"https" ~host:"fix-public.sandbox.pro.coinbase.com" ~port:4198 () *)
 let uri = Uri.make ~host:"127.0.0.1" ~port:4199 ()
 
 let hb msg =

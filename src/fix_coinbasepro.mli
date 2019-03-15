@@ -5,6 +5,8 @@
 
 open Fix
 
+val url : Uri.t
+val sandbox_url : Uri.t
 val tid : string
 
 val logon_fields :
