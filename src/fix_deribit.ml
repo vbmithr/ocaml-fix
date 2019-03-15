@@ -252,6 +252,22 @@ module DeribitTotalPl = Make(struct
   end)
 let () = register_field (module DeribitTotalPl)
 
+type _ typ += MarkPrice : float typ
+module MarkPrice = Make(struct
+    type t = float [@@deriving sexp]
+    let t = MarkPrice
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 100_090
+    let name = "MarkPrice"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MarkPrice, MarkPrice -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MarkPrice)
+
 let url = Uri.make ~host:"www.deribit.com" ~port:9880 ()
 let test_url = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
