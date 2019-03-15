@@ -6,7 +6,6 @@ open Fixtypes
 open Fix_deribit
 
 let src = Logs.Src.create "fix.deribit.shell"
-let uri = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
 let hb msg =
   Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
@@ -122,7 +121,7 @@ let on_client_cmd username w words =
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main cfg =
+let main sandbox cfg =
   let open Bs_devkit in
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
   let { Cfg.key ; secret ; _ } =
@@ -131,7 +130,8 @@ let main cfg =
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
   Fix_async.connect_ez
-    ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (r, w) ->
+    ~sid ~tid ~version:Version.v44
+    ~logon_fields (if sandbox then test_url else url) >>= fun (r, w) ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
   Deferred.any [
@@ -145,10 +145,11 @@ let command =
     let open Command.Let_syntax in
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()
+      and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
       and () = Logs_async_reporter.set_level_via_param None in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main cfg
+        main sandbox cfg
     ]
   end
 

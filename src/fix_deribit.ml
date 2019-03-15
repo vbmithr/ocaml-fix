@@ -252,6 +252,9 @@ module DeribitTotalPl = Make(struct
   end)
 let () = register_field (module DeribitTotalPl)
 
+let url = Uri.make ~host:"www.deribit.com" ~port:9880 ()
+let test_url = Uri.make ~host:"test.deribit.com" ~port:9881 ()
+
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"
 

@@ -5,6 +5,8 @@
 
 open Fix
 
+val url : Uri.t
+val test_url : Uri.t
 val sid : string
 val tid : string
 
