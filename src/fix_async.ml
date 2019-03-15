@@ -11,7 +11,7 @@ open Fix
 
 let src = Logs.Src.create "fix.async"
 
-let with_connection uri =
+let connect uri =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
   let cleanup () =
@@ -84,6 +84,13 @@ let with_connection uri =
   end;
   return (client_read, client_write)
 
+let with_connection url ~f =
+  connect url >>= fun (r, w) ->
+  Monitor.protect (fun () -> f r w)
+    ~finally:begin fun () ->
+      Pipe.close w ; Pipe.close_read r ; Deferred.unit
+    end
+
 module BoundedIntMap : sig
   type 'a t
 
@@ -111,7 +118,7 @@ end = struct
   (* let find { m ; _ } k = Int.Map.find m k *)
 end
 
-let with_connection_ez
+let connect_ez
     ?(history_size=10)
     ?(heartbeat=Time_ns.Span.of_int_sec 30)
     ?(logon_fields=[])
@@ -140,7 +147,7 @@ let with_connection_ez
   let last_sent     = ref (Time_stamp_counter.now ()) in
   let count = ref 1 in
   let hb = Time_ns.Span.to_int63_ns heartbeat in
-  with_connection uri >>= fun (r, w) ->
+  connect uri >>= fun (r, w) ->
   let s msg =
     last_sent := Time_stamp_counter.now () ;
     let ts = begin
@@ -223,6 +230,16 @@ let with_connection_ez
   don't_wait_for (cleanup ()) ;
   don't_wait_for (Pipe.closed ww >>| Ivar.fill_if_empty do_logout) ;
   return (Ivar.read closed, r, ww)
+
+let with_connection_ez
+    ?history_size ?heartbeat ?logon_fields
+    ?logon_ts ~sid ~tid ~version uri ~f =
+  connect_ez ?history_size ?heartbeat ?logon_fields
+    ?logon_ts ~sid ~tid ~version uri >>= fun (closed, r, w) ->
+  Monitor.protect (fun () -> f ~closed r w)
+    ~finally:begin fun () ->
+      Pipe.close w ; Pipe.close_read r ; Deferred.unit
+    end
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

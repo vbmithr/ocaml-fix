@@ -140,7 +140,7 @@ let main cfg =
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
-  Fix_async.with_connection_ez
+  Fix_async.connect_ez
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version:Version.v42 ~logon_fields uri >>= fun (closed, r, w) ->

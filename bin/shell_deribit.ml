@@ -130,7 +130,7 @@ let main cfg =
   let ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
-  Fix_async.with_connection_ez
+  Fix_async.connect_ez
     ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (closed, r, w) ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
