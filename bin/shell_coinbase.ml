@@ -3,7 +3,7 @@ open Async
 
 open Fix
 open Fixtypes
-open Coinbase
+open Fix_coinbasepro
 
 let src = Logs.Src.create "fix.coinbase.shell"
 (* let uri = Uri.make ~scheme:"https" ~host:"fix-public.sandbox.pro.coinbase.com" ~port:4198 () *)

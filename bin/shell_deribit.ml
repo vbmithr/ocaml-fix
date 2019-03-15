@@ -3,7 +3,7 @@ open Async
 
 open Fix
 open Fixtypes
-open Deribit
+open Fix_deribit
 
 let src = Logs.Src.create "fix.deribit.shell"
 let uri = Uri.make ~host:"test.deribit.com" ~port:9881 ()
