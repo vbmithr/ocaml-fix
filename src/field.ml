@@ -1817,6 +1817,22 @@ module MiscFeeAmt = Make(struct
   end)
 let () = register_field (module MiscFeeAmt)
 
+type _ typ += MinPriceIncrement : float typ
+module MinPriceIncrement = Make(struct
+    type t = float [@@deriving sexp]
+    let t = MinPriceIncrement
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 969
+    let name = "MinPriceIncrement"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | MinPriceIncrement, MinPriceIncrement -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module MinPriceIncrement)
+
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
     type t = string [@@deriving sexp]
