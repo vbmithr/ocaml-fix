@@ -131,13 +131,13 @@ let main cfg =
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
   Fix_async.connect_ez
-    ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (closed, r, w) ->
+    ~sid ~tid ~version:Version.v44 ~logon_fields uri >>= fun (r, w) ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
   Deferred.any [
     Pipe.iter r ~f:(on_server_msg w);
     Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd key w);
-    closed
+    Pipe.closed w
   ]
 
 let command =

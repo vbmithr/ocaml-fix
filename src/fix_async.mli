@@ -25,7 +25,7 @@ val connect_ez :
   tid:string ->
   version:Fixtypes.Version.t ->
   Uri.t ->
-  (unit Deferred.t * Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t
+  (Fix.t Pipe.Reader.t * Fix.t Pipe.Writer.t) Deferred.t
 
 val with_connection_ez :
   ?history_size:int ->
@@ -36,9 +36,7 @@ val with_connection_ez :
   tid:string ->
   version:Fixtypes.Version.t ->
   Uri.t ->
-  f:(closed:unit Deferred.t ->
-     t Pipe.Reader.t ->
-     t Pipe.Writer.t -> 'a Deferred.t) ->
+  f:(t Pipe.Reader.t -> t Pipe.Writer.t -> 'a Deferred.t) ->
   'a Deferred.t
 
 (*---------------------------------------------------------------------------
