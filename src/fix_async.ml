@@ -11,6 +11,12 @@ open Fix
 
 let src = Logs.Src.create "fix.async"
 
+let write_iovec w iovec =
+  List.fold_left iovec ~init:0 ~f:begin fun a { Faraday.buffer ; off ; len } ->
+    Writer.write_bigstring w buffer ~pos:off ~len ;
+    a+len
+  end
+
 let connect uri =
   let client_read, msg_write = Pipe.create () in
   let msg_read, client_write = Pipe.create () in
@@ -21,18 +27,15 @@ let connect uri =
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
   let stream = Faraday.create 4096 in
-  let run (Conduit_async.V3.Inet_sock s) r _ =
-    let writev = Faraday_async.writev_of_fd (Socket.fd s) in
+  let run _ r w =
     let rec flush () =
       match Faraday.operation stream with
       | `Close -> raise Exit
       | `Yield -> Deferred.unit
       | `Writev iovecs ->
-        writev iovecs >>= function
-        | `Closed -> raise Exit
-        | `Ok n ->
-          Faraday.shift stream n ;
-          flush ()
+        let nb_written = write_iovec w iovecs  in
+        Faraday.shift stream nb_written ;
+        flush ()
     in
     don't_wait_for begin
       Pipe.iter msg_read ~f:begin fun msg ->
