@@ -4,6 +4,7 @@
   ---------------------------------------------------------------------------*)
 
 open Fix
+open Fixtypes
 
 val url : Uri.t
 val sandbox_url : Uri.t
@@ -17,7 +18,18 @@ val logon_fields :
   logon_ts:Ptime.t -> Field.t list
 
 val testreq : testreqid:string -> t
+val order_status_request : ?orderID:string -> unit -> t
 
+val new_order_market :
+  clOrdID:Uuidm.t -> side:Side.t ->
+  qty:float -> symbol:string -> t
+
+val new_order_limit :
+  clOrdID:Uuidm.t -> side:Side.t ->
+  price:float -> qty:float ->
+  timeInForce:TimeInForce.t -> symbol:string -> t
+
+val cancel_order : srvOrdID:Uuidm.t -> t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

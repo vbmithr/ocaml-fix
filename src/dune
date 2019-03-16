@@ -23,7 +23,7 @@
  (public_name fix-coinbasepro)
  (modules fix_coinbasepro)
  (preprocess (pps ppx_sexp_conv))
- (libraries ptime fix base64 monocypher digestif.c uri))
+ (libraries ptime uuidm fix base64 monocypher digestif.c uri))
 
 
 ;; (library
