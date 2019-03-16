@@ -193,8 +193,11 @@ let new_order_stop_limit
   ] in
   Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
 
-let cancel_order ~srvOrdID =
+let cancel_order ~orderID ~clOrdID =
   let fields = [
-    Field.OrderID.create (Uuidm.to_string srvOrdID) ;
+    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
+    match orderID with
+    | `ClOrdID id -> Field.OrigClOrdID.create (Uuidm.to_string id) ;
+    | `OrderID id -> Field.OrderID.create (Uuidm.to_string id) ;
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderCancelRequest

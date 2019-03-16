@@ -47,7 +47,9 @@ let on_client_cmd w words =
   | "cancel" :: srvOrdID :: _ -> begin
     match Uuidm.of_string srvOrdID with
     | None -> Logs_async.err ~src (fun m -> m "wrong srvOrdID: must be an UUID")
-    | Some srvOrdID -> Pipe.write w (cancel_order ~srvOrdID)
+    | Some orderID ->
+      let clOrdID = Uuidm.create `V4 in
+      Pipe.write w (cancel_order ~orderID:(`OrderID orderID) ~clOrdID)
   end
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")

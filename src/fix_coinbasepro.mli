@@ -48,7 +48,9 @@ val new_order_stop_limit :
   side:Side.t -> price:float -> stopPx:float -> qty:float ->
   timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
 
-val cancel_order : srvOrdID:Uuidm.t -> t
+val cancel_order :
+  orderID:[`ClOrdID of Uuidm.t | `OrderID of Uuidm.t] ->
+  clOrdID:Uuidm.t -> t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
