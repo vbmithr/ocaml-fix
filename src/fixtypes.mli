@@ -194,6 +194,14 @@ module TimeInForce : sig
     | Session
     | GoodTillCancel
     | AtTheOpening
+    | ImmediateOrCancel
+    | FillOrKill
+    | GoodTillCrossing
+    | GoodTillDate
+    | AtTheClose
+    | GoodThroughCrossing
+    | AtCrossing
+    | PostOnly (* Coinbase special *)
 
   include IO with type t := t
 end

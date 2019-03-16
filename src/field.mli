@@ -136,6 +136,7 @@ module OrderQty : FIELD with type t := float
 module CashOrderQty : FIELD with type t := float
 module OrdType : FIELD with type t := OrdType.t
 module Price : FIELD with type t := float
+module StopPx : FIELD with type t := float
 module TimeInForce : FIELD with type t := TimeInForce.t
 
 (*---------------------------------------------------------------------------

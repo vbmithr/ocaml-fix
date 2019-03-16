@@ -24,26 +24,26 @@ let on_client_cmd w words =
     let clOrdID = Uuidm.create `V4 in
     let qty = float_of_string qty in
     Pipe.write w
-      (new_order_market ~clOrdID ~side:Buy ~qty ~symbol)
+      (new_order_market ~side:Buy ~qty ~symbol clOrdID)
   | "sell" :: symbol :: qty :: [] ->
     let clOrdID = Uuidm.create `V4 in
     let qty = float_of_string qty in
     Pipe.write w
-      (new_order_market ~clOrdID ~side:Sell ~qty ~symbol)
+      (new_order_market ~side:Sell ~qty ~symbol clOrdID)
   | "buy" :: symbol :: qty :: price :: _ ->
     let clOrdID = Uuidm.create `V4 in
     let price = float_of_string price in
     let qty = float_of_string qty in
     let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
     Pipe.write w
-      (new_order_limit ~clOrdID ~side:Buy ~price ~qty ~timeInForce ~symbol)
+      (new_order_limit ~side:Buy ~price ~qty ~timeInForce ~symbol clOrdID)
   | "sell" :: symbol :: qty :: price :: _ ->
     let clOrdID = Uuidm.create `V4 in
     let price = float_of_string price in
     let qty = float_of_string qty in
     let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
     Pipe.write w
-      (new_order_limit ~clOrdID ~side:Sell ~price ~qty ~timeInForce ~symbol)
+      (new_order_limit ~side:Sell ~price ~qty ~timeInForce ~symbol clOrdID)
   | "cancel" :: srvOrdID :: _ -> begin
     match Uuidm.of_string srvOrdID with
     | None -> Logs_async.err ~src (fun m -> m "wrong srvOrdID: must be an UUID")

@@ -1481,6 +1481,22 @@ module Price = Make(struct
   end)
 let () = register_field (module Price)
 
+type _ typ += StopPx : float typ
+module StopPx = Make(struct
+    type t = float [@@deriving sexp]
+    let t = StopPx
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 99
+    let name = "StopPx"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | StopPx, StopPx -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module StopPx)
+
 type _ typ += AvgPx : float typ
 module AvgPx = Make(struct
     type t = float [@@deriving sexp]

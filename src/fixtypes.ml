@@ -769,18 +769,42 @@ module TimeInForce = struct
       | Session
       | GoodTillCancel
       | AtTheOpening
+      | ImmediateOrCancel
+      | FillOrKill
+      | GoodTillCrossing
+      | GoodTillDate
+      | AtTheClose
+      | GoodThroughCrossing
+      | AtCrossing
+      | PostOnly (* Coinbase special *)
     [@@deriving sexp]
 
     let parse = function
       | "0" -> Some Session
       | "1" -> Some GoodTillCancel
       | "2" -> Some AtTheOpening
+      | "3" -> Some ImmediateOrCancel
+      | "4" -> Some FillOrKill
+      | "5" -> Some GoodTillCrossing
+      | "6" -> Some GoodTillDate
+      | "7" -> Some AtTheClose
+      | "8" -> Some GoodThroughCrossing
+      | "9" -> Some AtCrossing
+      | "P" -> Some PostOnly
       | _ -> None
 
     let print = function
       | Session -> "0"
       | GoodTillCancel -> "1"
       | AtTheOpening -> "2"
+      | ImmediateOrCancel -> "3"
+      | FillOrKill -> "4"
+      | GoodTillCrossing -> "5"
+      | GoodTillDate -> "6"
+      | AtTheClose -> "7"
+      | GoodThroughCrossing -> "8"
+      | AtCrossing -> "9"
+      | PostOnly -> "P"
   end
   include T
   include Make(T)

@@ -120,7 +120,9 @@ let order_status_request ?(orderID = "*") () =
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderStatusRequest
 
-let new_order_market ~clOrdID ~side ~qty ~symbol =
+let new_order_market
+    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
+    ~side ~qty ~symbol clOrdID =
   let fields = [
     Field.HandlInst.create Private ;
     Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
@@ -128,10 +130,21 @@ let new_order_market ~clOrdID ~side ~qty ~symbol =
     Field.OrderQty.create qty ;
     Field.OrdType.create Market ;
     Field.Symbol.create symbol ;
+    STP.create selfTradePrevention ;
   ] in
   Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
 
-let new_order_limit ~clOrdID ~side ~price ~qty ~timeInForce ~symbol =
+let check_time_in_force = function
+  | Fixtypes.TimeInForce.GoodTillCancel
+  | ImmediateOrCancel
+  | FillOrKill
+  | PostOnly -> ()
+  | _ -> invalid_arg "timeInForce not supported by Coinbasepro"
+
+let new_order_limit
+    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
+    ~side ~price ~qty ~timeInForce ~symbol clOrdID =
+  check_time_in_force timeInForce ;
   let fields = [
     Field.HandlInst.create Private ;
     Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
@@ -141,6 +154,42 @@ let new_order_limit ~clOrdID ~side ~price ~qty ~timeInForce ~symbol =
     Field.OrdType.create Limit ;
     Field.TimeInForce.create timeInForce ;
     Field.Symbol.create symbol ;
+    STP.create selfTradePrevention ;
+  ] in
+  Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
+
+let new_order_stop
+    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
+    ~side ~stopPx ~qty ~timeInForce ~symbol clOrdID =
+  check_time_in_force timeInForce ;
+  let fields = [
+    Field.HandlInst.create Private ;
+    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
+    Field.Side.create side ;
+    Field.OrderQty.create qty ;
+    Field.StopPx.create stopPx ;
+    Field.OrdType.create Stop ;
+    Field.TimeInForce.create timeInForce ;
+    Field.Symbol.create symbol ;
+    STP.create selfTradePrevention ;
+  ] in
+  Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
+
+let new_order_stop_limit
+    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
+    ~side ~price ~stopPx ~qty ~timeInForce ~symbol clOrdID =
+  check_time_in_force timeInForce ;
+  let fields = [
+    Field.HandlInst.create Private ;
+    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
+    Field.Side.create side ;
+    Field.OrderQty.create qty ;
+    Field.Price.create price ;
+    Field.StopPx.create stopPx ;
+    Field.OrdType.create StopLimit ;
+    Field.TimeInForce.create timeInForce ;
+    Field.Symbol.create symbol ;
+    STP.create selfTradePrevention ;
   ] in
   Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
 

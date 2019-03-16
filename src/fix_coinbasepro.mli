@@ -10,6 +10,15 @@ val url : Uri.t
 val sandbox_url : Uri.t
 val tid : string
 
+module SelfTradePrevention : sig
+  type t =
+    | DecrementAndCancel
+    | CancelRestingOrder
+    | CancelIncomingOrder
+    | CancelBothOrders
+  [@@deriving sexp]
+end
+
 val logon_fields :
   ?cancel_on_disconnect:[`All | `Session] ->
   key:string ->
@@ -21,13 +30,23 @@ val testreq : testreqid:string -> t
 val order_status_request : ?orderID:string -> unit -> t
 
 val new_order_market :
-  clOrdID:Uuidm.t -> side:Side.t ->
-  qty:float -> symbol:string -> t
+  ?selfTradePrevention:SelfTradePrevention.t ->
+  side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> t
 
 val new_order_limit :
-  clOrdID:Uuidm.t -> side:Side.t ->
-  price:float -> qty:float ->
-  timeInForce:TimeInForce.t -> symbol:string -> t
+  ?selfTradePrevention:SelfTradePrevention.t ->
+  side:Side.t -> price:float -> qty:float ->
+  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
+
+val new_order_stop :
+  ?selfTradePrevention:SelfTradePrevention.t ->
+  side:Side.t -> stopPx:float -> qty:float ->
+  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
+
+val new_order_stop_limit :
+  ?selfTradePrevention:SelfTradePrevention.t ->
+  side:Side.t -> price:float -> stopPx:float -> qty:float ->
+  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
 
 val cancel_order : srvOrdID:Uuidm.t -> t
 
