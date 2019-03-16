@@ -63,17 +63,19 @@ let main sandbox cfg =
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
-  Fix_async.connect_ez
+  Fix_async.with_connection_ez
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
-    ~sid:key ~tid ~version:Version.v42 ~logon_fields url >>= fun (r, w) ->
-  Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
-  Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
-  Deferred.any [
-    Pipe.iter r ~f:(on_server_msg w);
-    Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
-    Pipe.closed w
-  ]
+    ~sid:key ~tid ~version:Version.v42 ~logon_fields url
+    ~f:begin fun r w ->
+      Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
+      Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
+      Deferred.any [
+        Pipe.iter r ~f:(on_server_msg w);
+        Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
+        Pipe.closed w
+      ]
+    end
 
 let command =
   Command.async ~summary:"Coinbase sandbox shell" begin
