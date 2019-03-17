@@ -22,7 +22,7 @@ let connect uri =
   let msg_read, client_write = Pipe.create () in
   let cleanup () =
       Logs_async.warn
-        (fun m -> m "with_connection: cleanup up") >>| fun () ->
+        (fun m -> m "with_connection: cleaning up") >>| fun () ->
       Pipe.close_read msg_read ;
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
