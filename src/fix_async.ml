@@ -129,6 +129,7 @@ let connect_ez
     ~sid
     ~tid
     ~version uri =
+  let closed = Ivar.create () in
   let do_logout = Ivar.create () in
   let do_cleanup = Ivar.create () in
   Clock_ns.every (Time_ns.Span.of_int_sec 60)
@@ -227,17 +228,18 @@ let connect_ez
     Logs_async.warn
       (fun m -> m "with_connection_ez: cleaning up") >>| fun () ->
     Pipe.close w ;
-    Pipe.close_read rr in
+    Pipe.close_read rr ;
+    Ivar.fill closed () in
   don't_wait_for (cleanup ()) ;
   don't_wait_for (Pipe.closed ww >>| Ivar.fill_if_empty do_logout) ;
-  return (r, ww)
+  return (Ivar.read closed, r, ww)
 
 let with_connection_ez
     ?history_size ?heartbeat ?logon_fields
     ?logon_ts ~sid ~tid ~version uri ~f =
   connect_ez ?history_size ?heartbeat ?logon_fields
-    ?logon_ts ~sid ~tid ~version uri >>= fun (r, w) ->
-  Monitor.protect (fun () -> f r w)
+    ?logon_ts ~sid ~tid ~version uri >>= fun (closed, r, w) ->
+  Monitor.protect (fun () -> f ~closed r w)
     ~finally:begin fun () ->
       Pipe.close w ; Pipe.close_read r ; Deferred.unit
     end
