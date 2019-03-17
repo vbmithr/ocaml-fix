@@ -52,6 +52,35 @@ val cancel_order :
   orderID:[`ClOrdID of Uuidm.t | `OrderID of Uuidm.t] ->
   clOrdID:Uuidm.t -> t
 
+type execution_report = {
+  clOrdID : Uuidm.t option ;
+  orderID : Uuidm.t option ;
+  symbol : string ;
+  side : Fixtypes.Side.t ;
+  lastQty : float option ;
+  price : float ;
+  orderQty : float ;
+  cashOrderQty : float option ;
+  transactTime : Ptime.t ;
+  ordStatus : Fixtypes.OrdStatus.t ;
+  ordRejReason : Fixtypes.OrdRejReason.t option ;
+  tradeID : Uuidm.t ;
+  taker : bool ;
+} [@@deriving sexp]
+
+val parse_execution_report : t -> execution_report
+
+type order_cancel_reject = {
+  clOrdID : Uuidm.t option ;
+  orderID : Uuidm.t option ;
+  origClOrderID : Uuidm.t option ;
+  ordStatus : Fixtypes.OrdStatus.t option ;
+  cxlRejReason : Fixtypes.CxlRejReason.t option ;
+  cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
+} [@@deriving sexp]
+
+val parse_order_cancel_reject : t -> order_cancel_reject
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

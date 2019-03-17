@@ -25,10 +25,3 @@
  (preprocess (pps ppx_sexp_conv))
  (libraries ptime uuidm fix base64 monocypher digestif.c uri))
 
-
-;; (library
-;;  ((name okcoin)
-;;   (public_name fix.okcoin)
-;;   (modules (okcoin))
-;;   (libraries (fix))))
-

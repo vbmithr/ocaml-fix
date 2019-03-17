@@ -43,6 +43,8 @@ val parser : (t * int, R.msg) result Angstrom.t
 val find : 'a typ -> field -> 'a option
 val same_kind : field -> field -> bool
 val find_set : 'a typ -> Set.t -> 'a option
+val find_set_bind : 'a typ -> Set.t -> f:('a -> 'b option) -> 'b option
+val find_set_map : 'a typ -> Set.t -> f:('a -> 'b) -> 'b option
 val find_and_remove_set : 'a typ -> Set.t -> ('a * Set.t) option
 val remove_set : 'a typ -> Set.t -> Set.t
 
@@ -83,6 +85,22 @@ type _ typ += NoPositions : int typ
 type _ typ += NoFills : int typ
 type _ typ += TotNumReports : int typ
 type _ typ += NoMiscFees : int typ
+type _ typ += ClOrdID : string typ
+type _ typ += OrigClOrdID : string typ
+type _ typ += OrderID : string typ
+type _ typ += Symbol : string typ
+type _ typ += TradeID : string typ
+type _ typ += AggressorIndicator : bool typ
+type _ typ += Side : Side.t typ
+type _ typ += TransactTime : Ptime.t typ
+type _ typ += OrdStatus : OrdStatus.t typ
+type _ typ += LastQty : float typ
+type _ typ += OrderQty : float typ
+type _ typ += CashOrderQty : float typ
+type _ typ += Price : float typ
+type _ typ += OrdRejReason : OrdRejReason.t typ
+type _ typ += CxlRejReason : CxlRejReason.t typ
+type _ typ += CxlRejResponseTo : CxlRejResponseTo.t typ
 
 module NoRelatedSym : FIELD with type t := int
 module NoMDEntryTypes : FIELD with type t := int

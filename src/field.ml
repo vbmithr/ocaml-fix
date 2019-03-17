@@ -135,6 +135,22 @@ let find_set :
     | Some v -> Some v
   end fields None
 
+let find_set_bind :
+  type a. a typ -> Set.t -> f:(a -> 'b option) -> 'b option = fun typ fields ~f ->
+  Set.fold begin fun field a ->
+    match find typ field with
+    | None -> a
+    | Some v -> f v
+  end fields None
+
+let find_set_map :
+  type a. a typ -> Set.t -> f:(a -> 'b) -> 'b option = fun typ fields ~f ->
+  Set.fold begin fun field a ->
+    match find typ field with
+    | None -> a
+    | Some v -> Some (f v)
+  end fields None
+
 let find_and_remove_set :
   type a. a typ -> Set.t -> (a * Set.t) option = fun typ fields ->
   Set.fold begin fun f a ->
@@ -985,22 +1001,6 @@ module RefTagID = Make(struct
   end)
 let () = register_field (module RefTagID)
 
-type _ typ += TradeID : int typ
-module TradeID = Make(struct
-    type t = int [@@deriving sexp]
-    let t = TradeID
-    let pp = Format.pp_print_int
-    let parse = int_of_string_opt
-    let tag = 1003
-    let name = "TradeID"
-    let eq :
-      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-      match a, b with
-      | TradeID, TradeID -> Some Eq
-      | _ -> None
-  end)
-let () = register_field (module TradeID)
-
 type _ typ += MarketDepth : int typ
 module MarketDepth = Make(struct
     type t = int [@@deriving sexp]
@@ -1224,6 +1224,22 @@ module NoMiscFees = Make(struct
       | _ -> None
   end)
 let () = register_field (module NoMiscFees)
+
+type _ typ += TradeID : string typ
+module TradeID = Make(struct
+    type t = string [@@deriving sexp]
+    let t = TradeID
+    let pp = Format.pp_print_string
+    let parse s = Some s
+    let tag = 1003
+    let name = "TradeID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TradeID, TradeID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TradeID)
 
 type _ typ += FillExecID : string typ
 module FillExecID = Make(struct
