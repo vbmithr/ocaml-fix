@@ -56,13 +56,13 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~groups ~fields MsgType.MarketDataRequest)
   | "orders" :: _ ->
     let fields = [
-      Field.MassStatusReqID.create Uuid.(create () |> to_string) ;
+      Field.MassStatusReqID.create (Uuid_unix.create () |> Uuid.to_string) ;
       Field.MassStatusReqType.create AllOrders ;
     ] in
     Pipe.write w (Fix.create ~fields MsgType.OrderMassStatusRequest)
   | "positions" :: _ ->
     let fields = [
-      Field.PosReqID.create Uuid.(create () |> to_string) ;
+      Field.PosReqID.create (Uuid_unix.create () |> Uuid.to_string) ;
       Field.PosReqType.create Positions ;
       Field.SubscriptionRequestType.create Snapshot ;
     ] in
@@ -76,7 +76,7 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.UserRequest)
   | "buy" :: symbol :: qty :: [] ->
     let fields = [
-      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.ClOrdID.create (Uuid_unix.create () |> Uuid.to_string) ;
       Field.Side.create Buy ;
       Field.OrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
@@ -85,7 +85,7 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "sell" :: symbol :: qty :: [] ->
     let fields = [
-      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.ClOrdID.create Uuid_unix.(create () |> Uuid.to_string) ;
       Field.Side.create Sell ;
       Field.OrderQty.create (float_of_string qty) ;
       Field.OrdType.create Market ;
@@ -94,7 +94,7 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "buy" :: symbol :: qty :: price :: _ ->
     let fields = [
-      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.ClOrdID.create Uuid_unix.(create () |> Uuid.to_string) ;
       Field.Side.create Buy ;
       Field.OrderQty.create (float_of_string qty) ;
       Field.Price.create (float_of_string price) ;
@@ -104,7 +104,7 @@ let on_client_cmd username w words =
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "sell" :: symbol :: qty :: price :: _ ->
     let fields = [
-      Field.ClOrdID.create Uuid.(create () |> to_string) ;
+      Field.ClOrdID.create Uuid_unix.(create () |> Uuid.to_string) ;
       Field.Side.create Sell ;
       Field.OrderQty.create (float_of_string qty) ;
       Field.Price.create (float_of_string price) ;

@@ -132,8 +132,9 @@ let connect_ez
   let closed = Ivar.create () in
   let do_logout = Ivar.create () in
   let do_cleanup = Ivar.create () in
+  let calibrator = Lazy.force Time_stamp_counter.calibrator in
   Clock_ns.every (Time_ns.Span.of_int_sec 60)
-    Time_stamp_counter.Calibrator.calibrate
+    (fun () -> Time_stamp_counter.Calibrator.calibrate calibrator)
     ~stop:(Ivar.read do_cleanup)
     ~continue_on_error:false ;
   let logon =
@@ -159,7 +160,8 @@ let connect_ez
       | _, Some _ ->
         let open Int63 in
         Time_ns.to_int63_ns_since_epoch
-          (Time_stamp_counter.to_time_ns !last_sent) / of_int 1_000_000_000 |> to_float |>
+          (Time_stamp_counter.to_time_ns ~calibrator !last_sent) /
+        of_int 1_000_000_000 |> to_float |>
         Ptime.of_float_s
       | _, None -> None
     end in
@@ -168,10 +170,13 @@ let connect_ez
     incr count ;
     Pipe.write w msg in
   let watchdog () =
-    let open Time_stamp_counter in
-    let now = now () in
-    let span_last_received = Span.to_ns (diff now !last_received) in
-    let span_last_sent = Span.to_ns (diff now !last_sent) in
+    let now = Time_stamp_counter.now () in
+    let span_last_received =
+      Time_stamp_counter.Span.to_ns
+        ~calibrator (Time_stamp_counter.diff now !last_received) in
+    let span_last_sent =
+      Time_stamp_counter.Span.to_ns
+        ~calibrator (Time_stamp_counter.diff now !last_sent) in
     let open Int63 in
     Logs_async.debug ~src begin fun m ->
       m "watchdog %a %a" pp span_last_received pp span_last_sent
