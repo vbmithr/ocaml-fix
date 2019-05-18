@@ -27,7 +27,7 @@ let connect uri =
       Pipe.close msg_write in
   don't_wait_for (Pipe.closed client_write >>= cleanup) ;
   let stream = Faraday.create 4096 in
-  let run _ r w =
+  let run _sock _conn r w =
     let rec flush () =
       match Faraday.operation stream with
       | `Close -> raise Exit
@@ -73,7 +73,7 @@ let connect uri =
   in
   don't_wait_for begin
     Monitor.try_with ~extract_exn:true
-      (fun () -> Conduit_async.V3.with_connection_uri uri run) >>= function
+      (fun () -> Async_uri.with_connection uri run) >>= function
     | Error Exit ->
       Logs_async.err ~src (fun m -> m "Serializer closed") >>=
       cleanup
