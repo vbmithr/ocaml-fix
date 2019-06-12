@@ -9,6 +9,7 @@
  (name fix_async)
  (public_name fix-async)
  (modules fix_async)
+ (preprocess (pps ppx_sexp_conv))
  (libraries fix async angstrom-async faraday-async async-uri uri logs-async))
 
 (library
