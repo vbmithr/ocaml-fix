@@ -102,6 +102,11 @@ type _ typ += OrdRejReason : OrdRejReason.t typ
 type _ typ += CxlRejReason : CxlRejReason.t typ
 type _ typ += CxlRejResponseTo : CxlRejResponseTo.t typ
 
+type _ typ += MDEntryType : MDEntryType.t typ
+type _ typ += MDEntryPx : float typ
+type _ typ += MDEntrySize : float typ
+type _ typ += MDEntryDate : Ptime.t typ
+
 module NoRelatedSym : FIELD with type t := int
 module NoMDEntryTypes : FIELD with type t := int
 module NoMDEntries : FIELD with type t := int
@@ -149,6 +154,7 @@ module UserRequestType : FIELD with type t := UserRequestType.t
 module ClOrdID : FIELD with type t := string
 module OrigClOrdID : FIELD with type t := string
 module OrderID : FIELD with type t := string
+module SecondaryOrderID : FIELD with type t := string
 module Side : FIELD with type t := Side.t
 module OrderQty : FIELD with type t := float
 module CashOrderQty : FIELD with type t := float
@@ -156,6 +162,7 @@ module OrdType : FIELD with type t := OrdType.t
 module Price : FIELD with type t := float
 module StopPx : FIELD with type t := float
 module TimeInForce : FIELD with type t := TimeInForce.t
+module OrdStatus : FIELD with type t := OrdStatus.t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

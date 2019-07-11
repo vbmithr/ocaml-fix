@@ -1865,6 +1865,22 @@ module MinPriceIncrement = Make(struct
   end)
 let () = register_field (module MinPriceIncrement)
 
+type _ typ += OpenInterest : float typ
+module OpenInterest = Make(struct
+    type t = float [@@deriving sexp]
+    let t = OpenInterest
+    let pp = Format.pp_print_float
+    let parse = float_of_string_opt
+    let tag = 746
+    let name = "OpenInterest"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | OpenInterest, OpenInterest -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module OpenInterest)
+
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
     type t = string [@@deriving sexp]

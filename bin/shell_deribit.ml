@@ -125,7 +125,8 @@ let main sandbox cfg =
   let open Bs_devkit in
   Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
   let { Cfg.key ; secret ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg "DERIBIT" in
+    List.Assoc.find_exn ~equal:String.equal cfg
+      (if sandbox then "DERIBIT" else "DERIBIT_PROD") in
   let ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in

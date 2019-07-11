@@ -4,6 +4,10 @@
   ---------------------------------------------------------------------------*)
 
 open Fix
+open Field
+
+type _ typ += DeribitTradeID : int typ
+module DeribitTradeID : FIELD with type t := int
 
 val url : Uri.t
 val test_url : Uri.t
