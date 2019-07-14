@@ -7,12 +7,20 @@ open Rresult
 open Astring
 open Sexplib.Std
 
+module Yojsonable = struct
+  module type S = sig
+    type t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) result
+  end
+end
+
 module type IOMIN = sig
   type t
 
   val t_of_sexp : Sexplib.Sexp.t -> t
   val sexp_of_t : t -> Sexplib.Sexp.t
-  val parse : string -> t option
+  val parse : string -> (t, R.msg) result
   val print : t -> string
 end
 
@@ -26,15 +34,18 @@ end
 
 module Make (T : IOMIN) = struct
   open T
-  let parse_exn s =
-    match parse s with
-    | None -> invalid_arg "parse"
-    | Some v -> v
-
+  let parse_exn s = R.failwith_error_msg (parse s)
   let pp ppf v = Format.fprintf ppf "%s" (print v)
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 end
+
+let of_yojson_string ~f = function
+  | `String s -> f s
+  | #Yojson.Safe.t -> Error "input must be a json string"
+
+let reword_tyre_error t =
+  R.reword_error (fun e -> R.msgf "%a" Tyre.pp_error e) t
 
 module Ptime = struct
   include Ptime
@@ -48,25 +59,42 @@ module Ptime = struct
   let sexp_of_t t =
     sexp_of_string (to_rfc3339 t)
 
+  let of_yojson =
+    of_yojson_string ~f:begin fun s ->
+      match of_rfc3339 s with
+      | Ok (v,_,_) -> Ok v
+      | Error (`RFC3339 (_, e)) ->
+        R.fail (Format.asprintf "%a" pp_rfc3339_error e)
+    end
+
+  let to_yojson t = `String (to_rfc3339 t)
+
   let date_of_string s =
-    match String.(Sub.to_int (sub_with_range s ~first:0 ~len:4)),
-          String.(Sub.to_int (sub_with_range s ~first:4 ~len:2)),
-          String.(Sub.to_int (sub_with_range s ~first:6 ~len:2))
-    with
-    | Some y, Some m, Some d -> Some (y, m, d)
-    | _ -> None
+    if String.length s <> 8 then
+      R.error_msg "date_of_string: string must have length 8"
+    else
+      match String.(Sub.to_int (sub_with_range s ~first:0 ~len:4)),
+            String.(Sub.to_int (sub_with_range s ~first:4 ~len:2)),
+            String.(Sub.to_int (sub_with_range s ~first:6 ~len:2))
+      with
+      | Some y, Some m, Some d -> Ok (y, m, d)
+      | _ -> R.error_msg "date_of_string: parse error"
 
   let string_of_date (y, m, d) =
     Printf.sprintf "%04d%02d%02d" y m d
 
   let date_of_sexp sexp =
     let sexp_str = string_of_sexp sexp in
-    match date_of_string sexp_str with
-    | Some v -> v
-    | _ -> invalid_arg "Ptime.date_of_sexp"
+    R.failwith_error_msg (date_of_string sexp_str)
 
   let sexp_of_date d =
     sexp_of_string (string_of_date d)
+
+  let date_of_yojson = of_yojson_string ~f:begin fun s ->
+      R.reword_error (function `Msg s -> s) (date_of_string s)
+    end
+
+  let date_to_yojson d = `String (string_of_date d)
 
   let tzspec =
     let open Tyre in
@@ -112,13 +140,14 @@ module Ptime = struct
 
   let time_re = Tyre.compile time
 
-  let time_of_string s = Tyre.exec time_re s
-  let time_of_string_opt s = R.to_option (time_of_string s)
+  let time_of_string s = reword_tyre_error (Tyre.exec time_re s)
 
   let time_of_sexp s =
-    match time_of_string (string_of_sexp s) with
-    | Ok time -> time
-    | Error _  -> invalid_arg "time_of_sexp"
+    R.failwith_error_msg (time_of_string (string_of_sexp s))
+
+  let time_of_yojson = of_yojson_string ~f:begin fun s ->
+      R.reword_error (function `Msg m -> m) (time_of_string s)
+    end
 
   let pp_time ppf = function
     | (hh, mm, 0), 0 -> Format.fprintf ppf "%02d:%02dZ" hh mm
@@ -161,11 +190,13 @@ module Ptime = struct
 
   let sexp_of_time t =
     sexp_of_string (string_of_time t)
+
+  let time_to_yojson t = `String (string_of_time t)
 end
 
 module Date = struct
   module T = struct
-    type t = Ptime.date [@@deriving sexp]
+    type t = Ptime.date [@@deriving sexp,yojson]
 
     let parse = Ptime.date_of_string
     let print = Ptime.string_of_date
@@ -176,9 +207,9 @@ end
 
 module TZTimeOnly = struct
   module T = struct
-    type t = Ptime.time [@@deriving sexp]
+    type t = Ptime.time [@@deriving sexp,yojson]
 
-    let parse = Ptime.time_of_string_opt
+    let parse = Ptime.time_of_string
     let print = Ptime.string_of_time
   end
   include T
@@ -192,10 +223,10 @@ module UTCTimestamp = struct
     with
     | Some ts, Some frac -> begin
         match Ptime.(add_span ts frac) with
-        | None -> None
-        | Some ts -> Some ts
+        | None -> invalid_arg "not an UTCTimestamp"
+        | Some ts -> ts
       end
-    | _ -> None
+    | _ -> invalid_arg "not an UTCTimestamp"
 
   let pp ppf t =
     let ((y, m, d), ((hh, mm, ss), _)) = Ptime.to_date_time t in
@@ -215,31 +246,15 @@ module UTCTimestamp = struct
     let ci = conv int_of_string string_of_int in
     compile @@ conv
       (fun ((((((y, m), d), h), mm), s), ms) -> parse y m d h mm s ?ms)
-      (function
-        | None -> ((((((0, 0), 0), 0), 0), 0), None)
-        | Some t ->
-          match Ptime.to_date_time t
-          with ((y, m, d), ((h, mm, s), _)) ->
-            ((((((y, m), d), h), mm), s), None))
+      (fun t ->
+         match Ptime.to_date_time t
+         with ((y, m, d), ((h, mm, s), _)) ->
+           ((((((y, m), d), h), mm), s), None))
       (ci (pcre "\\d{4}") <&> ci (pcre "\\d{2}") <&> ci (pcre "\\d{2}") <*
        dash <&> int <* colon <&> int <* colon <&> int <&> (opt ms))
 
-  let parse str =
-    Tyre.exec re str
-
-  let parse_opt str =
-    match parse str with
-    | Ok v -> v
-    | _ -> None
-
-  let parse_exn str =
-    let open R in
-    failwith_error_msg @@
-    reword_error
-      (fun e -> msg (Format.asprintf "%a" Tyre.pp_error e))
-      (parse str) |> function
-    | None -> failwith "invalid timestamp"
-    | Some ts -> ts
+  let parse str = reword_tyre_error (Tyre.exec re str)
+  let parse_exn str = R.failwith_error_msg (parse str)
 end
 
 module UserRequestType = struct
@@ -249,14 +264,14 @@ module UserRequestType = struct
       | Logoff
       | ChangePassword
       | RequestStatus
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Logon
-      | "2" -> Some Logoff
-      | "3" -> Some ChangePassword
-      | "4" -> Some RequestStatus
-      | _ -> None
+      | "1" -> Ok Logon
+      | "2" -> Ok Logoff
+      | "3" -> Ok ChangePassword
+      | "4" -> Ok RequestStatus
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Logon          -> "1"
@@ -279,18 +294,18 @@ module UserStatus = struct
       | Other
       | ForcedLogout
       | SessionShutdownWarning
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some LoggedIn
-      | "2" -> Some LoggedOff
-      | "3" -> Some NotRecognized
-      | "4" -> Some PasswordIncorrect
-      | "5" -> Some PasswordChanged
-      | "6" -> Some Other
-      | "7" -> Some ForcedLogout
-      | "8" -> Some SessionShutdownWarning
-      | _ -> None
+      | "1" -> Ok LoggedIn
+      | "2" -> Ok LoggedOff
+      | "3" -> Ok NotRecognized
+      | "4" -> Ok PasswordIncorrect
+      | "5" -> Ok PasswordChanged
+      | "6" -> Ok Other
+      | "7" -> Ok ForcedLogout
+      | "8" -> Ok SessionShutdownWarning
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | LoggedIn               -> "1"
@@ -312,13 +327,13 @@ module HandlInst = struct
       | Private
       | Public
       | Manual
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Private
-      | "2" -> Some Public
-      | "3" -> Some Manual
-      | _ -> None
+      | "1" -> Ok Private
+      | "2" -> Ok Public
+      | "3" -> Ok Manual
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Private -> "1"
@@ -347,25 +362,25 @@ module OrdStatus = struct
       | Expired
       | AcceptedForBidding
       | PendingReplace
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some New
-      | "1" -> Some PartiallyFilled
-      | "2" -> Some Filled
-      | "3" -> Some DoneForDay
-      | "4" -> Some Canceled
-      | "5" -> Some Replaced
-      | "6" -> Some PendingCancel
-      | "7" -> Some Stopped
-      | "8" -> Some Rejected
-      | "9" -> Some Suspended
-      | "A" -> Some PendingNew
-      | "B" -> Some Calculated
-      | "C" -> Some Expired
-      | "D" -> Some AcceptedForBidding
-      | "E" -> Some PendingReplace
-      | _ -> None
+      | "0" -> Ok New
+      | "1" -> Ok PartiallyFilled
+      | "2" -> Ok Filled
+      | "3" -> Ok DoneForDay
+      | "4" -> Ok Canceled
+      | "5" -> Ok Replaced
+      | "6" -> Ok PendingCancel
+      | "7" -> Ok Stopped
+      | "8" -> Ok Rejected
+      | "9" -> Ok Suspended
+      | "A" -> Ok PendingNew
+      | "B" -> Ok Calculated
+      | "C" -> Ok Expired
+      | "D" -> Ok AcceptedForBidding
+      | "E" -> Ok PendingReplace
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | New                -> "0"
@@ -398,17 +413,17 @@ module PosReqType = struct
       | SettlementActivity
       | BackoutMessage
       | DeltaPositions
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Positions
-      | "1" -> Some Trades
-      | "2" -> Some Exercises
-      | "3" -> Some Assignments
-      | "4" -> Some SettlementActivity
-      | "5" -> Some BackoutMessage
-      | "6" -> Some DeltaPositions
-      | _ -> None
+      | "0" -> Ok Positions
+      | "1" -> Ok Trades
+      | "2" -> Ok Exercises
+      | "3" -> Ok Assignments
+      | "4" -> Ok SettlementActivity
+      | "5" -> Ok BackoutMessage
+      | "6" -> Ok DeltaPositions
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Positions          -> "0"
@@ -436,20 +451,20 @@ module MassStatusReqType = struct
       | PartyID
       | SecurityIssuer
       | UssuerOfUnderlyingSecurity
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Security
-      | "2" -> Some UnderlyingSecurity
-      | "3" -> Some Product
-      | "4" -> Some CFICode
-      | "5" -> Some SecurityType
-      | "6" -> Some TradingSession
-      | "7" -> Some AllOrders
-      | "8" -> Some PartyID
-      | "9" -> Some SecurityIssuer
-      | "10" -> Some UssuerOfUnderlyingSecurity
-      | _ -> None
+      | "1" -> Ok Security
+      | "2" -> Ok UnderlyingSecurity
+      | "3" -> Ok Product
+      | "4" -> Ok CFICode
+      | "5" -> Ok SecurityType
+      | "6" -> Ok TradingSession
+      | "7" -> Ok AllOrders
+      | "8" -> Ok PartyID
+      | "9" -> Ok SecurityIssuer
+      | "10" -> Ok UssuerOfUnderlyingSecurity
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Security                   -> "1"
@@ -475,15 +490,15 @@ module PosReqResult = struct
       | NoPositionsFound
       | NotAuthorized
       | Unsupported
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some ValidRequest
-      | "1" -> Some InvalidRequest
-      | "2" -> Some NoPositionsFound
-      | "3" -> Some NotAuthorized
-      | "4" -> Some Unsupported
-      | _ -> None
+      | "0" -> Ok ValidRequest
+      | "1" -> Ok InvalidRequest
+      | "2" -> Ok NoPositionsFound
+      | "3" -> Ok NotAuthorized
+      | "4" -> Ok Unsupported
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | ValidRequest     -> "0"
@@ -505,16 +520,16 @@ module OrdType = struct
       | StopLimit
       | MarketOnClose
       | WithOrWithout
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Market
-      | "2" -> Some Market
-      | "3" -> Some Market
-      | "4" -> Some Market
-      | "5" -> Some Market
-      | "6" -> Some Market
-      | _ -> None
+      | "1" -> Ok Market
+      | "2" -> Ok Market
+      | "3" -> Ok Market
+      | "4" -> Ok Market
+      | "5" -> Ok Market
+      | "6" -> Ok Market
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Market        -> "1"
@@ -538,17 +553,17 @@ module OrdRejReason = struct
       | TooLateToEnter
       | UnknownOrder
       | DuplicateOrder
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Broker
-      | "1" -> Some UnknownSymbol
-      | "2" -> Some ExchangeClosed
-      | "3" -> Some OrderExceedsLimit
-      | "4" -> Some TooLateToEnter
-      | "5" -> Some UnknownOrder
-      | "6" -> Some DuplicateOrder
-      | _ -> None
+      | "0" -> Ok Broker
+      | "1" -> Ok UnknownSymbol
+      | "2" -> Ok ExchangeClosed
+      | "3" -> Ok OrderExceedsLimit
+      | "4" -> Ok TooLateToEnter
+      | "5" -> Ok UnknownOrder
+      | "6" -> Ok DuplicateOrder
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Broker            -> "0"
@@ -569,12 +584,12 @@ module PutOrCall = struct
     type t =
       | Put
       | Call
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Put
-      | "1" -> Some Call
-      | _ -> None
+      | "0" -> Ok Put
+      | "1" -> Ok Call
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Put -> "0"
@@ -594,17 +609,17 @@ module EncryptMethod = struct
       | PGP_DES
       | PGP_DES_MD5
       | PEM_DES_MD5
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Other
-      | "1" -> Some PKCS
-      | "2" -> Some DES
-      | "3" -> Some PKCS_DES
-      | "4" -> Some PGP_DES
-      | "5" -> Some PGP_DES_MD5
-      | "6" -> Some PEM_DES_MD5
-      | _ -> None
+      | "0" -> Ok Other
+      | "1" -> Ok PKCS
+      | "2" -> Ok DES
+      | "3" -> Ok PKCS_DES
+      | "4" -> Ok PGP_DES
+      | "5" -> Ok PGP_DES_MD5
+      | "6" -> Ok PEM_DES_MD5
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Other -> "0"
@@ -626,14 +641,14 @@ module ExecTransType = struct
       | Cancel
       | Correct
       | Status
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some New
-      | "1" -> Some Cancel
-      | "2" -> Some Correct
-      | "3" -> Some Status
-      | _ -> None
+      | "0" -> Ok New
+      | "1" -> Ok Cancel
+      | "2" -> Ok Correct
+      | "3" -> Ok Status
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | New     -> "0"
@@ -651,13 +666,13 @@ module SubscriptionRequestType = struct
       | Snapshot
       | Subscribe
       | Unsubscribe
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Snapshot
-      | "1" -> Some Subscribe
-      | "2" -> Some Unsubscribe
-      | _ -> None
+      | "0" -> Ok Snapshot
+      | "1" -> Ok Subscribe
+      | "2" -> Ok Unsubscribe
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Snapshot -> "0"
@@ -673,12 +688,12 @@ module MDUpdateType = struct
     type t =
       | Full
       | Incremental
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Full
-      | "1" -> Some Incremental
-      | _ -> None
+      | "0" -> Ok Full
+      | "1" -> Ok Incremental
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Full -> "0"
@@ -697,16 +712,16 @@ module MDUpdateAction = struct
       | DeleteThru
       | DeleteFrom
       | Overlay
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some New
-      | "1" -> Some Change
-      | "2" -> Some Delete
-      | "3" -> Some DeleteThru
-      | "4" -> Some DeleteFrom
-      | "5" -> Some Overlay
-      | _ -> None
+      | "0" -> Ok New
+      | "1" -> Ok Change
+      | "2" -> Ok Delete
+      | "3" -> Ok DeleteThru
+      | "4" -> Ok DeleteFrom
+      | "5" -> Ok Overlay
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | New -> "0"
@@ -726,13 +741,13 @@ module MDEntryType = struct
       | Bid
       | Offer
       | Trade
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Bid
-      | "1" -> Some Offer
-      | "2" -> Some Trade
-      | _ -> None
+      | "0" -> Ok Bid
+      | "1" -> Ok Offer
+      | "2" -> Ok Trade
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Bid -> "0"
@@ -748,12 +763,12 @@ module Side = struct
     type t =
       | Buy
       | Sell
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Buy
-      | "2" -> Some Sell
-      | _ -> None
+      | "1" -> Ok Buy
+      | "2" -> Ok Sell
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Buy -> "1"
@@ -777,21 +792,21 @@ module TimeInForce = struct
       | GoodThroughCrossing
       | AtCrossing
       | PostOnly (* Coinbase special *)
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Session
-      | "1" -> Some GoodTillCancel
-      | "2" -> Some AtTheOpening
-      | "3" -> Some ImmediateOrCancel
-      | "4" -> Some FillOrKill
-      | "5" -> Some GoodTillCrossing
-      | "6" -> Some GoodTillDate
-      | "7" -> Some AtTheClose
-      | "8" -> Some GoodThroughCrossing
-      | "9" -> Some AtCrossing
-      | "P" -> Some PostOnly
-      | _ -> None
+      | "0" -> Ok Session
+      | "1" -> Ok GoodTillCancel
+      | "2" -> Ok AtTheOpening
+      | "3" -> Ok ImmediateOrCancel
+      | "4" -> Ok FillOrKill
+      | "5" -> Ok GoodTillCrossing
+      | "6" -> Ok GoodTillDate
+      | "7" -> Ok AtTheClose
+      | "8" -> Ok GoodThroughCrossing
+      | "9" -> Ok AtCrossing
+      | "P" -> Ok PostOnly
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Session -> "0"
@@ -812,12 +827,12 @@ end
 
 module YesOrNo = struct
   module T = struct
-    type t = bool [@@deriving sexp]
+    type t = bool [@@deriving sexp,yojson]
 
     let parse = function
-      | "Y" -> Some true
-      | "N" -> Some false
-      | _ -> None
+      | "Y" -> Ok true
+      | "N" -> Ok false
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | true -> "Y"
@@ -836,16 +851,16 @@ module SecurityListRequestType = struct
       | TradingSessionID
       | AllSecurities
       | MarketID
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Symbol
-      | "1" -> Some SecurityType
-      | "2" -> Some Product
-      | "3" -> Some TradingSessionID
-      | "4" -> Some AllSecurities
-      | "5" -> Some MarketID
-      | _ -> None
+      | "0" -> Ok Symbol
+      | "1" -> Ok SecurityType
+      | "2" -> Ok Product
+      | "3" -> Ok TradingSessionID
+      | "4" -> Ok AllSecurities
+      | "5" -> Ok MarketID
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Symbol -> "0"
@@ -863,11 +878,11 @@ module SecurityRequestResult = struct
   module T = struct
     type t =
       | Valid
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Valid
-      | _ -> None
+      | "0" -> Ok Valid
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Valid -> "0"
@@ -883,13 +898,13 @@ module SecurityType = struct
       | Future
       | Option
       | Index
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "FUT" -> Some Future
-      | "OPT" -> Some Option
-      | "INDEX" -> Some Index
-      | _ -> None
+      | "FUT" -> Ok Future
+      | "OPT" -> Ok Option
+      | "INDEX" -> Ok Index
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Future -> "FUT"
@@ -906,13 +921,13 @@ module QtyType = struct
       | Units
       | Contracts
       | UnitsPerTime
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some Units
-      | "1" -> Some Contracts
-      | "2" -> Some UnitsPerTime
-      | _ -> None
+      | "0" -> Ok Units
+      | "1" -> Ok Contracts
+      | "2" -> Ok UnitsPerTime
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Units -> "0"
@@ -928,7 +943,7 @@ module Version = struct
     type t =
       | FIX of int * int
       | FIXT of int * int
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let v40 = FIX (4, 0)
     let v41 = FIX (4, 1)
@@ -943,13 +958,19 @@ module Version = struct
 
     let print t = Format.asprintf "%a" pp t
 
+    let to_yojson t = `String (Format.asprintf "%a" pp t)
+
     let parse s =
       match String.cuts ~sep:"." s with
       | [ "FIX" ; major ; minor ] ->
-        Some (FIX (int_of_string major, int_of_string minor))
+        Ok (FIX (int_of_string major, int_of_string minor))
       | [ "FIXT" ; major ; minor ] ->
-        Some (FIXT (int_of_string major, int_of_string minor))
-      | _ -> None
+        Ok (FIXT (int_of_string major, int_of_string minor))
+      | _ -> R.error_msg "unknown code"
+
+    let of_yojson = of_yojson_string ~f:begin fun s ->
+        R.reword_error (function `Msg m -> m) (parse s)
+      end
   end
   include T
   include Make(T)
@@ -985,7 +1006,7 @@ module MsgType = struct
     | PositionReport
     | UserRequest
     | UserResponse
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
@@ -1022,7 +1043,8 @@ module MsgType = struct
     | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
 
   let parse s =
-    try Some (parse_exn s) with _ -> None
+    try Ok (parse_exn s)
+    with Invalid_argument msg -> R.error_msg msg
 
   let print = function
     | Heartbeat                     -> "0"
@@ -1075,7 +1097,7 @@ module SessionRejectReason = struct
     | XMLValidationError
     | InvalidVersion
     | Other
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
@@ -1088,7 +1110,8 @@ module SessionRejectReason = struct
     | _ -> invalid_arg "SessionRejectReason.of_int"
 
   let of_int i =
-    try Some (of_int_exn i) with _ -> None
+    try Ok (of_int_exn i)
+    with Invalid_argument msg -> R.error_msg msg
 
   let to_int = function
     | InvalidTag -> 0
@@ -1109,13 +1132,10 @@ module SessionRejectReason = struct
 
   let parse s =
     match int_of_string_opt s with
-    | None -> None
+    | None -> R.error_msg "not an int"
     | Some i -> of_int i
 
-  let parse_exn s =
-    match parse s with
-    | Some v -> v
-    | None -> invalid_arg "SessionRejectReason.parse_exn"
+  let parse_exn s = R.failwith_error_msg (parse s)
 
   let print t = string_of_int (to_int t)
 
@@ -1147,32 +1167,32 @@ module ExecType = struct
       | TradeInClearingHold
       | TradeReleasedToClearing
       | Triggered
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some New
-      | "1" -> Some PartialFill
-      | "2" -> Some Fill
-      | "3" -> Some DoneForDay
-      | "4" -> Some Canceled
-      | "5" -> Some Replaced
-      | "6" -> Some PendingCancel
-      | "7" -> Some Stopped
-      | "8" -> Some Rejected
-      | "9" -> Some Suspended
-      | "A" -> Some PendingNew
-      | "B" -> Some Calculated
-      | "C" -> Some Expired
-      | "D" -> Some Restated
-      | "E" -> Some PendingReplace
-      | "F" -> Some Trade
-      | "G" -> Some TradeCorrect
-      | "H" -> Some TradeCancel
-      | "I" -> Some OrderStatus
-      | "J" -> Some TradeInClearingHold
-      | "K" -> Some TradeReleasedToClearing
-      | "L" -> Some Triggered
-      | _ -> None
+      | "0" -> Ok New
+      | "1" -> Ok PartialFill
+      | "2" -> Ok Fill
+      | "3" -> Ok DoneForDay
+      | "4" -> Ok Canceled
+      | "5" -> Ok Replaced
+      | "6" -> Ok PendingCancel
+      | "7" -> Ok Stopped
+      | "8" -> Ok Rejected
+      | "9" -> Ok Suspended
+      | "A" -> Ok PendingNew
+      | "B" -> Ok Calculated
+      | "C" -> Ok Expired
+      | "D" -> Ok Restated
+      | "E" -> Ok PendingReplace
+      | "F" -> Ok Trade
+      | "G" -> Ok TradeCorrect
+      | "H" -> Ok TradeCancel
+      | "I" -> Ok OrderStatus
+      | "J" -> Ok TradeInClearingHold
+      | "K" -> Ok TradeReleasedToClearing
+      | "L" -> Ok Triggered
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | New                     -> "0"
@@ -1210,14 +1230,14 @@ module MiscFeeType = struct
       | Tax
       | LocalCommission
       | ExchangeFees
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some Regulatory
-      | "2" -> Some Tax
-      | "3" -> Some LocalCommission
-      | "4" -> Some ExchangeFees
-      | _ -> None
+      | "1" -> Ok Regulatory
+      | "2" -> Ok Tax
+      | "3" -> Ok LocalCommission
+      | "4" -> Ok ExchangeFees
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | Regulatory      -> "1"
@@ -1236,14 +1256,14 @@ module CxlRejReason = struct
       | UnknownOrder
       | BrokerExchangeOption
       | PendingCancelOrReplace
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "0" -> Some TooLateToCancel
-      | "1" -> Some UnknownOrder
-      | "2" -> Some BrokerExchangeOption
-      | "3" -> Some PendingCancelOrReplace
-      | _ -> None
+      | "0" -> Ok TooLateToCancel
+      | "1" -> Ok UnknownOrder
+      | "2" -> Ok BrokerExchangeOption
+      | "3" -> Ok PendingCancelOrReplace
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | TooLateToCancel        -> "0"
@@ -1260,12 +1280,12 @@ module CxlRejResponseTo = struct
     type t =
       | OrderCancelRequest
       | OrderReplaceRequest
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "1" -> Some OrderCancelRequest
-      | "2" -> Some OrderReplaceRequest
-      | _ -> None
+      | "1" -> Ok OrderCancelRequest
+      | "2" -> Ok OrderReplaceRequest
+      | _ -> R.error_msg "unknown code"
 
     let print = function
       | OrderCancelRequest  -> "1"

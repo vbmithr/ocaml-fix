@@ -1,3 +1,4 @@
+open Rresult
 open Sexplib.Std
 open Fix
 open Fixtypes
@@ -14,18 +15,29 @@ module Uuidm = struct
 
   let sexp_of_t t =
     sexp_of_string (to_string t)
+
+  let of_yojson = function
+    | `String s -> begin
+      match of_string s with
+      | None -> Error "not an uuid"
+      | Some u -> Ok u
+    end
+    | #Yojson.Safe.t -> Error "not a json string"
+
+  let to_yojson t = `String (to_string t)
 end
 
 module CancelOnDisconnect = struct
   module T = struct
     type t =
       | All
-      | Session [@@deriving sexp]
+      | Session
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "Y" -> Some All
-      | "S" -> Some Session
-      | _ -> None
+      | "Y" -> Ok All
+      | "S" -> Ok Session
+      | _ -> R.error_msg "invalid argument"
 
     let print = function
       | All -> "Y"
@@ -42,14 +54,14 @@ module SelfTradePrevention = struct
       | CancelRestingOrder
       | CancelIncomingOrder
       | CancelBothOrders
-    [@@deriving sexp]
+    [@@deriving sexp,yojson]
 
     let parse = function
-      | "D" -> Some DecrementAndCancel
-      | "O" -> Some CancelRestingOrder
-      | "N" -> Some CancelIncomingOrder
-      | "B" -> Some CancelBothOrders
-      | _ -> None
+      | "D" -> Ok DecrementAndCancel
+      | "O" -> Ok CancelRestingOrder
+      | "N" -> Ok CancelIncomingOrder
+      | "B" -> Ok CancelBothOrders
+      | _ -> R.error_msg "invalid argument"
 
     let print = function
       | DecrementAndCancel -> "D"
@@ -63,7 +75,7 @@ end
 
 type _ typ += CancelOnDisconnect : CancelOnDisconnect.t typ
 module CancelOrdersOnDisconnect = Make(struct
-    type t = CancelOnDisconnect.t [@@deriving sexp]
+    type t = CancelOnDisconnect.t [@@deriving sexp,yojson]
     let t = CancelOnDisconnect
     let pp = CancelOnDisconnect.pp
     let parse = CancelOnDisconnect.parse
@@ -79,7 +91,7 @@ let () = register_field (module CancelOrdersOnDisconnect)
 
 type _ typ += SelfTradePrevention : SelfTradePrevention.t typ
 module STP = Make(struct
-    type t = SelfTradePrevention.t [@@deriving sexp]
+    type t = SelfTradePrevention.t [@@deriving sexp,yojson]
     let t = SelfTradePrevention
     let pp = SelfTradePrevention.pp
     let parse = SelfTradePrevention.parse
@@ -231,7 +243,7 @@ type execution_report = {
   ordRejReason : Fixtypes.OrdRejReason.t option ;
   tradeID : Uuidm.t ;
   taker : bool ;
-} [@@deriving sexp]
+} [@@deriving sexp,yojson]
 
 let parse_execution_report t =
   match t.typ with
@@ -271,7 +283,7 @@ type order_cancel_reject = {
   ordStatus : Fixtypes.OrdStatus.t option ;
   cxlRejReason : Fixtypes.CxlRejReason.t option ;
   cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
-} [@@deriving sexp]
+} [@@deriving sexp,yojson]
 
 let parse_order_cancel_reject t =
   match t.typ with

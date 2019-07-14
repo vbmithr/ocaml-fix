@@ -2,27 +2,27 @@
  (name fix)
  (public_name fix)
  (modules fixtypes field fix)
- (preprocess (pps ppx_sexp_conv))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (libraries rresult astring ptime logs sexplib tyre angstrom faraday))
 
 (library
  (name fix_async)
  (public_name fix-async)
  (modules fix_async)
- (preprocess (pps ppx_sexp_conv))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (libraries fix async angstrom-async faraday-async async-uri uri logs-async))
 
 (library
  (name fix_deribit)
  (public_name fix-deribit)
  (modules fix_deribit)
- (preprocess (pps ppx_sexp_conv))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (libraries ptime fix base64 monocypher digestif.c uri))
 
 (library
  (name fix_coinbasepro)
  (public_name fix-coinbasepro)
  (modules fix_coinbasepro)
- (preprocess (pps ppx_sexp_conv))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (libraries ptime uuidm fix base64 monocypher digestif.c uri))
 

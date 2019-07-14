@@ -3,22 +3,28 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
-open Sexplib
+open Rresult
+open Ppx_sexp_conv_lib
+
+module Yojsonable : sig
+  module type S = sig
+    type t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) result
+  end
+end
 
 module type IOMIN = sig
   type t
 
   val t_of_sexp : Sexplib.Sexp.t -> t
   val sexp_of_t : t -> Sexplib.Sexp.t
-  val parse : string -> t option
+  val parse : string -> (t, R.msg) result
   val print : t -> string
 end
 
 module type IO = sig
-  type t [@@deriving sexp]
-
-  val parse : string -> t option
-  val print : t -> string
+  include IOMIN
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
@@ -34,20 +40,24 @@ module Ptime : sig
   include module type of Ptime
     with type t = Ptime.t
      and type span = Ptime.span
-  val t_of_sexp : Sexp.t -> t
-  val sexp_of_t : t -> Sexp.t
+  include Sexpable.S with type t := t
+  include Yojsonable.S with type t := t
   val date_of_sexp : Sexp.t -> date
   val sexp_of_date : date -> Sexp.t
   val time_of_sexp : Sexp.t -> time
   val sexp_of_time : time -> Sexp.t
+
+  val date_of_yojson : Yojson.Safe.t -> date Ppx_deriving_yojson_runtime.error_or
+  val date_to_yojson : date -> Yojson.Safe.t
+  val time_of_yojson : Yojson.Safe.t -> time Ppx_deriving_yojson_runtime.error_or
+  val time_to_yojson : time -> Yojson.Safe.t
 end
 
 module Date : IO with type t := Ptime.date
 module TZTimeOnly : IO with type t := Ptime.time
 
 module UTCTimestamp : sig
-  val parse : string -> (Ptime.t option, Ptime.t option Tyre.error) result
-  val parse_opt : string -> Ptime.t option
+  val parse : string -> (Ptime.t, R.msg) result
   val parse_exn : string -> Ptime.t
   val pp : Format.formatter -> Ptime.t -> unit
 end
@@ -59,6 +69,7 @@ module HandlInst : sig
     | Private
     | Public
     | Manual
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -69,6 +80,7 @@ module ExecTransType : sig
     | Cancel
     | Correct
     | Status
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -90,6 +102,7 @@ module OrdStatus : sig
     | Expired
     | AcceptedForBidding
     | PendingReplace
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -103,6 +116,7 @@ module PosReqType : sig
     | SettlementActivity
     | BackoutMessage
     | DeltaPositions
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -114,6 +128,7 @@ module PosReqResult : sig
     | NoPositionsFound
     | NotAuthorized
     | Unsupported
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -126,6 +141,7 @@ module OrdType : sig
     | StopLimit
     | MarketOnClose
     | WithOrWithout
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -139,6 +155,7 @@ module EncryptMethod : sig
     | PGP_DES
     | PGP_DES_MD5
     | PEM_DES_MD5
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -148,6 +165,7 @@ module SubscriptionRequestType : sig
     | Snapshot
     | Subscribe
     | Unsubscribe
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -156,6 +174,7 @@ module MDUpdateType : sig
   type t =
     | Full
     | Incremental
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -168,6 +187,7 @@ module MDUpdateAction : sig
     | DeleteThru
     | DeleteFrom
     | Overlay
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -177,6 +197,7 @@ module MDEntryType : sig
     | Bid
     | Offer
     | Trade
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -185,6 +206,7 @@ module Side : sig
   type t =
     | Buy
     | Sell
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -202,6 +224,7 @@ module TimeInForce : sig
     | GoodThroughCrossing
     | AtCrossing
     | PostOnly (* Coinbase special *)
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -210,7 +233,7 @@ module Version : sig
   type t =
     | FIX of int * int
     | FIXT of int * int
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   val v40 : t
   val v41 : t
@@ -252,7 +275,7 @@ module MsgType : sig
     | PositionReport
     | UserRequest
     | UserResponse
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -274,7 +297,7 @@ module SessionRejectReason : sig
     | XMLValidationError
     | InvalidVersion
     | Other
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -283,7 +306,7 @@ module PutOrCall : sig
   type t =
     | Put
     | Call
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -296,7 +319,7 @@ module SecurityListRequestType : sig
     | TradingSessionID
     | AllSecurities
     | MarketID
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -304,7 +327,7 @@ end
 module SecurityRequestResult : sig
   type t =
     | Valid
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
 
   include IO with type t := t
 end
@@ -314,7 +337,7 @@ module SecurityType : sig
     | Future
     | Option
     | Index
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -323,7 +346,7 @@ module QtyType : sig
     | Units
     | Contracts
     | UnitsPerTime
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -351,7 +374,7 @@ module ExecType : sig
     | TradeInClearingHold
     | TradeReleasedToClearing
     | Triggered
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -364,7 +387,7 @@ module OrdRejReason : sig
     | TooLateToEnter
     | UnknownOrder
     | DuplicateOrder
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -375,7 +398,7 @@ module UserRequestType : sig
     | ChangePassword
     | RequestStatus
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -390,7 +413,7 @@ module UserStatus : sig
     | ForcedLogout
     | SessionShutdownWarning
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -407,7 +430,7 @@ module MassStatusReqType : sig
     | SecurityIssuer
     | UssuerOfUnderlyingSecurity
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -418,7 +441,7 @@ module MiscFeeType : sig
     | LocalCommission
     | ExchangeFees
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -429,7 +452,7 @@ module CxlRejReason : sig
     | BrokerExchangeOption
     | PendingCancelOrReplace
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 
@@ -438,7 +461,7 @@ module CxlRejResponseTo : sig
     | OrderCancelRequest
     | OrderReplaceRequest
 
-  [@@deriving sexp]
+  [@@deriving sexp,yojson]
   include IO with type t := t
 end
 

@@ -9,18 +9,28 @@ open Sexplib.Std
 
 open Fixtypes
 
+let int_of_string_result istr =
+  match int_of_string_opt istr with
+  | None -> R.error_msg "not an int"
+  | Some i -> Ok i
+
+let float_of_string_result istr =
+  match float_of_string_opt istr with
+  | None -> R.error_msg "not an float"
+  | Some i -> Ok i
+
 type _ typ  = ..
 
 type (_,_) eq = Eq : ('a,'a) eq
 
 module type T = sig
-  type t [@@deriving sexp]
+  type t [@@deriving sexp,yojson]
   val t : t typ
   val pp : Format.formatter -> t -> unit
   val tag : int
   val name : string
   val eq : 'a typ -> 'b typ -> ('a, 'b) eq option
-  val parse : string -> t option
+  val parse : string -> (t, R.msg) result
 end
 
 type field =
@@ -229,16 +239,16 @@ module Make (T : T) = struct
 
   let parse tag' v =
     match T.parse v with
-    | Some v when tag' = tag -> Some (F (T.t, (module T), v))
+    | Ok v when tag' = tag -> Some (F (T.t, (module T), v))
     | _ -> None
 end
 
 type _ typ += Account : string typ
 module Account = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Account
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 1
     let name = "Account"
     let eq :
@@ -251,7 +261,7 @@ let () = register_field (module Account)
 
 type _ typ += BeginString : Version.t typ
 module BeginString = Make(struct
-    type t = Version.t [@@deriving sexp]
+    type t = Version.t [@@deriving sexp,yojson]
     let t = BeginString
     let pp = Version.pp
     let parse = Version.parse
@@ -267,10 +277,10 @@ let () = register_field (module BeginString)
 
 type _ typ += BodyLength : int typ
 module BodyLength = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = BodyLength
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 9
     let name = "BodyLength"
     let eq :
@@ -283,10 +293,10 @@ let () = register_field (module BodyLength)
 
 type _ typ += CheckSum : string typ
 module CheckSum = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = CheckSum
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 10
     let name = "CheckSum"
     let eq :
@@ -299,10 +309,10 @@ let () = register_field (module CheckSum)
 
 type _ typ += ClOrdID : string typ
 module ClOrdID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = ClOrdID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 11
     let name = "ClOrdID"
     let eq :
@@ -315,10 +325,10 @@ let () = register_field (module ClOrdID)
 
 type _ typ += OrigClOrdID : string typ
 module OrigClOrdID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = OrigClOrdID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 41
     let name = "OrigClOrdID"
     let eq :
@@ -331,7 +341,7 @@ let () = register_field (module OrigClOrdID)
 
 type _ typ += HandlInst : HandlInst.t typ
 module HandlInst = Make(struct
-    type t = HandlInst.t [@@deriving sexp]
+    type t = HandlInst.t [@@deriving sexp,yojson]
     let t = HandlInst
     let pp = HandlInst.pp
     let parse = HandlInst.parse
@@ -347,7 +357,7 @@ let () = register_field (module HandlInst)
 
 type _ typ += TimeInForce : TimeInForce.t typ
 module TimeInForce = Make(struct
-    type t = TimeInForce.t [@@deriving sexp]
+    type t = TimeInForce.t [@@deriving sexp,yojson]
     let t = TimeInForce
     let pp = TimeInForce.pp
     let parse = TimeInForce.parse
@@ -363,7 +373,7 @@ let () = register_field (module TimeInForce)
 
 type _ typ += ExecType : ExecType.t typ
 module ExecType = Make(struct
-    type t = ExecType.t [@@deriving sexp]
+    type t = ExecType.t [@@deriving sexp,yojson]
     let t = ExecType
     let pp = ExecType.pp
     let parse = ExecType.parse
@@ -379,7 +389,7 @@ let () = register_field (module ExecType)
 
 type _ typ += MsgType : Fixtypes.MsgType.t typ
 module MsgType = Make(struct
-    type t = Fixtypes.MsgType.t [@@deriving sexp]
+    type t = Fixtypes.MsgType.t [@@deriving sexp,yojson]
     let t = MsgType
     let pp = Fixtypes.MsgType.pp
     let tag = 35
@@ -395,7 +405,7 @@ let () = register_field (module MsgType)
 
 type _ typ += RefMsgType : Fixtypes.MsgType.t typ
 module RefMsgType = Make(struct
-    type t = Fixtypes.MsgType.t [@@deriving sexp]
+    type t = Fixtypes.MsgType.t [@@deriving sexp,yojson]
     let t = RefMsgType
     let pp = Fixtypes.MsgType.pp
     let tag = 372
@@ -411,10 +421,10 @@ let () = register_field (module RefMsgType)
 
 type _ typ += SendingTime : Ptime.t typ
 module SendingTime = Make(struct
-    type t = Ptime.t [@@deriving sexp]
+    type t = Ptime.t [@@deriving sexp,yojson]
     let t = SendingTime
     let pp = Fixtypes.UTCTimestamp.pp
-    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let parse = Fixtypes.UTCTimestamp.parse
     let tag = 52
     let name = "SendingTime"
     let eq :
@@ -427,10 +437,10 @@ let () = register_field (module SendingTime)
 
 type _ typ += TransactTime : Ptime.t typ
 module TransactTime = Make(struct
-    type t = Ptime.t [@@deriving sexp]
+    type t = Ptime.t [@@deriving sexp,yojson]
     let t = TransactTime
     let pp = Fixtypes.UTCTimestamp.pp
-    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let parse = Fixtypes.UTCTimestamp.parse
     let tag = 60
     let name = "TransactTime"
     let eq :
@@ -443,10 +453,10 @@ let () = register_field (module TransactTime)
 
 type _ typ += MDEntryDate : Ptime.t typ
 module MDEntryDate = Make(struct
-    type t = Ptime.t [@@deriving sexp]
+    type t = Ptime.t [@@deriving sexp,yojson]
     let t = MDEntryDate
     let pp = Fixtypes.UTCTimestamp.pp
-    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let parse = Fixtypes.UTCTimestamp.parse
     let tag = 272
     let name = "MDEntryDate"
     let eq :
@@ -459,10 +469,10 @@ let () = register_field (module MDEntryDate)
 
 type _ typ += IssueDate : Ptime.t typ
 module IssueDate = Make(struct
-    type t = Ptime.t [@@deriving sexp]
+    type t = Ptime.t [@@deriving sexp,yojson]
     let t = IssueDate
     let pp = Fixtypes.UTCTimestamp.pp
-    let parse = Fixtypes.UTCTimestamp.parse_opt
+    let parse = Fixtypes.UTCTimestamp.parse
     let tag = 225
     let name = "IssueDate"
     let eq :
@@ -475,7 +485,7 @@ let () = register_field (module IssueDate)
 
 type _ typ += MaturityDate : Ptime.date typ
 module MaturityDate = Make(struct
-    type t = Ptime.date [@@deriving sexp]
+    type t = Ptime.date [@@deriving sexp,yojson]
     let t = MaturityDate
     let pp = Fixtypes.Date.pp
     let parse = Fixtypes.Date.parse
@@ -491,7 +501,7 @@ let () = register_field (module MaturityDate)
 
 type _ typ += MaturityTime : Ptime.time typ
 module MaturityTime = Make(struct
-    type t = Ptime.time [@@deriving sexp]
+    type t = Ptime.time [@@deriving sexp,yojson]
     let t = MaturityTime
     let pp = Fixtypes.TZTimeOnly.pp
     let parse = Fixtypes.TZTimeOnly.parse
@@ -507,10 +517,10 @@ let () = register_field (module MaturityTime)
 
 type _ typ += SenderCompID : string typ
 module SenderCompID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SenderCompID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 49
     let name = "SenderCompID"
     let eq :
@@ -523,10 +533,10 @@ let () = register_field (module SenderCompID)
 
 type _ typ += TargetCompID : string typ
 module TargetCompID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = TargetCompID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 56
     let name = "TargetCompID"
     let eq :
@@ -539,10 +549,10 @@ let () = register_field (module TargetCompID)
 
 type _ typ += MsgSeqNum : int typ
 module MsgSeqNum = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = MsgSeqNum
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 34
     let name = "MsgSeqNum"
     let eq :
@@ -555,10 +565,10 @@ let () = register_field (module MsgSeqNum)
 
 type _ typ += RefSeqNum : int typ
 module RefSeqNum = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = RefSeqNum
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 45
     let name = "RefSeqNum"
     let eq :
@@ -571,10 +581,10 @@ let () = register_field (module RefSeqNum)
 
 type _ typ += SessionRejectReason : int typ
 module SessionRejectReason = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = SessionRejectReason
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 373
     let name = "SessionRejectReason"
     let eq :
@@ -587,10 +597,10 @@ let () = register_field (module SessionRejectReason)
 
 type _ typ += RawData : string typ
 module RawData = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = RawData
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 96
     let name = "RawData"
     let eq :
@@ -603,10 +613,10 @@ let () = register_field (module RawData)
 
 type _ typ += Username : string typ
 module Username = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Username
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 553
     let name = "Username"
     let eq :
@@ -619,10 +629,10 @@ let () = register_field (module Username)
 
 type _ typ += Password : string typ
 module Password = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Password
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 554
     let name = "Password"
     let eq :
@@ -635,10 +645,10 @@ let () = register_field (module Password)
 
 type _ typ += Text : string typ
 module Text = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Text
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 58
     let name = "Text"
     let eq :
@@ -651,10 +661,10 @@ let () = register_field (module Text)
 
 type _ typ += TestReqID : string typ
 module TestReqID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = TestReqID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 112
     let name = "TestReqID"
     let eq :
@@ -667,10 +677,10 @@ let () = register_field (module TestReqID)
 
 type _ typ += UserRequestID : string typ
 module UserRequestID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = UserRequestID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 923
     let name = "UserRequestID"
     let eq :
@@ -683,10 +693,10 @@ let () = register_field (module UserRequestID)
 
 type _ typ += HeartBtInt : int typ
 module HeartBtInt = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = HeartBtInt
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 108
     let name = "HeartBtInt"
     let eq :
@@ -699,10 +709,10 @@ let () = register_field (module HeartBtInt)
 
 type _ typ += BeginSeqNo : int typ
 module BeginSeqNo = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = BeginSeqNo
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 7
     let name = "BeginSeqNo"
     let eq :
@@ -715,10 +725,10 @@ let () = register_field (module BeginSeqNo)
 
 type _ typ += EndSeqNo : int typ
 module EndSeqNo = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = EndSeqNo
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 16
     let name = "EndSeqNo"
     let eq :
@@ -731,10 +741,10 @@ let () = register_field (module EndSeqNo)
 
 type _ typ += SecurityReqID : string typ
 module SecurityReqID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SecurityReqID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 320
     let name = "SecurityReqID"
     let eq :
@@ -747,7 +757,7 @@ let () = register_field (module SecurityReqID)
 
 type _ typ += EncryptMethod : EncryptMethod.t typ
 module EncryptMethod = Make(struct
-    type t = EncryptMethod.t [@@deriving sexp]
+    type t = EncryptMethod.t [@@deriving sexp,yojson]
     let t = EncryptMethod
     let pp = EncryptMethod.pp
     let parse = EncryptMethod.parse
@@ -763,7 +773,7 @@ let () = register_field (module EncryptMethod)
 
 type _ typ += SecurityListRequestType : SecurityListRequestType.t typ
 module SecurityListRequestType = Make(struct
-    type t = SecurityListRequestType.t [@@deriving sexp]
+    type t = SecurityListRequestType.t [@@deriving sexp,yojson]
     let t = SecurityListRequestType
     let pp = SecurityListRequestType.pp
     let parse = SecurityListRequestType.parse
@@ -779,7 +789,7 @@ let () = register_field (module SecurityListRequestType)
 
 type _ typ += UserRequestType : UserRequestType.t typ
 module UserRequestType = Make(struct
-    type t = UserRequestType.t [@@deriving sexp]
+    type t = UserRequestType.t [@@deriving sexp,yojson]
     let t = UserRequestType
     let pp = UserRequestType.pp
     let parse = UserRequestType.parse
@@ -795,7 +805,7 @@ let () = register_field (module UserRequestType)
 
 type _ typ += UserStatus : UserStatus.t typ
 module UserStatus = Make(struct
-    type t = UserStatus.t [@@deriving sexp]
+    type t = UserStatus.t [@@deriving sexp,yojson]
     let t = UserStatus
     let pp = UserStatus.pp
     let parse = UserStatus.parse
@@ -811,10 +821,10 @@ let () = register_field (module UserStatus)
 
 type _ typ += SecurityResponseID : string typ
 module SecurityResponseID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SecurityResponseID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 322
     let name = "SecurityResponseID"
     let eq :
@@ -827,7 +837,7 @@ let () = register_field (module SecurityResponseID)
 
 type _ typ += SecurityRequestResult : SecurityRequestResult.t typ
 module SecurityRequestResult = Make(struct
-    type t = SecurityRequestResult.t [@@deriving sexp]
+    type t = SecurityRequestResult.t [@@deriving sexp,yojson]
     let t = SecurityRequestResult
     let pp = SecurityRequestResult.pp
     let parse = SecurityRequestResult.parse
@@ -843,10 +853,10 @@ let () = register_field (module SecurityRequestResult)
 
 type _ typ += NoRelatedSym : int typ
 module NoRelatedSym = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoRelatedSym
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 146
     let name = "NoRelatedSym"
     let eq :
@@ -859,10 +869,10 @@ let () = register_field (module NoRelatedSym)
 
 type _ typ += MDReqID : string typ
 module MDReqID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = MDReqID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 262
     let name = "MDReqID"
     let eq :
@@ -875,10 +885,10 @@ let () = register_field (module MDReqID)
 
 type _ typ += MassStatusReqID : string typ
 module MassStatusReqID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = MassStatusReqID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 584
     let name = "MassStatusReqID"
     let eq :
@@ -891,10 +901,10 @@ let () = register_field (module MassStatusReqID)
 
 type _ typ += PosReqID : string typ
 module PosReqID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = PosReqID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 710
     let name = "PosReqID"
     let eq :
@@ -907,10 +917,10 @@ let () = register_field (module PosReqID)
 
 type _ typ += PosMaintRptID : string typ
 module PosMaintRptID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = PosMaintRptID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 721
     let name = "PosMaintRptID"
     let eq :
@@ -923,7 +933,7 @@ let () = register_field (module PosMaintRptID)
 
 type _ typ += PosReqType : PosReqType.t typ
 module PosReqType = Make(struct
-    type t = PosReqType.t [@@deriving sexp]
+    type t = PosReqType.t [@@deriving sexp,yojson]
     let t = PosReqType
     let pp = PosReqType.pp
     let parse = PosReqType.parse
@@ -939,7 +949,7 @@ let () = register_field (module PosReqType)
 
 type _ typ += MassStatusReqType : MassStatusReqType.t typ
 module MassStatusReqType = Make(struct
-    type t = MassStatusReqType.t [@@deriving sexp]
+    type t = MassStatusReqType.t [@@deriving sexp,yojson]
     let t = MassStatusReqType
     let pp = MassStatusReqType.pp
     let parse = MassStatusReqType.parse
@@ -955,7 +965,7 @@ let () = register_field (module MassStatusReqType)
 
 type _ typ += PosReqResult : PosReqResult.t typ
 module PosReqResult = Make(struct
-    type t = PosReqResult.t [@@deriving sexp]
+    type t = PosReqResult.t [@@deriving sexp,yojson]
     let t = PosReqResult
     let pp = PosReqResult.pp
     let parse = PosReqResult.parse
@@ -971,7 +981,7 @@ let () = register_field (module PosReqResult)
 
 type _ typ += SubscriptionRequestType : SubscriptionRequestType.t typ
 module SubscriptionRequestType = Make(struct
-    type t = SubscriptionRequestType.t [@@deriving sexp]
+    type t = SubscriptionRequestType.t [@@deriving sexp,yojson]
     let t = SubscriptionRequestType
     let pp = SubscriptionRequestType.pp
     let parse = SubscriptionRequestType.parse
@@ -987,10 +997,10 @@ let () = register_field (module SubscriptionRequestType)
 
 type _ typ += RefTagID : int typ
 module RefTagID = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = RefTagID
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 371
     let name = "RefTagID"
     let eq :
@@ -1003,10 +1013,10 @@ let () = register_field (module RefTagID)
 
 type _ typ += MarketDepth : int typ
 module MarketDepth = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = MarketDepth
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 264
     let name = "MarketDepth"
     let eq :
@@ -1019,7 +1029,7 @@ let () = register_field (module MarketDepth)
 
 type _ typ += MDUpdateType : MDUpdateType.t typ
 module MDUpdateType = Make(struct
-    type t = MDUpdateType.t [@@deriving sexp]
+    type t = MDUpdateType.t [@@deriving sexp,yojson]
     let t = MDUpdateType
     let pp = MDUpdateType.pp
     let parse = MDUpdateType.parse
@@ -1035,7 +1045,7 @@ let () = register_field (module MDUpdateType)
 
 type _ typ += MDUpdateAction : MDUpdateAction.t typ
 module MDUpdateAction = Make(struct
-    type t = MDUpdateAction.t [@@deriving sexp]
+    type t = MDUpdateAction.t [@@deriving sexp,yojson]
     let t = MDUpdateAction
     let pp = MDUpdateAction.pp
     let parse = MDUpdateAction.parse
@@ -1051,7 +1061,7 @@ let () = register_field (module MDUpdateAction)
 
 type _ typ += OrdStatus : OrdStatus.t typ
 module OrdStatus = Make(struct
-    type t = OrdStatus.t [@@deriving sexp]
+    type t = OrdStatus.t [@@deriving sexp,yojson]
     let t = OrdStatus
     let pp = OrdStatus.pp
     let parse = OrdStatus.parse
@@ -1067,7 +1077,7 @@ let () = register_field (module OrdStatus)
 
 type _ typ += MiscFeeType : MiscFeeType.t typ
 module MiscFeeType = Make(struct
-    type t = MiscFeeType.t [@@deriving sexp]
+    type t = MiscFeeType.t [@@deriving sexp,yojson]
     let t = MiscFeeType
     let pp = MiscFeeType.pp
     let parse = MiscFeeType.parse
@@ -1083,7 +1093,7 @@ let () = register_field (module MiscFeeType)
 
 type _ typ += CxlRejReason : CxlRejReason.t typ
 module CxlRejReason = Make(struct
-    type t = CxlRejReason.t [@@deriving sexp]
+    type t = CxlRejReason.t [@@deriving sexp,yojson]
     let t = CxlRejReason
     let pp = CxlRejReason.pp
     let parse = CxlRejReason.parse
@@ -1099,7 +1109,7 @@ let () = register_field (module CxlRejReason)
 
 type _ typ += CxlRejResponseTo : CxlRejResponseTo.t typ
 module CxlRejResponseTo = Make(struct
-    type t = CxlRejResponseTo.t [@@deriving sexp]
+    type t = CxlRejResponseTo.t [@@deriving sexp,yojson]
     let t = CxlRejResponseTo
     let pp = CxlRejResponseTo.pp
     let parse = CxlRejResponseTo.parse
@@ -1115,10 +1125,10 @@ let () = register_field (module CxlRejResponseTo)
 
 type _ typ += NoMDEntryTypes : int typ
 module NoMDEntryTypes = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoMDEntryTypes
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 267
     let name = "NoMDEntryTypes"
     let eq :
@@ -1131,10 +1141,10 @@ let () = register_field (module NoMDEntryTypes)
 
 type _ typ += NoMDEntries : int typ
 module NoMDEntries = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoMDEntries
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 268
     let name = "NoMDEntries"
     let eq :
@@ -1147,7 +1157,7 @@ let () = register_field (module NoMDEntries)
 
 type _ typ += MDEntryType : MDEntryType.t typ
 module MDEntryType = Make(struct
-    type t = MDEntryType.t [@@deriving sexp]
+    type t = MDEntryType.t [@@deriving sexp,yojson]
     let t = MDEntryType
     let pp = MDEntryType.pp
     let parse = MDEntryType.parse
@@ -1163,10 +1173,10 @@ let () = register_field (module MDEntryType)
 
 type _ typ += NoPositions : int typ
 module NoPositions = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoPositions
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 702
     let name = "NoPositions"
     let eq :
@@ -1179,10 +1189,10 @@ let () = register_field (module NoPositions)
 
 type _ typ += NoFills : int typ
 module NoFills = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoFills
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 1362
     let name = "NoFills"
     let eq :
@@ -1195,10 +1205,10 @@ let () = register_field (module NoFills)
 
 type _ typ += TotNumReports : int typ
 module TotNumReports = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = TotNumReports
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 911
     let name = "TotNumReports"
     let eq :
@@ -1211,10 +1221,10 @@ let () = register_field (module TotNumReports)
 
 type _ typ += NoMiscFees : int typ
 module NoMiscFees = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = NoMiscFees
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 136
     let name = "NoMiscFees"
     let eq :
@@ -1227,10 +1237,10 @@ let () = register_field (module NoMiscFees)
 
 type _ typ += TradeID : string typ
 module TradeID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = TradeID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 1003
     let name = "TradeID"
     let eq :
@@ -1243,10 +1253,10 @@ let () = register_field (module TradeID)
 
 type _ typ += FillExecID : string typ
 module FillExecID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = FillExecID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 1363
     let name = "FillExecID"
     let eq :
@@ -1259,10 +1269,10 @@ let () = register_field (module FillExecID)
 
 type _ typ += RawDataLength : int typ
 module RawDataLength = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = RawDataLength
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 95
     let name = "RawDataLength"
     let eq :
@@ -1275,10 +1285,10 @@ let () = register_field (module RawDataLength)
 
 type _ typ += ExecID : string typ
 module ExecID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = ExecID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 17
     let name = "ExecID"
     let eq :
@@ -1291,10 +1301,10 @@ let () = register_field (module ExecID)
 
 type _ typ += OrderID : string typ
 module OrderID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = OrderID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 37
     let name = "OrderID"
     let eq :
@@ -1307,10 +1317,10 @@ let () = register_field (module OrderID)
 
 type _ typ += SecondaryOrderID : string typ
 module SecondaryOrderID = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SecondaryOrderID
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 198
     let name = "SecondaryOrderID"
     let eq :
@@ -1323,10 +1333,10 @@ let () = register_field (module SecondaryOrderID)
 
 type _ typ += Symbol : string typ
 module Symbol = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Symbol
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 55
     let name = "Symbol"
     let eq :
@@ -1339,10 +1349,10 @@ let () = register_field (module Symbol)
 
 type _ typ += UnderlyingSymbol : string typ
 module UnderlyingSymbol = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = UnderlyingSymbol
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 311
     let name = "UnderlyingSymbol"
     let eq :
@@ -1355,10 +1365,10 @@ let () = register_field (module UnderlyingSymbol)
 
 type _ typ += SecurityDesc : string typ
 module SecurityDesc = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SecurityDesc
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 107
     let name = "SecurityDesc"
     let eq :
@@ -1371,7 +1381,7 @@ let () = register_field (module SecurityDesc)
 
 type _ typ += SecurityType : SecurityType.t typ
 module SecurityType = Make(struct
-    type t = SecurityType.t [@@deriving sexp]
+    type t = SecurityType.t [@@deriving sexp,yojson]
     let t = SecurityType
     let pp = SecurityType.pp
     let parse = SecurityType.parse
@@ -1387,7 +1397,7 @@ let () = register_field (module SecurityType)
 
 type _ typ += Side : Side.t typ
 module Side = Make(struct
-    type t = Side.t [@@deriving sexp]
+    type t = Side.t [@@deriving sexp,yojson]
     let t = Side
     let pp = Side.pp
     let parse = Side.parse
@@ -1403,7 +1413,7 @@ let () = register_field (module Side)
 
 type _ typ += PutOrCall : PutOrCall.t typ
 module PutOrCall = Make(struct
-    type t = PutOrCall.t [@@deriving sexp]
+    type t = PutOrCall.t [@@deriving sexp,yojson]
     let t = PutOrCall
     let pp = PutOrCall.pp
     let parse = PutOrCall.parse
@@ -1419,7 +1429,7 @@ let () = register_field (module PutOrCall)
 
 type _ typ += QtyType : QtyType.t typ
 module QtyType = Make(struct
-    type t = QtyType.t [@@deriving sexp]
+    type t = QtyType.t [@@deriving sexp,yojson]
     let t = QtyType
     let pp = QtyType.pp
     let parse = QtyType.parse
@@ -1435,7 +1445,7 @@ let () = register_field (module QtyType)
 
 type _ typ += OrdType : OrdType.t typ
 module OrdType = Make(struct
-    type t = OrdType.t [@@deriving sexp]
+    type t = OrdType.t [@@deriving sexp,yojson]
     let t = OrdType
     let pp = OrdType.pp
     let parse = OrdType.parse
@@ -1451,7 +1461,7 @@ let () = register_field (module OrdType)
 
 type _ typ += OrdRejReason : OrdRejReason.t typ
 module OrdRejReason = Make(struct
-    type t = OrdRejReason.t [@@deriving sexp]
+    type t = OrdRejReason.t [@@deriving sexp,yojson]
     let t = OrdRejReason
     let pp = OrdRejReason.pp
     let parse = OrdRejReason.parse
@@ -1467,7 +1477,7 @@ let () = register_field (module OrdRejReason)
 
 type _ typ += ExecTransType : ExecTransType.t typ
 module ExecTransType = Make(struct
-    type t = ExecTransType.t [@@deriving sexp]
+    type t = ExecTransType.t [@@deriving sexp,yojson]
     let t = ExecTransType
     let pp = ExecTransType.pp
     let parse = ExecTransType.parse
@@ -1483,10 +1493,10 @@ let () = register_field (module ExecTransType)
 
 type _ typ += Price : float typ
 module Price = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = Price
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 44
     let name = "Price"
     let eq :
@@ -1499,10 +1509,10 @@ let () = register_field (module Price)
 
 type _ typ += StopPx : float typ
 module StopPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = StopPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 99
     let name = "StopPx"
     let eq :
@@ -1515,10 +1525,10 @@ let () = register_field (module StopPx)
 
 type _ typ += AvgPx : float typ
 module AvgPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = AvgPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 6
     let name = "AvgPx"
     let eq :
@@ -1531,10 +1541,10 @@ let () = register_field (module AvgPx)
 
 type _ typ += LastPx : float typ
 module LastPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = LastPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 31
     let name = "LastPx"
     let eq :
@@ -1547,10 +1557,10 @@ let () = register_field (module LastPx)
 
 type _ typ += FillPx : float typ
 module FillPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = FillPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 1364
     let name = "FillPx"
     let eq :
@@ -1563,10 +1573,10 @@ let () = register_field (module FillPx)
 
 type _ typ += FillQty : float typ
 module FillQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = FillQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 1365
     let name = "FillQty"
     let eq :
@@ -1579,10 +1589,10 @@ let () = register_field (module FillQty)
 
 type _ typ += LastQty : float typ
 module LastQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = LastQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 32
     let name = "LastQty"
     let eq :
@@ -1595,10 +1605,10 @@ let () = register_field (module LastQty)
 
 type _ typ += MaxShow : float typ
 module MaxShow = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MaxShow
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 210
     let name = "MaxShow"
     let eq :
@@ -1611,10 +1621,10 @@ let () = register_field (module MaxShow)
 
 type _ typ += StrikePrice : float typ
 module StrikePrice = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = StrikePrice
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 202
     let name = "StrikePrice"
     let eq :
@@ -1627,10 +1637,10 @@ let () = register_field (module StrikePrice)
 
 type _ typ += MDEntryPx : float typ
 module MDEntryPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MDEntryPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 270
     let name = "MDEntryPx"
     let eq :
@@ -1643,10 +1653,10 @@ let () = register_field (module MDEntryPx)
 
 type _ typ += UnderlyingPx : float typ
 module UnderlyingPx = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = UnderlyingPx
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 810
     let name = "UnderlyingPx"
     let eq :
@@ -1659,10 +1669,10 @@ let () = register_field (module UnderlyingPx)
 
 type _ typ += UnderlyingEndPrice : float typ
 module UnderlyingEndPrice = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = UnderlyingEndPrice
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 883
     let name = "UnderlyingEndPrice"
     let eq :
@@ -1675,10 +1685,10 @@ let () = register_field (module UnderlyingEndPrice)
 
 type _ typ += SettlPrice : float typ
 module SettlPrice = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = SettlPrice
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 730
     let name = "SettlPrice"
     let eq :
@@ -1691,10 +1701,10 @@ let () = register_field (module SettlPrice)
 
 type _ typ += MDEntrySize : float typ
 module MDEntrySize = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MDEntrySize
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 271
     let name = "MDEntrySize"
     let eq :
@@ -1707,10 +1717,10 @@ let () = register_field (module MDEntrySize)
 
 type _ typ += MinTradeVol : float typ
 module MinTradeVol = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MinTradeVol
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 562
     let name = "MinTradeVol"
     let eq :
@@ -1723,10 +1733,10 @@ let () = register_field (module MinTradeVol)
 
 type _ typ += ContractMultiplier : float typ
 module ContractMultiplier = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = ContractMultiplier
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 231
     let name = "ContractMultiplier"
     let eq :
@@ -1739,10 +1749,10 @@ let () = register_field (module ContractMultiplier)
 
 type _ typ += LongQty : float typ
 module LongQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = LongQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 704
     let name = "LongQty"
     let eq :
@@ -1755,10 +1765,10 @@ let () = register_field (module LongQty)
 
 type _ typ += ShortQty : float typ
 module ShortQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = ShortQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 705
     let name = "ShortQty"
     let eq :
@@ -1771,10 +1781,10 @@ let () = register_field (module ShortQty)
 
 type _ typ += LeavesQty : float typ
 module LeavesQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = LeavesQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 151
     let name = "LeavesQty"
     let eq :
@@ -1787,10 +1797,10 @@ let () = register_field (module LeavesQty)
 
 type _ typ += CumQty : float typ
 module CumQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = CumQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 14
     let name = "CumQty"
     let eq :
@@ -1803,10 +1813,10 @@ let () = register_field (module CumQty)
 
 type _ typ += OrderQty : float typ
 module OrderQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = OrderQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 38
     let name = "OrderQty"
     let eq :
@@ -1819,10 +1829,10 @@ let () = register_field (module OrderQty)
 
 type _ typ += CashOrderQty : float typ
 module CashOrderQty = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = CashOrderQty
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 152
     let name = "CashOrderQty"
     let eq :
@@ -1835,10 +1845,10 @@ let () = register_field (module CashOrderQty)
 
 type _ typ += MiscFeeAmt : float typ
 module MiscFeeAmt = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MiscFeeAmt
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 137
     let name = "MiscFeeAmt"
     let eq :
@@ -1851,10 +1861,10 @@ let () = register_field (module MiscFeeAmt)
 
 type _ typ += MinPriceIncrement : float typ
 module MinPriceIncrement = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MinPriceIncrement
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 969
     let name = "MinPriceIncrement"
     let eq :
@@ -1867,10 +1877,10 @@ let () = register_field (module MinPriceIncrement)
 
 type _ typ += OpenInterest : float typ
 module OpenInterest = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = OpenInterest
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 746
     let name = "OpenInterest"
     let eq :
@@ -1883,10 +1893,10 @@ let () = register_field (module OpenInterest)
 
 type _ typ += StrikeCurrency : string typ
 module StrikeCurrency = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = StrikeCurrency
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 947
     let name = "StrikeCurrency"
     let eq :
@@ -1899,10 +1909,10 @@ let () = register_field (module StrikeCurrency)
 
 type _ typ += Currency : string typ
 module Currency = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = Currency
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 15
     let name = "Currency"
     let eq :
@@ -1915,10 +1925,10 @@ let () = register_field (module Currency)
 
 type _ typ += SettlType : string typ
 module SettlType = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SettlType
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 63
     let name = "SettlType"
     let eq :
@@ -1931,10 +1941,10 @@ let () = register_field (module SettlType)
 
 type _ typ += SettlCurrency : string typ
 module SettlCurrency = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SettlCurrency
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 120
     let name = "SettlCurrency"
     let eq :
@@ -1947,10 +1957,10 @@ let () = register_field (module SettlCurrency)
 
 type _ typ += CommCurrency : string typ
 module CommCurrency = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = CommCurrency
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 479
     let name = "CommCurrency"
     let eq :
@@ -1963,10 +1973,10 @@ let () = register_field (module CommCurrency)
 
 type _ typ += SecurityExchange : string typ
 module SecurityExchange = Make(struct
-    type t = string [@@deriving sexp]
+    type t = string [@@deriving sexp,yojson]
     let t = SecurityExchange
     let pp = Format.pp_print_string
-    let parse s = Some s
+    let parse s = Ok s
     let tag = 207
     let name = "SecurityExchange"
     let eq :
@@ -1979,7 +1989,7 @@ let () = register_field (module SecurityExchange)
 
 type _ typ += AggressorIndicator : bool typ
 module AggressorIndicator = Make(struct
-    type t = bool [@@deriving sexp]
+    type t = bool [@@deriving sexp,yojson]
     let t = AggressorIndicator
     let pp = YesOrNo.pp
     let parse = YesOrNo.parse

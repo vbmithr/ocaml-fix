@@ -6,18 +6,21 @@
 open Rresult
 open Fixtypes
 
+val int_of_string_result : string -> (int, R.msg) result
+val float_of_string_result : string -> (float, R.msg) result
+
 type (_,_) eq = Eq : ('a,'a) eq
 
 type _ typ = ..
 
 module type T = sig
-  type t [@@deriving sexp]
+  type t [@@deriving sexp,yojson]
   val t : t typ
   val pp : Format.formatter -> t -> unit
   val tag : int
   val name : string
   val eq : 'a typ -> 'b typ -> ('a, 'b) eq option
-  val parse : string -> t option
+  val parse : string -> (t, R.msg) result
 end
 
 type field =

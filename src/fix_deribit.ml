@@ -3,6 +3,7 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
+open Rresult
 open Sexplib.Std
 open Fix
 open Fixtypes
@@ -10,7 +11,7 @@ open Field
 
 type _ typ += CancelOnDisconnect : bool typ
 module CancelOnDisconnect = Make(struct
-    type t = bool [@@deriving sexp]
+    type t = bool [@@deriving sexp,yojson]
     let t = CancelOnDisconnect
     let pp = YesOrNo.pp
     let parse = YesOrNo.parse
@@ -26,10 +27,10 @@ let () = register_field (module CancelOnDisconnect)
 
 type _ typ += InstrumentPricePrecision : int typ
 module InstrumentPricePrecision = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = InstrumentPricePrecision
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 2576
     let name = "InstrumentPricePrecision"
     let eq :
@@ -42,10 +43,10 @@ let () = register_field (module InstrumentPricePrecision)
 
 type _ typ += DeribitTradeAmount : int typ
 module DeribitTradeAmount = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = DeribitTradeAmount
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 100_007
     let name = "DeribitTradeAmount"
     let eq :
@@ -58,10 +59,10 @@ let () = register_field (module DeribitTradeAmount)
 
 type _ typ += DeribitTradeID : int typ
 module DeribitTradeID = Make(struct
-    type t = int [@@deriving sexp]
+    type t = int [@@deriving sexp,yojson]
     let t = DeribitTradeID
     let pp = Format.pp_print_int
-    let parse = int_of_string_opt
+    let parse = int_of_string_result
     let tag = 100_009
     let name = "DeribitTradeID"
     let eq :
@@ -74,14 +75,17 @@ let () = register_field (module DeribitTradeID)
 
 type _ typ += DeribitSinceTimestamp : Ptime.t typ
 module DeribitSinceTimestamp = Make(struct
-    type t = Ptime.t [@@deriving sexp]
+    type t = Ptime.t [@@deriving sexp,yojson]
     let t = DeribitSinceTimestamp
     let pp ppf t =
       Format.fprintf ppf "%.0f" (Ptime.to_float_s t *. 1e3)
     let parse s =
       match float_of_string_opt s with
-      | None -> None
-      | Some ts -> Ptime.of_float_s (ts /. 1e3)
+      | None -> R.error_msg "not a float"
+      | Some ts ->
+        match (Ptime.of_float_s (ts /. 1e3)) with
+        | None -> R.error_msg "float does not represent a time"
+        | Some v -> Ok v
     let tag = 100_008
     let name = "DeribitSinceTimestamp"
     let eq :
@@ -94,10 +98,10 @@ let () = register_field (module DeribitSinceTimestamp)
 
 type _ typ += TradeVolume24h : float typ
 module TradeVolume24h = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = TradeVolume24h
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_087
     let name = "TradeVolume24h"
     let eq :
@@ -110,10 +114,10 @@ let () = register_field (module TradeVolume24h)
 
 type _ typ += DeribitLiquidationPrice : float typ
 module DeribitLiquidationPrice = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitLiquidationPrice
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_088
     let name = "DeribitLiquidationPrice"
     let eq :
@@ -126,10 +130,10 @@ let () = register_field (module DeribitLiquidationPrice)
 
 type _ typ += DeribitBTCSize : float typ
 module DeribitBTCSize = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitBTCSize
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_089
     let name = "DeribitBTCSize"
     let eq :
@@ -142,10 +146,10 @@ let () = register_field (module DeribitBTCSize)
 
 type _ typ += DeribitUserEquity : float typ
 module DeribitUserEquity = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitUserEquity
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_001
     let name = "DeribitUserEquity"
     let eq :
@@ -158,10 +162,10 @@ let () = register_field (module DeribitUserEquity)
 
 type _ typ += DeribitUserBalance : float typ
 module DeribitUserBalance = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitUserBalance
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_002
     let name = "DeribitUserBalance"
     let eq :
@@ -174,10 +178,10 @@ let () = register_field (module DeribitUserBalance)
 
 type _ typ += DeribitInitialMargin : float typ
 module DeribitInitialMargin = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitInitialMargin
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_003
     let name = "DeribitInitialMargin"
     let eq :
@@ -190,10 +194,10 @@ let () = register_field (module DeribitInitialMargin)
 
 type _ typ += DeribitMaintenanceMargin : float typ
 module DeribitMaintenanceMargin = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitMaintenanceMargin
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_004
     let name = "DeribitMaintenanceMargin"
     let eq :
@@ -206,10 +210,10 @@ let () = register_field (module DeribitMaintenanceMargin)
 
 type _ typ += DeribitUnrealizedPl : float typ
 module DeribitUnrealizedPl = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitUnrealizedPl
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_005
     let name = "DeribitUnrealizedPl"
     let eq :
@@ -222,10 +226,10 @@ let () = register_field (module DeribitUnrealizedPl)
 
 type _ typ += DeribitRealizedPl : float typ
 module DeribitRealizedPl = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitRealizedPl
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_006
     let name = "DeribitRealizedPl"
     let eq :
@@ -238,10 +242,10 @@ let () = register_field (module DeribitRealizedPl)
 
 type _ typ += DeribitTotalPl : float typ
 module DeribitTotalPl = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = DeribitTotalPl
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_011
     let name = "DeribitTotalPl"
     let eq :
@@ -254,10 +258,10 @@ let () = register_field (module DeribitTotalPl)
 
 type _ typ += MarkPrice : float typ
 module MarkPrice = Make(struct
-    type t = float [@@deriving sexp]
+    type t = float [@@deriving sexp,yojson]
     let t = MarkPrice
     let pp = Format.pp_print_float
-    let parse = float_of_string_opt
+    let parse = float_of_string_result
     let tag = 100_090
     let name = "MarkPrice"
     let eq :
