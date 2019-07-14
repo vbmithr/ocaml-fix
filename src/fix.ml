@@ -23,7 +23,7 @@ type t = {
   ts : Ptime.t option ;
   fields : Field.Set.t ;
   groups : (Field.field * Field.field list list) option ;
-} [@@deriving sexp]
+} [@@deriving sexp,yojson]
 
 let create
     ?(version=Version.FIXT (1,1))
@@ -142,21 +142,21 @@ let of_fields fields =
     let fields, groups = fields_groups fields in
     R.of_option
       ~none:(fun () -> R.error_msg "missing MsgSeqNum")
-      (Field.find_set Field.MsgSeqNum fields) >>= fun seqnum ->
+      (Field.Set.find_typ Field.MsgSeqNum fields) >>= fun seqnum ->
     R.of_option
       ~none:(fun () -> R.error_msg "missing SenderCompID")
-      (Field.find_set Field.SenderCompID fields) >>= fun sid ->
+      (Field.Set.find_typ Field.SenderCompID fields) >>= fun sid ->
     R.of_option
       ~none:(fun () -> R.error_msg "missing TargetCompID")
-      (Field.find_set Field.TargetCompID fields) >>= fun tid ->
-    let ts = Field.find_set Field.SendingTime fields in
-    let fields = Field.(remove_set BeginString fields) in
-    let fields = Field.(remove_set BodyLength fields) in
-    let fields = Field.(remove_set MsgType fields) in
-    let fields = Field.(remove_set MsgSeqNum fields) in
-    let fields = Field.(remove_set SenderCompID fields) in
-    let fields = Field.(remove_set TargetCompID fields) in
-    let fields = Field.(remove_set SendingTime fields) in
+      (Field.Set.find_typ Field.TargetCompID fields) >>= fun tid ->
+    let ts = Field.Set.find_typ Field.SendingTime fields in
+    let fields = Field.(Set.remove_typ BeginString fields) in
+    let fields = Field.(Set.remove_typ BodyLength fields) in
+    let fields = Field.(Set.remove_typ MsgType fields) in
+    let fields = Field.(Set.remove_typ MsgSeqNum fields) in
+    let fields = Field.(Set.remove_typ SenderCompID fields) in
+    let fields = Field.(Set.remove_typ TargetCompID fields) in
+    let fields = Field.(Set.remove_typ SendingTime fields) in
     R.ok (create_set ?ts ~fields ?groups ~seqnum ~sid ~tid ~version typ)
   | _ ->
     R.error_msg "missing standard header"

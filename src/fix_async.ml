@@ -212,13 +212,13 @@ let connect_ez
         return None
       | Heartbeat
       | TestRequest ->
-        let testReqID = Field.(find_set TestReqID m.fields) in
+        let testReqID = Field.(Set.find_typ TestReqID m.fields) in
         s (Fix.heartbeat ?testReqID ~sid ~tid ()) >>= fun () ->
         return None
       | ResendRequest ->
         (* TODO implement *)
-        let bsn = Field.(find_set BeginSeqNo m.fields) in
-        let esn = Field.(find_set EndSeqNo m.fields) in
+        let bsn = Field.(Set.find_typ BeginSeqNo m.fields) in
+        let esn = Field.(Set.find_typ EndSeqNo m.fields) in
         begin match bsn, esn with
         | Some _, Some _ -> s (reject m.seqnum)
         | _ -> s (reject m.seqnum)

@@ -25,12 +25,23 @@ end
 
 type field =
     F : 'a typ * (module T with type t = 'a) * 'a -> field [@@deriving sexp]
-type t = field
+
+val field_to_yojson : field -> Yojson.Safe.t
+val field_of_yojson : Yojson.Safe.t -> field Ppx_deriving_yojson_runtime.error_or
+
+type t = field [@@deriving yojson]
 
 module Set : sig
   include Set.S with type elt := field
+  include Fixtypes.Yojsonable.S with type t := t
   val t_of_sexp : Sexplib.Sexp.t -> t
   val sexp_of_t :t -> Sexplib.Sexp.t
+
+  val find_typ : 'a typ -> t -> 'a option
+  val find_typ_bind : 'a typ -> t -> f:('a -> 'b option) -> 'b option
+  val find_typ_map : 'a typ -> t -> f:('a -> 'b) -> 'b option
+  val find_and_remove_typ : 'a typ -> t -> ('a * t) option
+  val remove_typ : 'a typ -> t -> t
 end
 
 val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
@@ -45,17 +56,13 @@ val parser : (t * int, R.msg) result Angstrom.t
 
 val find : 'a typ -> field -> 'a option
 val same_kind : field -> field -> bool
-val find_set : 'a typ -> Set.t -> 'a option
-val find_set_bind : 'a typ -> Set.t -> f:('a -> 'b option) -> 'b option
-val find_set_map : 'a typ -> Set.t -> f:('a -> 'b) -> 'b option
-val find_and_remove_set : 'a typ -> Set.t -> ('a * Set.t) option
-val remove_set : 'a typ -> Set.t -> Set.t
 
 module type FIELD = sig
   include T
   val create : t -> field
   val find : 'a typ -> field -> 'a option
   val parse : int -> string -> field option
+  val parse_yojson : string -> Yojson.Safe.t -> field option
 end
 
 val register_field : (module FIELD) -> unit

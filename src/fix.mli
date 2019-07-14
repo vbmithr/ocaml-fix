@@ -17,7 +17,7 @@ type t = {
   ts : Ptime.t option ;
   fields : Field.Set.t ;
   groups : (Field.t * Field.field list list) option ;
-} [@@deriving sexp]
+} [@@deriving sexp,yojson]
 
 val pp : Format.formatter -> t -> unit
 val create :

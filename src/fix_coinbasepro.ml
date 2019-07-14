@@ -249,21 +249,21 @@ let parse_execution_report t =
   match t.typ with
   | ExecutionReport ->
     let clOrdID =
-      Field.find_set_bind ClOrdID t.fields ~f:Uuidm.of_string in
+      Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
     let orderID =
-      Field.find_set_bind OrderID t.fields ~f:Uuidm.of_string in
+      Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
     let tradeID =
-      Field.find_set_bind TradeID t.fields ~f:Uuidm.of_string in
-    let symbol = Field.find_set Symbol t.fields in
-    let side = Field.find_set Side t.fields in
-    let lastQty = Field.find_set LastQty t.fields in
-    let price = Field.find_set Price t.fields in
-    let orderQty = Field.find_set OrderQty t.fields in
-    let cashOrderQty = Field.find_set CashOrderQty t.fields in
-    let transactTime = Field.find_set TransactTime t.fields in
-    let ordStatus = Field.find_set OrdStatus t.fields in
-    let taker = Field.find_set AggressorIndicator t.fields in
-    let ordRejReason = Field.find_set OrdRejReason t.fields in
+      Field.Set.find_typ_bind TradeID t.fields ~f:Uuidm.of_string in
+    let symbol = Field.Set.find_typ Symbol t.fields in
+    let side = Field.Set.find_typ Side t.fields in
+    let lastQty = Field.Set.find_typ LastQty t.fields in
+    let price = Field.Set.find_typ Price t.fields in
+    let orderQty = Field.Set.find_typ OrderQty t.fields in
+    let cashOrderQty = Field.Set.find_typ CashOrderQty t.fields in
+    let transactTime = Field.Set.find_typ TransactTime t.fields in
+    let ordStatus = Field.Set.find_typ OrdStatus t.fields in
+    let taker = Field.Set.find_typ AggressorIndicator t.fields in
+    let ordRejReason = Field.Set.find_typ OrdRejReason t.fields in
     begin
       match symbol, side, price, orderQty,
             transactTime, ordStatus, tradeID, taker with
@@ -289,14 +289,14 @@ let parse_order_cancel_reject t =
   match t.typ with
   | OrderCancelReject ->
     let clOrdID =
-      Field.find_set_bind ClOrdID t.fields ~f:Uuidm.of_string in
+      Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
     let orderID =
-      Field.find_set_bind OrderID t.fields ~f:Uuidm.of_string in
+      Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
     let origClOrderID =
-      Field.find_set_bind OrigClOrdID t.fields ~f:Uuidm.of_string in
-    let ordStatus = Field.find_set OrdStatus t.fields in
-    let cxlRejReason = Field.find_set CxlRejReason t.fields in
-    let cxlRejResponseTo = Field.find_set CxlRejResponseTo t.fields in
+      Field.Set.find_typ_bind OrigClOrdID t.fields ~f:Uuidm.of_string in
+    let ordStatus = Field.Set.find_typ OrdStatus t.fields in
+    let cxlRejReason = Field.Set.find_typ CxlRejReason t.fields in
+    let cxlRejResponseTo = Field.Set.find_typ CxlRejResponseTo t.fields in
     begin
       match cxlRejResponseTo with
       | None -> invalid_arg "parse_order_cancel_reject"

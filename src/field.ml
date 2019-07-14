@@ -60,6 +60,12 @@ let print (F (_, m, v)) =
   let module F = (val m) in
   Format.asprintf "%d=%a" F.tag F.pp v
 
+let to_yojson (F (_, m, v)) =
+  let module F = (val m) in
+  `Assoc [F.name, F.to_yojson v]
+
+let field_to_yojson = to_yojson
+
 let parse_raw str =
   match String.cut ~sep:"=" str with
   | None -> R.error_msgf "Missing '=' in '%s'" str
@@ -75,6 +81,7 @@ module type FIELD = sig
   val create : t -> field
   val find : 'a typ -> field -> 'a option
   val parse : int -> string -> field option
+  val parse_yojson : string -> Yojson.Safe.t -> field option
 end
 
 module IntSet = Set.Make(struct
@@ -110,16 +117,6 @@ let field_of_sexp sexp =
   | None -> failwith "field_of_sexp"
   | Some v -> v
 
-module Set = struct
-  include Set.Make(struct
-    type t = field
-    let compare = Pervasives.compare
-  end)
-
-  let sexp_of_t t = sexp_of_list sexp_of_field (elements t)
-  let t_of_sexp s = of_list (list_of_sexp field_of_sexp s)
-end
-
 let find :
   type a. a typ -> field -> a option = fun typ field ->
   SMap.fold begin fun _ m a ->
@@ -129,6 +126,8 @@ let find :
     | Some aa -> Some aa
   end !field_mods None
 
+let find_field = find
+
 let same_kind ((F (typ, _, _)) as f1) ((F (typ', _, _)) as f2) =
   SMap.fold begin fun _ m a ->
     let module F = (val m : FIELD) in
@@ -136,49 +135,6 @@ let same_kind ((F (typ, _, _)) as f1) ((F (typ', _, _)) as f2) =
     | Some _, Some _ -> true
     | _ -> a
   end !field_mods false
-
-let find_set :
-  type a. a typ -> Set.t -> a option = fun typ fields ->
-  Set.fold begin fun f a ->
-    match find typ f with
-    | None -> a
-    | Some v -> Some v
-  end fields None
-
-let find_set_bind :
-  type a. a typ -> Set.t -> f:(a -> 'b option) -> 'b option = fun typ fields ~f ->
-  Set.fold begin fun field a ->
-    match find typ field with
-    | None -> a
-    | Some v -> f v
-  end fields None
-
-let find_set_map :
-  type a. a typ -> Set.t -> f:(a -> 'b) -> 'b option = fun typ fields ~f ->
-  Set.fold begin fun field a ->
-    match find typ field with
-    | None -> a
-    | Some v -> Some (f v)
-  end fields None
-
-let find_and_remove_set :
-  type a. a typ -> Set.t -> (a * Set.t) option = fun typ fields ->
-  Set.fold begin fun f a ->
-    match find typ f with
-    | None -> a
-    | Some v -> Some (v, Set.remove f fields)
-  end fields None
-
-exception Removed of Set.t
-let remove_set :
-  type a. a typ -> Set.t -> Set.t = fun typ fields ->
-  try
-    Set.fold begin fun f a ->
-      match find typ f with
-      | None -> a
-      | Some _ -> raise (Removed (Set.remove f a))
-    end fields fields
-  with Removed s -> s
 
 exception Parsed_ok of t
 let parse str =
@@ -193,6 +149,95 @@ let parse str =
     end !field_mods ;
     R.error_msgf "Unknown tag %d=%s" tag v
   with Parsed_ok t -> R.ok t
+
+let of_yojson = function
+  | `Assoc [name, v] -> begin
+      try
+        SMap.iter begin fun _ m ->
+          let module F = (val m : FIELD) in
+          match F.parse_yojson name v with
+          | None -> ()
+          | Some v -> raise (Parsed_ok v)
+        end !field_mods ;
+        Error (Format.asprintf "Unknown %s %a" name Yojson.Safe.pp v)
+      with Parsed_ok t -> R.ok t
+    end
+  | #Yojson.Safe.t -> Error "Not a json object"
+
+let field_of_yojson = of_yojson
+
+module Set = struct
+  include Set.Make(struct
+      type t = field
+      let compare = Pervasives.compare
+    end)
+
+  let to_yojson t =
+    List.fold_right begin fun e a ->
+      match to_yojson e with
+      | `Assoc [name, v] -> (name, v) :: a
+      | #Yojson.Safe.t -> assert false
+    end (elements t) [] |>
+    fun l -> `Assoc l
+
+  let of_yojson = function
+    | `Assoc fields -> begin try
+          List.map begin fun a ->
+            match of_yojson (`Assoc [a]) with
+            | Ok v -> v
+            | Error msg -> invalid_arg msg
+          end fields |> fun r ->
+          Ok (of_list r)
+        with Invalid_argument msg -> Error msg
+      end
+    | #Yojson.Safe.t -> Error "not a json object"
+
+  let sexp_of_t t = sexp_of_list sexp_of_field (elements t)
+  let t_of_sexp s = of_list (list_of_sexp field_of_sexp s)
+
+  let find_typ :
+    type a. a typ -> t -> a option = fun typ fields ->
+    fold begin fun f a ->
+      match find_field typ f with
+      | None -> a
+      | Some v -> Some v
+    end fields None
+
+  let find_typ_bind :
+    type a. a typ -> t -> f:(a -> 'b option) -> 'b option = fun typ fields ~f ->
+    fold begin fun field a ->
+      match find_field typ field with
+      | None -> a
+      | Some v -> f v
+    end fields None
+
+  let find_typ_map :
+    type a. a typ -> t -> f:(a -> 'b) -> 'b option = fun typ fields ~f ->
+    fold begin fun field a ->
+      match find_field typ field with
+      | None -> a
+      | Some v -> Some (f v)
+    end fields None
+
+  let find_and_remove_typ :
+    type a. a typ -> t -> (a * t) option = fun typ fields ->
+    fold begin fun f a ->
+      match find_field typ f with
+      | None -> a
+      | Some v -> Some (v, remove f fields)
+    end fields None
+
+  exception Removed of t
+  let remove_typ :
+    type a. a typ -> t -> t = fun typ fields ->
+    try
+      fold begin fun f a ->
+        match find_field typ f with
+        | None -> a
+        | Some _ -> raise (Removed (remove f a))
+      end fields fields
+    with Removed s -> s
+end
 
 let parser =
   let open Angstrom in
@@ -218,11 +263,11 @@ let serialize k t (F (_, m, v)) =
   let module F = (val m) in
   let tag = string_of_int F.tag in
   let v = Format.asprintf "%a" F.pp v in
-  k (begin fun () ->
+  k begin fun () ->
     write_string t tag ;
     write_char t '=' ;
     write_string t v
-  end)
+  end
     (String.length tag + String.length v + 1)
     (sum_string tag + Char.to_int '=' + sum_string v)
 
@@ -240,6 +285,11 @@ module Make (T : T) = struct
   let parse tag' v =
     match T.parse v with
     | Ok v when tag' = tag -> Some (F (T.t, (module T), v))
+    | _ -> None
+
+  let parse_yojson name' v =
+    match T.of_yojson v with
+    | Ok v when name' = name -> Some (F (T.t, (module T), v))
     | _ -> None
 end
 
@@ -1995,12 +2045,12 @@ module AggressorIndicator = Make(struct
     let parse = YesOrNo.parse
     let tag = 1057
     let name = "AggressorIndicator"
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | AggressorIndicator, AggressorIndicator -> Some Eq
-    | _ -> None
-end)
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | AggressorIndicator, AggressorIndicator -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module AggressorIndicator)
 
 (*---------------------------------------------------------------------------
