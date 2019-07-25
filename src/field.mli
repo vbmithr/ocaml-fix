@@ -31,6 +31,8 @@ val field_of_yojson : Yojson.Safe.t -> field Ppx_deriving_yojson_runtime.error_o
 
 type t = field [@@deriving yojson]
 
+val equal : t -> t -> bool
+
 module Set : sig
   include Set.S with type elt := field
   include Fixtypes.Yojsonable.S with type t := t

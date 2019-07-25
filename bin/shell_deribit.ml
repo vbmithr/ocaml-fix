@@ -11,6 +11,20 @@ let hb msg =
   Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
 
 let on_server_msg _w msg = match msg.Fix.typ with
+  | SecurityList -> begin
+    match msg.groups with
+    | None -> assert false
+    | Some (_, groups) ->
+      let symbols =
+        List.fold_left groups ~init:[] ~f:begin fun a groups ->
+          List.fold_left groups ~init:a ~f:begin fun a symbol ->
+            match Field.find Field.Symbol symbol with
+            | None -> a
+            | Some symbol -> symbol :: a
+          end
+        end in
+      Logs_async.app ~src (fun m -> m "%a" Sexplib.Sexp.pp (sexp_of_list sexp_of_string symbols))
+  end
   | _ -> Deferred.unit
 
 let on_client_cmd username w words =

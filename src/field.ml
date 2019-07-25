@@ -37,6 +37,12 @@ type field =
     F : 'a typ * (module T with type t = 'a) * 'a -> field
 type t = field
 
+let equal (F (t, m, v)) (F (t', _, v')) =
+  let module A = (val m) in
+  match A.eq t t' with
+  | None -> false
+  | Some Eq -> v = v'
+
 type printable = (string * Sexplib.Sexp.t) [@@deriving sexp]
 
 let to_printable (F (_, m, v)) =
