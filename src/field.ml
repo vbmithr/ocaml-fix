@@ -92,7 +92,7 @@ end
 
 module IntSet = Set.Make(struct
     type t = int
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 let field_mods = ref SMap.empty
@@ -175,7 +175,7 @@ let field_of_yojson = of_yojson
 module Set = struct
   include Set.Make(struct
       type t = field
-      let compare = Pervasives.compare
+      let compare = Stdlib.compare
     end)
 
   let to_yojson t =
