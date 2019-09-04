@@ -27,26 +27,6 @@ module Uuidm = struct
   let to_yojson t = `String (to_string t)
 end
 
-module CancelOnDisconnect = struct
-  module T = struct
-    type t =
-      | All
-      | Session
-    [@@deriving sexp,yojson]
-
-    let parse = function
-      | "Y" -> Ok All
-      | "S" -> Ok Session
-      | _ -> R.error_msg "invalid argument"
-
-    let print = function
-      | All -> "Y"
-      | Session -> "S"
-  end
-  include T
-  include Fixtypes.Make(T)
-end
-
 module SelfTradePrevention = struct
   module T = struct
     type t =
@@ -72,22 +52,6 @@ module SelfTradePrevention = struct
   include T
   include Fixtypes.Make(T)
 end
-
-type _ typ += CancelOnDisconnect : CancelOnDisconnect.t typ
-module CancelOrdersOnDisconnect = Make(struct
-    type t = CancelOnDisconnect.t [@@deriving sexp,yojson]
-    let t = CancelOnDisconnect
-    let pp = CancelOnDisconnect.pp
-    let parse = CancelOnDisconnect.parse
-    let tag = 8013
-    let name = "CancelOnDisconnect"
-    let eq :
-      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-      match a, b with
-      | CancelOnDisconnect, CancelOnDisconnect -> Some Eq
-      | _ -> None
-  end)
-let () = register_field (module CancelOrdersOnDisconnect)
 
 type _ typ += SelfTradePrevention : SelfTradePrevention.t typ
 module STP = Make(struct

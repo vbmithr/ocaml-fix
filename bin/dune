@@ -13,3 +13,11 @@
  (package fix-coinbasepro)
  (preprocess (pps ppx_let ppx_sexp_conv))
  (libraries bs-devkit ptime.clock.os logs-async-reporter fix-async fix-coinbasepro))
+
+(executable
+ (name shell_ftx)
+ (public_name fix-coinbase-ftx)
+ (modules shell_ftx)
+ (package fix-ftx)
+ (preprocess (pps ppx_let ppx_sexp_conv))
+ (libraries bs-devkit ptime.clock.os logs-async-reporter fix-async fix-ftx))

@@ -1547,6 +1547,22 @@ module ExecTransType = Make(struct
   end)
 let () = register_field (module ExecTransType)
 
+type _ typ += ExecInst : ExecInst.t typ
+module ExecInst = Make(struct
+    type t = ExecInst.t [@@deriving sexp,yojson]
+    let t = ExecInst
+    let pp = ExecInst.pp
+    let parse = ExecInst.parse
+    let tag = 18
+    let name = "ExecInst"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ExecInst, ExecInst -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ExecInst)
+
 type _ typ += Price : float typ
 module Price = Make(struct
     type t = float [@@deriving sexp,yojson]
@@ -2058,6 +2074,22 @@ module AggressorIndicator = Make(struct
       | _ -> None
   end)
 let () = register_field (module AggressorIndicator)
+
+type _ typ += CancelOrdersOnDisconnect : CancelOrdersOnDisconnect.t typ
+module CancelOrdersOnDisconnect = Make(struct
+    type t = CancelOrdersOnDisconnect.t [@@deriving sexp,yojson]
+    let t = CancelOrdersOnDisconnect
+    let pp = CancelOrdersOnDisconnect.pp
+    let parse = CancelOrdersOnDisconnect.parse
+    let tag = 8013
+    let name = "CancelOrdersOnDisconnect"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CancelOrdersOnDisconnect, CancelOrdersOnDisconnect -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CancelOrdersOnDisconnect)
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

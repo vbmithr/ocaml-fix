@@ -3,10 +3,9 @@ open Async
 
 open Fix
 open Fixtypes
-open Fix_coinbasepro
+open Fix_ftx
 
-let src = Logs.Src.create "fix.coinbase.shell"
-(* let uri = Uri.make ~host:"127.0.0.1" ~port:4197 () *)
+let src = Logs.Src.create "fix.ftx.shell"
 
 let hb msg =
   Fix.create ~fields:[Field.TestReqID.create msg] MsgType.Heartbeat
@@ -20,56 +19,44 @@ let on_client_cmd w words =
   | "testreq" :: _ -> Pipe.write w (testreq ~testreqid:"a")
   | "orders" :: _ -> Pipe.write w (order_status_request ())
   | "order" :: orderID :: _ -> Pipe.write w (order_status_request ~orderID ())
-  | "buy" :: symbol :: qty :: [] ->
-    let clOrdID = Uuidm.create `V4 in
-    let qty = float_of_string qty in
-    Pipe.write w
-      (new_order_market ~side:Buy ~qty ~symbol clOrdID)
-  | "sell" :: symbol :: qty :: [] ->
-    let clOrdID = Uuidm.create `V4 in
-    let qty = float_of_string qty in
-    Pipe.write w
-      (new_order_market ~side:Sell ~qty ~symbol clOrdID)
   | "buy" :: symbol :: qty :: price :: _ ->
     let clOrdID = Uuidm.create `V4 in
     let price = float_of_string price in
     let qty = float_of_string qty in
     let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
     Pipe.write w
-      (new_order_limit ~side:Buy ~price ~qty ~timeInForce ~symbol clOrdID)
+      (new_order ~side:Buy ~price ~qty ~timeInForce ~symbol clOrdID)
   | "sell" :: symbol :: qty :: price :: _ ->
     let clOrdID = Uuidm.create `V4 in
     let price = float_of_string price in
     let qty = float_of_string qty in
     let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
     Pipe.write w
-      (new_order_limit ~side:Sell ~price ~qty ~timeInForce ~symbol clOrdID)
-  | "cancel" :: srvOrdID :: _ -> begin
-    match Uuidm.of_string srvOrdID with
-    | None -> Logs_async.err ~src (fun m -> m "wrong srvOrdID: must be an UUID")
-    | Some orderID ->
-      let clOrdID = Uuidm.create `V4 in
-      Pipe.write w (cancel_order ~orderID:(`OrderID orderID) ~clOrdID)
+      (new_order ~side:Sell ~price ~qty ~timeInForce ~symbol clOrdID)
+  | "cancel" :: srvOrdID :: _ ->
+    Pipe.write w (cancel_order (`OrderID (Int64.of_string srvOrdID)))
+  | "cancelClient" :: origClOrdID :: _ -> begin
+    match Uuidm.of_string origClOrdID with
+      | None -> Logs_async.err ~src (fun m -> m "wrong origClOrdID: must be an UUID")
+      | Some orderID ->  Pipe.write w (cancel_order (`ClOrdID orderID))
   end
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main sandbox cfg =
+let main cfg =
   let open Bs_devkit in
-  let url = if sandbox then sandbox_url else url in
-  let { Cfg.key ; secret ; passphrase ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg "CBPRO" in
-  let secret = Base64.decode_exn secret in
+  let { Cfg.key ; secret ; _ } =
+    List.Assoc.find_exn ~equal:String.equal cfg "FTX" in
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
-    logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
+    logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~logon_ts in
   Fix_async.with_connection_ez
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version:Version.v42 ~logon_fields url
     ~f:begin fun ~closed r w ->
       Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
-      Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
+      Logs_async.app ~src (fun m -> m "Connected to FTX") >>= fun () ->
       Deferred.any [
         Pipe.iter r ~f:(on_server_msg w);
         Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
@@ -78,15 +65,14 @@ let main sandbox cfg =
     end
 
 let command =
-  Command.async ~summary:"Coinbase shell" begin
+  Command.async ~summary:"FTX shell" begin
     let open Command.Let_syntax in
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()
-      and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
       and () = Logs_async_reporter.set_level_via_param None in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main sandbox cfg
+        main cfg
     ]
   end
 

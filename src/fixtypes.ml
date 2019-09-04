@@ -1295,6 +1295,43 @@ module CxlRejResponseTo = struct
   include Make(T)
 end
 
+module ExecInst = struct
+  module T = struct
+    type t =
+      | DoNotIncrease
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "E" -> Ok DoNotIncrease
+      | _ -> R.error_msg "unknown code"
+
+    let print = function
+      | DoNotIncrease  -> "E"
+  end
+  include T
+  include Make(T)
+end
+
+module CancelOrdersOnDisconnect = struct
+  module T = struct
+    type t =
+      | All
+      | Session
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "Y" -> Ok All
+      | "S" -> Ok Session
+      | _ -> R.error_msg "invalid argument"
+
+    let print = function
+      | All -> "Y"
+      | Session -> "S"
+  end
+  include T
+  include Make(T)
+end
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

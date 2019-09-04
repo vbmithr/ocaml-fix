@@ -397,7 +397,6 @@ module UserRequestType : sig
     | Logoff
     | ChangePassword
     | RequestStatus
-
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
@@ -412,7 +411,6 @@ module UserStatus : sig
     | Other
     | ForcedLogout
     | SessionShutdownWarning
-
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
@@ -429,7 +427,6 @@ module MassStatusReqType : sig
     | PartyID
     | SecurityIssuer
     | UssuerOfUnderlyingSecurity
-
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
@@ -440,7 +437,6 @@ module MiscFeeType : sig
     | Tax
     | LocalCommission
     | ExchangeFees
-
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
@@ -451,7 +447,6 @@ module CxlRejReason : sig
     | UnknownOrder
     | BrokerExchangeOption
     | PendingCancelOrReplace
-
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
@@ -460,7 +455,21 @@ module CxlRejResponseTo : sig
   type t =
     | OrderCancelRequest
     | OrderReplaceRequest
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
 
+module ExecInst : sig
+  type t =
+    | DoNotIncrease
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
+
+module CancelOrdersOnDisconnect : sig
+  type t =
+    | All
+    | Session
   [@@deriving sexp,yojson]
   include IO with type t := t
 end

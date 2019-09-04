@@ -26,3 +26,9 @@
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (libraries ptime uuidm fix base64 monocypher digestif.c uri))
 
+(library
+ (name fix_ftx)
+ (public_name fix-ftx)
+ (modules fix_ftx)
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
+ (libraries ptime uuidm fix hex monocypher digestif.c uri))
