@@ -83,7 +83,7 @@ let command =
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()
       and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
-      and () = Logs_async_reporter.set_level_via_param None in
+      and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
         main sandbox cfg
