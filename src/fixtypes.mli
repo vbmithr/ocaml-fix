@@ -275,6 +275,8 @@ module MsgType : sig
     | PositionReport
     | UserRequest
     | UserResponse
+    | NewOrderBatch
+    | OrderCancelBatchRequest
   [@@deriving sexp,yojson]
 
   include IO with type t := t

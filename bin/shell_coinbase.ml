@@ -14,12 +14,20 @@ let hb msg =
 let on_server_msg _w msg = match msg.Fix.typ with
   | _ -> Deferred.unit
 
+let gen_limit_fields ~symbol ~side ~price ~qty =
+  let clOrdID = Uuidm.create `V4 in
+  let price = float_of_string price in
+  let qty = float_of_string qty in
+  let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
+  new_order_limit_fields ~side ~price ~qty ~timeInForce ~symbol clOrdID
+
 let on_client_cmd w words =
   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
   match words with
   | "testreq" :: _ -> Pipe.write w (testreq ~testreqid:"a")
-  | "orders" :: _ -> Pipe.write w (order_status_request ())
-  | "order" :: orderID :: _ -> Pipe.write w (order_status_request ~orderID ())
+  | "order" :: orderID :: _ ->
+    let oid = Option.value_exn (Uuidm.of_string orderID) in
+    Pipe.write w (order_status_request oid)
   | "buy" :: symbol :: qty :: [] ->
     let clOrdID = Uuidm.create `V4 in
     let qty = float_of_string qty in
@@ -31,19 +39,15 @@ let on_client_cmd w words =
     Pipe.write w
       (new_order_market ~side:Sell ~qty ~symbol clOrdID)
   | "buy" :: symbol :: qty :: price :: _ ->
-    let clOrdID = Uuidm.create `V4 in
-    let price = float_of_string price in
-    let qty = float_of_string qty in
-    let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
-    Pipe.write w
-      (new_order_limit ~side:Buy ~price ~qty ~timeInForce ~symbol clOrdID)
+    let fields = gen_limit_fields ~symbol ~side:Buy ~price ~qty in
+    Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
+  | "buy2" :: symbol :: qty :: price :: qty2 :: price2 :: _ ->
+    let o1 = gen_limit_fields ~symbol ~side:Buy ~price ~qty in
+    let o2 = gen_limit_fields ~symbol ~side:Buy ~price:price2 ~qty:qty2 in
+    Pipe.write w (new_orders_limit (Uuidm.create `V4) [o1; o2])
   | "sell" :: symbol :: qty :: price :: _ ->
-    let clOrdID = Uuidm.create `V4 in
-    let price = float_of_string price in
-    let qty = float_of_string qty in
-    let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
-    Pipe.write w
-      (new_order_limit ~side:Sell ~price ~qty ~timeInForce ~symbol clOrdID)
+    let fields = gen_limit_fields ~symbol ~side:Sell ~price ~qty in
+    Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
   | "cancel" :: srvOrdID :: _ -> begin
     match Uuidm.of_string srvOrdID with
     | None -> Logs_async.err ~src (fun m -> m "wrong srvOrdID: must be an UUID")

@@ -1227,6 +1227,22 @@ module MDEntryType = Make(struct
   end)
 let () = register_field (module MDEntryType)
 
+type _ typ += NoOrders : int typ
+module NoOrders = Make(struct
+    type t = int [@@deriving sexp,yojson]
+    let t = NoOrders
+    let pp = Format.pp_print_int
+    let parse = int_of_string_result
+    let tag = 73
+    let name = "NoOrders"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | NoOrders, NoOrders -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module NoOrders)
+
 type _ typ += NoPositions : int typ
 module NoPositions = Make(struct
     type t = int [@@deriving sexp,yojson]

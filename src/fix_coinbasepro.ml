@@ -69,6 +69,22 @@ module STP = Make(struct
   end)
 let () = register_field (module STP)
 
+type _ typ += BatchID : string typ
+module BatchID = Make(struct
+    type t = string [@@deriving sexp,yojson]
+    let t = BatchID
+    let pp = Format.pp_print_string
+    let parse s = Ok s
+    let tag = 8014
+    let name = "BatchID"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | BatchID, BatchID -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module BatchID)
+
 let tid = "Coinbase"
 let version = Version.v42
 let url = Uri.make ~scheme:"https"
@@ -106,9 +122,9 @@ let testreq ~testreqid =
   let fields = [Field.TestReqID.create testreqid] in
   Fix.create ~fields Fixtypes.MsgType.TestRequest
 
-let order_status_request ?(orderID = "*") () =
+let order_status_request orderID =
   let fields = [
-    Field.OrderID.create orderID ;
+    Field.OrderID.create (Uuidm.to_string orderID) ;
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderStatusRequest
 
@@ -133,11 +149,11 @@ let check_time_in_force = function
   | PostOnly -> ()
   | _ -> invalid_arg "timeInForce not supported by Coinbasepro"
 
-let new_order_limit
+let new_order_limit_fields
     ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
     ~side ~price ~qty ~timeInForce ~symbol clOrdID =
   check_time_in_force timeInForce ;
-  let fields = [
+  [
     Field.HandlInst.create Private ;
     Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
     Field.Side.create side ;
@@ -147,8 +163,21 @@ let new_order_limit
     Field.TimeInForce.create timeInForce ;
     Field.Symbol.create symbol ;
     STP.create selfTradePrevention ;
-  ] in
+  ]
+
+let new_order_limit
+    ?selfTradePrevention
+    ~side ~price ~qty ~timeInForce ~symbol clOrdID =
+  let fields =
+    new_order_limit_fields ?selfTradePrevention
+      ~side ~price ~qty ~timeInForce ~symbol clOrdID in
   Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
+
+let new_orders_limit batchID fieldss =
+  Fix.create
+    ~fields:[ BatchID.create (Uuidm.to_string batchID) ]
+    ~groups:(NoOrders.create (List.length fieldss), fieldss)
+    Fixtypes.MsgType.NewOrderBatch
 
 let new_order_stop
     ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)

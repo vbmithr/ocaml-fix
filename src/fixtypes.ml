@@ -1006,6 +1006,8 @@ module MsgType = struct
     | PositionReport
     | UserRequest
     | UserResponse
+    | NewOrderBatch
+    | OrderCancelBatchRequest
   [@@deriving sexp,yojson]
 
   let pp_sexp ppf t =
@@ -1040,6 +1042,8 @@ module MsgType = struct
     | "AP" -> PositionReport
     | "BE" -> UserRequest
     | "BF" -> UserResponse
+    | "U6" -> NewOrderBatch
+    | "U4" -> OrderCancelBatchRequest
     | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
 
   let parse s =
@@ -1075,6 +1079,8 @@ module MsgType = struct
     | PositionReport                -> "AP"
     | UserRequest                   -> "BE"
     | UserResponse                  -> "BF"
+    | NewOrderBatch                 -> "U6"
+    | OrderCancelBatchRequest       -> "U4"
 
   let pp ppf t =
     Format.fprintf ppf "%s" (print t)

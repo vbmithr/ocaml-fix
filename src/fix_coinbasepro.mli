@@ -28,16 +28,23 @@ val logon_fields :
   logon_ts:Ptime.t -> Field.t list
 
 val testreq : testreqid:string -> t
-val order_status_request : ?orderID:string -> unit -> t
+val order_status_request : Uuidm.t -> t
 
 val new_order_market :
   ?selfTradePrevention:SelfTradePrevention.t ->
   side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> t
 
+val new_order_limit_fields :
+  ?selfTradePrevention:SelfTradePrevention.t ->
+  side:Side.t -> price:float -> qty:float ->
+  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> Field.t list
+
 val new_order_limit :
   ?selfTradePrevention:SelfTradePrevention.t ->
   side:Side.t -> price:float -> qty:float ->
   timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
+
+val new_orders_limit : Uuidm.t -> Field.t list list -> t
 
 val new_order_stop :
   ?selfTradePrevention:SelfTradePrevention.t ->
