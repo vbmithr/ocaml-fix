@@ -63,7 +63,7 @@ let main sandbox cfg =
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
-  Fix_async.with_connection_ez
+  Fix_async.EZ.with_connection
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version:Version.v42 ~logon_fields url
@@ -74,11 +74,12 @@ let main sandbox cfg =
         Pipe.iter r ~f:(on_server_msg w);
         Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
         closed
-      ]
+      ] >>= fun () ->
+      Deferred.Or_error.ok_unit
     end
 
 let command =
-  Command.async ~summary:"Coinbase shell" begin
+  Command.async_or_error ~summary:"Coinbase shell" begin
     let open Command.Let_syntax in
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()
