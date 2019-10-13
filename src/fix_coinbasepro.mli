@@ -9,6 +9,7 @@ open Fixtypes
 val url : Uri.t
 val sandbox_url : Uri.t
 val tid : string
+val version : Version.t
 
 module SelfTradePrevention : sig
   type t =

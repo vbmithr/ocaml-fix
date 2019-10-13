@@ -70,6 +70,7 @@ module STP = Make(struct
 let () = register_field (module STP)
 
 let tid = "Coinbase"
+let version = Version.v42
 let url = Uri.make ~scheme:"https"
     ~host:"fix.pro.coinbase.com" ~port:4198 ()
 let sandbox_url = Uri.make ~scheme:"https"

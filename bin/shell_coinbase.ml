@@ -66,7 +66,7 @@ let main sandbox cfg =
   Fix_async.EZ.with_connection
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
-    ~sid:key ~tid ~version:Version.v42 ~logon_fields url
+    ~sid:key ~tid ~version ~logon_fields url
     ~f:begin fun ~closed r w ->
       Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
       Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
