@@ -362,7 +362,7 @@ module OrdStatus = struct
       | Expired
       | AcceptedForBidding
       | PendingReplace
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "0" -> Ok New
@@ -520,7 +520,7 @@ module OrdType = struct
       | StopLimit
       | MarketOnClose
       | WithOrWithout
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "1" -> Ok Market
@@ -792,7 +792,7 @@ module TimeInForce = struct
       | GoodThroughCrossing
       | AtCrossing
       | PostOnly (* Coinbase special *)
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "0" -> Ok Session

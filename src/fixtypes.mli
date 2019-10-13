@@ -102,7 +102,7 @@ module OrdStatus : sig
     | Expired
     | AcceptedForBidding
     | PendingReplace
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,bin_io]
 
   include IO with type t := t
 end
@@ -141,7 +141,7 @@ module OrdType : sig
     | StopLimit
     | MarketOnClose
     | WithOrWithout
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,bin_io]
 
   include IO with type t := t
 end
@@ -224,7 +224,7 @@ module TimeInForce : sig
     | GoodThroughCrossing
     | AtCrossing
     | PostOnly (* Coinbase special *)
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,bin_io]
 
   include IO with type t := t
 end
