@@ -5,7 +5,6 @@
 
 open Rresult
 
-module Fixtypes : module type of Fixtypes
 module Field : module type of Field
 
 type t = {

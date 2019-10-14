@@ -8,7 +8,6 @@ open Astring
 open Sexplib.Std
 
 module Field = Field
-module Fixtypes = Fixtypes
 
 open Fixtypes
 

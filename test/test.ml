@@ -1,4 +1,3 @@
-open Fix
 open Fixtypes
 
 let date () =

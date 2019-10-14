@@ -1,9 +1,16 @@
 (library
+ (name fixtypes)
+ (public_name fixtypes)
+ (modules fixtypes)
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
+ (libraries bin_prot rresult astring ptime sexplib tyre))
+
+(library
  (name fix)
  (public_name fix)
- (modules fixtypes field fix)
+ (modules field fix)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries bin_prot rresult astring ptime logs sexplib tyre angstrom faraday))
+ (libraries fixtypes rresult astring ptime logs sexplib angstrom faraday))
 
 (library
  (name fix_async)
@@ -24,11 +31,11 @@
  (public_name fix-coinbasepro)
  (modules fix_coinbasepro)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ptime uuidm fix base64 monocypher digestif.c uri))
+ (libraries ptime uuidm fixtypes fix base64 monocypher digestif.c uri))
 
 (library
  (name fix_ftx)
  (public_name fix-ftx)
  (modules fix_ftx)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ptime uuidm fix hex monocypher digestif.c uri))
+ (libraries ptime uuidm fixtypes fix hex monocypher digestif.c uri))
