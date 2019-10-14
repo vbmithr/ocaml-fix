@@ -1361,6 +1361,99 @@ module LastLiquidityInd = struct
   include Make(T)
 end
 
+module TickDirection = struct
+  module T = struct
+    type t =
+      | PlusTick
+      | ZeroPlusTick
+      | MinusTick
+      | ZeroMinusTick
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "0" -> Ok PlusTick
+      | "1" -> Ok ZeroPlusTick
+      | "2" -> Ok MinusTick
+      | "3" -> Ok ZeroMinusTick
+      | _ -> R.error_msg "unknown code"
+
+    let print = function
+      | PlusTick -> "0"
+      | ZeroPlusTick -> "1"
+      | MinusTick -> "2"
+      | ZeroMinusTick -> "3"
+  end
+  include T
+  include Make(T)
+end
+
+module PegPriceType = struct
+  module T = struct
+    type t =
+      | LastPeg
+      | MidPricePeg
+      | OpeningPeg
+      | MarketPeg
+      | PrimaryPeg
+      | FixedPeg
+      | PegToVWAP
+      | TrailingStopPeg
+      | PegToLimitPrice
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "1" -> Ok LastPeg
+      | "2" -> Ok MidPricePeg
+      | "3" -> Ok OpeningPeg
+      | "4" -> Ok MarketPeg
+      | "5" -> Ok PrimaryPeg
+      | "6" -> Ok FixedPeg
+      | "7" -> Ok PegToVWAP
+      | "8" -> Ok TrailingStopPeg
+      | "9" -> Ok PegToLimitPrice
+      | _ -> R.error_msg "unknown code"
+
+    let print = function
+      | LastPeg         -> "1"
+      | MidPricePeg     -> "2"
+      | OpeningPeg      -> "3"
+      | MarketPeg       -> "4"
+      | PrimaryPeg      -> "5"
+      | FixedPeg        -> "6"
+      | PegToVWAP       -> "7"
+      | TrailingStopPeg -> "8"
+      | PegToLimitPrice -> "9"
+  end
+  include T
+  include Make(T)
+end
+
+module ContingencyType = struct
+  module T = struct
+    type t =
+      | OCO
+      | OTO
+      | OUOA
+      | OUOP
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "1" -> Ok OCO
+      | "2" -> Ok OTO
+      | "3" -> Ok OUOA
+      | "4" -> Ok OUOP
+      | _ -> R.error_msg "unknown code"
+
+    let print = function
+      | OCO -> "1"
+      | OTO -> "2"
+      | OUOA -> "3"
+      | OUOP -> "4"
+  end
+  include T
+  include Make(T)
+end
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

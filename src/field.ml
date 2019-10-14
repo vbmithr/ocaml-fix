@@ -2123,6 +2123,54 @@ module LastLiquidityInd = Make(struct
   end)
 let () = register_field (module LastLiquidityInd)
 
+type _ typ += TickDirection : TickDirection.t typ
+module TickDirection = Make(struct
+    type t = TickDirection.t [@@deriving sexp,yojson]
+    let t = TickDirection
+    let pp = TickDirection.pp
+    let parse = TickDirection.parse
+    let tag = 274
+    let name = "TickDirection"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | TickDirection, TickDirection -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module TickDirection)
+
+type _ typ += PegPriceType : PegPriceType.t typ
+module PegPriceType = Make(struct
+    type t = PegPriceType.t [@@deriving sexp,yojson]
+    let t = PegPriceType
+    let pp = PegPriceType.pp
+    let parse = PegPriceType.parse
+    let tag = 1094
+    let name = "PegPriceType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | PegPriceType, PegPriceType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module PegPriceType)
+
+type _ typ += ContingencyType : ContingencyType.t typ
+module ContingencyType = Make(struct
+    type t = ContingencyType.t [@@deriving sexp,yojson]
+    let t = ContingencyType
+    let pp = ContingencyType.pp
+    let parse = ContingencyType.parse
+    let tag = 1385
+    let name = "ContingencyType"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | ContingencyType, ContingencyType -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module ContingencyType)
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

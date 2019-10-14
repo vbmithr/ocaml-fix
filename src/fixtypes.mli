@@ -481,7 +481,41 @@ module LastLiquidityInd : sig
     | AddedLiquidity
     | RemovedLiquidity
     | LiquidityRoutedOut
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
 
+module TickDirection : sig
+  type t =
+    | PlusTick
+    | ZeroPlusTick
+    | MinusTick
+    | ZeroMinusTick
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
+
+module PegPriceType : sig
+  type t =
+    | LastPeg
+    | MidPricePeg
+    | OpeningPeg
+    | MarketPeg
+    | PrimaryPeg
+    | FixedPeg
+    | PegToVWAP
+    | TrailingStopPeg
+    | PegToLimitPrice
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
+
+module ContingencyType : sig
+  type t =
+    | OCO
+    | OTO
+    | OUOA
+    | OUOP
   [@@deriving sexp,yojson]
   include IO with type t := t
 end
