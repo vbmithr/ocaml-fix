@@ -48,13 +48,17 @@ let on_client_cmd w words =
   | "sell" :: symbol :: qty :: price :: _ ->
     let fields = gen_limit_fields ~symbol ~side:Sell ~price ~qty in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)
-  | "cancel" :: srvOrdID :: _ -> begin
-    match Uuidm.of_string srvOrdID with
-    | None -> Logs_async.err ~src (fun m -> m "wrong srvOrdID: must be an UUID")
-    | Some orderID ->
+  | ["cancel"; srvOrdID] -> begin
+      let orderID = Option.value_exn (Uuidm.of_string srvOrdID) in
       let clOrdID = Uuidm.create `V4 in
       Pipe.write w (cancel_order ~orderID:(`OrderID orderID) ~clOrdID)
   end
+  | "cancel" :: symbol :: clOrdIDs -> begin
+      let clOrdIDs =
+        List.map clOrdIDs ~f:(fun c -> Option.value_exn (Uuidm.of_string c), None) in
+      let batchID = Uuidm.create `V4 in
+      Pipe.write w (cancel_orders batchID ~symbol clOrdIDs)
+    end
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 

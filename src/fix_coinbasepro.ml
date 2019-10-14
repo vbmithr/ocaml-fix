@@ -223,6 +223,19 @@ let cancel_order ~orderID ~clOrdID =
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderCancelRequest
 
+let cancel_orders batchID ~symbol orders =
+  let orders =
+    List.map begin fun (clOrdID, sv) -> List.filter_map (fun a -> a) [
+      Some (Field.OrigClOrdID.create (Uuidm.to_string clOrdID)) ;
+      Some (Field.Symbol.create symbol) ;
+      Option.map (fun sv -> Field.OrderID.create (Uuidm.to_string sv)) sv ;
+    ]
+    end orders in
+  Fix.create
+    ~fields:[ BatchID.create (Uuidm.to_string batchID) ]
+    ~groups:(NoOrders.create (List.length orders), orders)
+  Fixtypes.MsgType.OrderCancelBatchRequest
+
 type execution_report = {
   clOrdID : Uuidm.t option ;
   orderID : Uuidm.t option ;

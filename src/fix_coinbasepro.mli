@@ -60,6 +60,9 @@ val cancel_order :
   orderID:[`ClOrdID of Uuidm.t | `OrderID of Uuidm.t] ->
   clOrdID:Uuidm.t -> t
 
+val cancel_orders :
+  Uuidm.t -> symbol:string -> (Uuidm.t * Uuidm.t option) list -> t
+
 type execution_report = {
   clOrdID : Uuidm.t option ;
   orderID : Uuidm.t option ;
