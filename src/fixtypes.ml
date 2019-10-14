@@ -1338,6 +1338,29 @@ module CancelOrdersOnDisconnect = struct
   include Make(T)
 end
 
+module LastLiquidityInd = struct
+  module T = struct
+    type t =
+      | AddedLiquidity
+      | RemovedLiquidity
+      | LiquidityRoutedOut
+    [@@deriving sexp,yojson]
+
+    let parse = function
+      | "1" -> Ok AddedLiquidity
+      | "2" -> Ok RemovedLiquidity
+      | "3" -> Ok LiquidityRoutedOut
+      | _ -> R.error_msg "unknown code"
+
+    let print = function
+      | AddedLiquidity  -> "1"
+      | RemovedLiquidity -> "2"
+      | LiquidityRoutedOut -> "3"
+  end
+  include T
+  include Make(T)
+end
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

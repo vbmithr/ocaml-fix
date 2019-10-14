@@ -476,6 +476,16 @@ module CancelOrdersOnDisconnect : sig
   include IO with type t := t
 end
 
+module LastLiquidityInd : sig
+  type t =
+    | AddedLiquidity
+    | RemovedLiquidity
+    | LiquidityRoutedOut
+
+  [@@deriving sexp,yojson]
+  include IO with type t := t
+end
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 

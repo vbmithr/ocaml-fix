@@ -2107,6 +2107,22 @@ module CancelOrdersOnDisconnect = Make(struct
   end)
 let () = register_field (module CancelOrdersOnDisconnect)
 
+type _ typ += LastLiquidityInd : LastLiquidityInd.t typ
+module LastLiquidityInd = Make(struct
+    type t = LastLiquidityInd.t [@@deriving sexp,yojson]
+    let t = LastLiquidityInd
+    let pp = LastLiquidityInd.pp
+    let parse = LastLiquidityInd.parse
+    let tag = 851
+    let name = "LastLiquidityInd"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | LastLiquidityInd, LastLiquidityInd -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module LastLiquidityInd)
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff
 
