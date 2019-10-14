@@ -139,8 +139,8 @@ module OrdType : sig
     | Limit
     | Stop
     | StopLimit
-    | MarketOnClose
-    | WithOrWithout
+    | MarketIfTouched
+    | LimitIfTouched
   [@@deriving sexp,yojson,bin_io]
 
   include IO with type t := t

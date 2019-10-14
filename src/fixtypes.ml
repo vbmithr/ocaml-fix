@@ -518,17 +518,17 @@ module OrdType = struct
       | Limit
       | Stop
       | StopLimit
-      | MarketOnClose
-      | WithOrWithout
+      | MarketIfTouched
+      | LimitIfTouched
     [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "1" -> Ok Market
-      | "2" -> Ok Market
-      | "3" -> Ok Market
-      | "4" -> Ok Market
-      | "5" -> Ok Market
-      | "6" -> Ok Market
+      | "2" -> Ok Limit
+      | "3" -> Ok Stop
+      | "4" -> Ok StopLimit
+      | "J" -> Ok MarketIfTouched
+      | "K" -> Ok LimitIfTouched
       | _ -> R.error_msg "unknown code"
 
     let print = function
@@ -536,8 +536,8 @@ module OrdType = struct
       | Limit         -> "2"
       | Stop          -> "3"
       | StopLimit     -> "4"
-      | MarketOnClose -> "5"
-      | WithOrWithout -> "6"
+      | MarketIfTouched -> "J"
+      | LimitIfTouched -> "K"
   end
   include T
   include Make(T)
