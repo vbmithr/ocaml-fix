@@ -206,7 +206,7 @@ module Side : sig
   type t =
     | Buy
     | Sell
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,bin_io]
 
   include IO with type t := t
 end

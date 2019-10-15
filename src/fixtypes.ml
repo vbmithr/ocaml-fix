@@ -763,7 +763,7 @@ module Side = struct
     type t =
       | Buy
       | Sell
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "1" -> Ok Buy

@@ -209,6 +209,16 @@ module Set = struct
       | Some v -> Some v
     end fields None
 
+  let find_typ_exn typ fields =
+    match find_typ typ fields with
+    | None -> invalid_arg "fiend_typ"
+    | Some v -> v
+
+  let find_typ_map_exn typ fields ~f =
+    match find_typ typ fields with
+    | None -> invalid_arg "fiend_typ"
+    | Some v -> f v
+
   let find_typ_bind :
     type a. a typ -> t -> f:(a -> 'b option) -> 'b option = fun typ fields ~f ->
     fold begin fun field a ->

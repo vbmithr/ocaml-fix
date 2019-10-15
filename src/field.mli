@@ -40,8 +40,10 @@ module Set : sig
   val sexp_of_t :t -> Sexplib.Sexp.t
 
   val find_typ : 'a typ -> t -> 'a option
+  val find_typ_exn : 'a typ -> t -> 'a
   val find_typ_bind : 'a typ -> t -> f:('a -> 'b option) -> 'b option
   val find_typ_map : 'a typ -> t -> f:('a -> 'b) -> 'b option
+  val find_typ_map_exn : 'a typ -> t -> f:('a -> 'b) -> 'b
   val find_and_remove_typ : 'a typ -> t -> ('a * t) option
   val remove_typ : 'a typ -> t -> t
 end

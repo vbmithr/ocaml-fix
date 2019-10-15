@@ -19,7 +19,7 @@ let gen_limit_fields ~symbol ~side ~price ~qty =
   let price = float_of_string price in
   let qty = float_of_string qty in
   let timeInForce = Fixtypes.TimeInForce.GoodTillCancel in
-  new_order_limit_fields ~side ~price ~qty ~timeInForce ~symbol clOrdID
+  new_order_fields ~side ~price ~qty ~timeInForce ~symbol clOrdID
 
 let on_client_cmd w words =
   let words = String.split ~on:' ' @@ String.chop_suffix_exn words ~suffix:"\n" in
@@ -32,12 +32,12 @@ let on_client_cmd w words =
     let clOrdID = Uuidm.create `V4 in
     let qty = float_of_string qty in
     Pipe.write w
-      (new_order_market ~side:Buy ~qty ~symbol clOrdID)
+      (new_order ~ordType:Market ~side:Buy ~qty ~symbol clOrdID)
   | "sell" :: symbol :: qty :: [] ->
     let clOrdID = Uuidm.create `V4 in
     let qty = float_of_string qty in
     Pipe.write w
-      (new_order_market ~side:Sell ~qty ~symbol clOrdID)
+      (new_order ~ordType:Market ~side:Sell ~qty ~symbol clOrdID)
   | "buy" :: symbol :: qty :: price :: _ ->
     let fields = gen_limit_fields ~symbol ~side:Buy ~price ~qty in
     Pipe.write w (Fix.create ~fields MsgType.NewOrderSingle)

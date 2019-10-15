@@ -30,31 +30,22 @@ val logon_fields :
 val testreq : testreqid:string -> t
 val order_status_request : Uuidm.t -> t
 
-val new_order_market :
+val new_order_fields :
   ?selfTradePrevention:SelfTradePrevention.t ->
-  side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> t
+  ?timeInForce:TimeInForce.t ->
+  ?ordType:OrdType.t ->
+  ?price:float ->
+  ?stopPx:float ->
+  side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> Field.t list
 
-val new_order_limit_fields :
+val new_order :
   ?selfTradePrevention:SelfTradePrevention.t ->
-  side:Side.t -> price:float -> qty:float ->
-  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> Field.t list
-
-val new_order_limit :
-  ?selfTradePrevention:SelfTradePrevention.t ->
-  side:Side.t -> price:float -> qty:float ->
-  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
+  ?timeInForce:TimeInForce.t ->
+  ?ordType:OrdType.t ->
+  ?price:float ->
+  ?stopPx:float -> side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> t
 
 val new_orders_limit : Uuidm.t -> Field.t list list -> t
-
-val new_order_stop :
-  ?selfTradePrevention:SelfTradePrevention.t ->
-  side:Side.t -> stopPx:float -> qty:float ->
-  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
-
-val new_order_stop_limit :
-  ?selfTradePrevention:SelfTradePrevention.t ->
-  side:Side.t -> price:float -> stopPx:float -> qty:float ->
-  timeInForce:TimeInForce.t -> symbol:string -> Uuidm.t -> t
 
 val cancel_order :
   orderID:[`ClOrdID of Uuidm.t | `OrderID of Uuidm.t] ->
@@ -63,34 +54,42 @@ val cancel_order :
 val cancel_orders :
   Uuidm.t -> symbol:string -> (Uuidm.t * Uuidm.t option) list -> t
 
-type execution_report = {
-  clOrdID : Uuidm.t option ;
-  orderID : Uuidm.t option ;
-  symbol : string ;
-  side : Fixtypes.Side.t ;
-  lastQty : float option ;
-  price : float ;
-  orderQty : float ;
-  cashOrderQty : float option ;
-  transactTime : Ptime.t ;
-  ordStatus : Fixtypes.OrdStatus.t ;
-  ordRejReason : Fixtypes.OrdRejReason.t option ;
-  tradeID : Uuidm.t ;
-  taker : bool ;
-} [@@deriving sexp]
+type t =
+  | Logout
+  | Heartbeat of string option
+  | ExecutionReport of {
+      clOrdID : Uuidm.t option ;
+      orderID : Uuidm.t option ;
+      symbol : string ;
+      side : Fixtypes.Side.t ;
+      lastQty : float option ;
+      price : float ;
+      orderQty : float ;
+      cashOrderQty : float option ;
+      transactTime : Ptime.t ;
+      ordStatus : Fixtypes.OrdStatus.t ;
+      ordRejReason : Fixtypes.OrdRejReason.t option ;
+      tradeID : Uuidm.t ;
+      taker : bool ;
+    }
+  | NewOrderBatchReject of {
+      batchID: Uuidm.t; text: string option
+    }
+  | OrderCancelReject of {
+      clOrdID: Uuidm.t;
+      orderID: Uuidm.t;
+      origClOrdID: Uuidm.t option;
+      ordStatus: Fixtypes.OrdStatus.t option;
+      cxlRejReason: Fixtypes.CxlRejReason.t ;
+      cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
+    }
+  | OrderCancelBatchReject of {
+      batchID: Uuidm.t; text: string option
+    }
+  | Reject
+[@@deriving sexp,yojson]
 
-val parse_execution_report : t -> execution_report
-
-type order_cancel_reject = {
-  clOrdID : Uuidm.t option ;
-  orderID : Uuidm.t option ;
-  origClOrderID : Uuidm.t option ;
-  ordStatus : Fixtypes.OrdStatus.t option ;
-  cxlRejReason : Fixtypes.CxlRejReason.t option ;
-  cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
-} [@@deriving sexp]
-
-val parse_order_cancel_reject : t -> order_cancel_reject
+val parse : Fix.t -> t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

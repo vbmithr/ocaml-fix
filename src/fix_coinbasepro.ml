@@ -128,49 +128,55 @@ let order_status_request orderID =
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderStatusRequest
 
-let new_order_market
-    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
-    ~side ~qty ~symbol clOrdID =
-  let fields = [
-    Field.HandlInst.create Private ;
-    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
-    Field.Side.create side ;
-    Field.OrderQty.create qty ;
-    Field.OrdType.create Market ;
-    Field.Symbol.create symbol ;
-    STP.create selfTradePrevention ;
-  ] in
-  Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
-
-let check_time_in_force = function
+let check_timeInForce = function
   | Fixtypes.TimeInForce.GoodTillCancel
   | ImmediateOrCancel
   | FillOrKill
   | PostOnly -> ()
   | _ -> invalid_arg "timeInForce not supported by Coinbasepro"
 
-let new_order_limit_fields
-    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
-    ~side ~price ~qty ~timeInForce ~symbol clOrdID =
-  check_time_in_force timeInForce ;
-  [
-    Field.HandlInst.create Private ;
-    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
-    Field.Side.create side ;
-    Field.OrderQty.create qty ;
-    Field.Price.create price ;
-    Field.OrdType.create Limit ;
-    Field.TimeInForce.create timeInForce ;
-    Field.Symbol.create symbol ;
-    STP.create selfTradePrevention ;
+let check_ordType = function
+  | Fixtypes.OrdType.Market
+  | Limit
+  | StopLimit -> ()
+  | _ -> invalid_arg "ordType not supported by Coinbasepro"
+
+let new_order_fields
+    ?selfTradePrevention
+    ?(timeInForce=Fixtypes.TimeInForce.GoodTillCancel)
+    ?(ordType=Fixtypes.OrdType.Market)
+    ?price
+    ?stopPx
+    ~side
+    ~qty
+    ~symbol
+    clOrdID =
+  check_timeInForce timeInForce ;
+  check_ordType ordType ;
+  List.filter_map (fun a -> a) [
+    Option.some @@ Field.HandlInst.create Private ;
+    Option.some @@ Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
+    Option.some @@ Field.Symbol.create symbol ;
+    Option.some @@ Field.Side.create side ;
+    Option.some @@ Field.OrderQty.create qty ;
+    Option.map Field.Price.create price ;
+    Option.map Field.StopPx.create stopPx ;
+    Option.some @@ Field.OrdType.create ordType ;
+    Option.some @@ Field.TimeInForce.create timeInForce ;
+    Option.map STP.create selfTradePrevention ;
   ]
 
-let new_order_limit
+let new_order
     ?selfTradePrevention
-    ~side ~price ~qty ~timeInForce ~symbol clOrdID =
+    ?timeInForce
+    ?ordType
+    ?price
+    ?stopPx
+    ~side ~qty ~symbol clOrdID =
   let fields =
-    new_order_limit_fields ?selfTradePrevention
-      ~side ~price ~qty ~timeInForce ~symbol clOrdID in
+    new_order_fields
+      ?selfTradePrevention ?timeInForce ?ordType ?price ?stopPx
+      ~side ~qty ~symbol clOrdID in
   Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
 
 let new_orders_limit batchID fieldss =
@@ -178,41 +184,6 @@ let new_orders_limit batchID fieldss =
     ~fields:[ BatchID.create (Uuidm.to_string batchID) ]
     ~groups:(NoOrders.create (List.length fieldss), fieldss)
     Fixtypes.MsgType.NewOrderBatch
-
-let new_order_stop
-    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
-    ~side ~stopPx ~qty ~timeInForce ~symbol clOrdID =
-  check_time_in_force timeInForce ;
-  let fields = [
-    Field.HandlInst.create Private ;
-    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
-    Field.Side.create side ;
-    Field.OrderQty.create qty ;
-    Field.StopPx.create stopPx ;
-    Field.OrdType.create Stop ;
-    Field.TimeInForce.create timeInForce ;
-    Field.Symbol.create symbol ;
-    STP.create selfTradePrevention ;
-  ] in
-  Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
-
-let new_order_stop_limit
-    ?(selfTradePrevention=SelfTradePrevention.DecrementAndCancel)
-    ~side ~price ~stopPx ~qty ~timeInForce ~symbol clOrdID =
-  check_time_in_force timeInForce ;
-  let fields = [
-    Field.HandlInst.create Private ;
-    Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
-    Field.Side.create side ;
-    Field.OrderQty.create qty ;
-    Field.Price.create price ;
-    Field.StopPx.create stopPx ;
-    Field.OrdType.create StopLimit ;
-    Field.TimeInForce.create timeInForce ;
-    Field.Symbol.create symbol ;
-    STP.create selfTradePrevention ;
-  ] in
-  Fix.create ~fields Fixtypes.MsgType.NewOrderSingle
 
 let cancel_order ~orderID ~clOrdID =
   let fields = [
@@ -236,80 +207,76 @@ let cancel_orders batchID ~symbol orders =
     ~groups:(NoOrders.create (List.length orders), orders)
   Fixtypes.MsgType.OrderCancelBatchRequest
 
-type execution_report = {
-  clOrdID : Uuidm.t option ;
-  orderID : Uuidm.t option ;
-  symbol : string ;
-  side : Fixtypes.Side.t ;
-  lastQty : float option ;
-  price : float ;
-  orderQty : float ;
-  cashOrderQty : float option ;
-  transactTime : Ptime.t ;
-  ordStatus : Fixtypes.OrdStatus.t ;
-  ordRejReason : Fixtypes.OrdRejReason.t option ;
-  tradeID : Uuidm.t ;
-  taker : bool ;
-} [@@deriving sexp,yojson]
+type t =
+  | Logout
+  | Heartbeat of string option
+  | ExecutionReport of {
+      clOrdID : Uuidm.t option ;
+      orderID : Uuidm.t option ;
+      symbol : string ;
+      side : Fixtypes.Side.t ;
+      lastQty : float option ;
+      price : float ;
+      orderQty : float ;
+      cashOrderQty : float option ;
+      transactTime : Ptime.t ;
+      ordStatus : Fixtypes.OrdStatus.t ;
+      ordRejReason : Fixtypes.OrdRejReason.t option ;
+      tradeID : Uuidm.t ;
+      taker : bool ;
+    }
+  | NewOrderBatchReject of {
+      batchID: Uuidm.t; text: string option
+    }
+  | OrderCancelReject of {
+      clOrdID: Uuidm.t;
+      orderID: Uuidm.t;
+      origClOrdID: Uuidm.t option;
+      ordStatus: Fixtypes.OrdStatus.t option;
+      cxlRejReason: Fixtypes.CxlRejReason.t ;
+      cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
+    }
+  | OrderCancelBatchReject of {
+      batchID: Uuidm.t; text: string option
+    }
+  | Reject
+[@@deriving sexp,yojson]
 
-let parse_execution_report t =
+let parse t =
   match t.typ with
+  | Logout -> Logout
+  | Heartbeat -> Heartbeat (Field.Set.find_typ TestReqID t.fields)
   | ExecutionReport ->
-    let clOrdID =
-      Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
-    let orderID =
-      Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
-    let tradeID =
-      Field.Set.find_typ_bind TradeID t.fields ~f:Uuidm.of_string in
-    let symbol = Field.Set.find_typ Symbol t.fields in
-    let side = Field.Set.find_typ Side t.fields in
-    let lastQty = Field.Set.find_typ LastQty t.fields in
-    let price = Field.Set.find_typ Price t.fields in
-    let orderQty = Field.Set.find_typ OrderQty t.fields in
+    let clOrdID      = Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
+    let orderID      = Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
+    let tradeID      = Option.get (Field.Set.find_typ_bind TradeID t.fields ~f:Uuidm.of_string) in
+    let symbol       = Field.Set.find_typ_exn Symbol t.fields in
+    let side         = Field.Set.find_typ_exn Side t.fields in
+    let lastQty      = Field.Set.find_typ LastQty t.fields in
+    let price        = Field.Set.find_typ_exn Price t.fields in
+    let orderQty     = Field.Set.find_typ_exn OrderQty t.fields in
     let cashOrderQty = Field.Set.find_typ CashOrderQty t.fields in
-    let transactTime = Field.Set.find_typ TransactTime t.fields in
-    let ordStatus = Field.Set.find_typ OrdStatus t.fields in
-    let taker = Field.Set.find_typ AggressorIndicator t.fields in
+    let transactTime = Field.Set.find_typ_exn TransactTime t.fields in
+    let ordStatus    = Field.Set.find_typ_exn OrdStatus t.fields in
+    let taker        = Field.Set.find_typ_exn AggressorIndicator t.fields in
     let ordRejReason = Field.Set.find_typ OrdRejReason t.fields in
-    begin
-      match symbol, side, price, orderQty,
-            transactTime, ordStatus, tradeID, taker with
-      | Some symbol, Some side, Some price, Some orderQty,
-        Some transactTime, Some ordStatus, Some tradeID, Some taker ->
-        { clOrdID ; orderID ; symbol ; side ;
-          lastQty ; price ; orderQty ; cashOrderQty ; transactTime ;
-          ordStatus ; tradeID ; taker ; ordRejReason }
-      | _ -> invalid_arg "parse_execution_report"
-    end
-  | _ -> invalid_arg "not an ExecutionReport"
-
-type order_cancel_reject = {
-  clOrdID : Uuidm.t option ;
-  orderID : Uuidm.t option ;
-  origClOrderID : Uuidm.t option ;
-  ordStatus : Fixtypes.OrdStatus.t option ;
-  cxlRejReason : Fixtypes.CxlRejReason.t option ;
-  cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
-} [@@deriving sexp,yojson]
-
-let parse_order_cancel_reject t =
-  match t.typ with
+    ExecutionReport { clOrdID; orderID; tradeID; symbol; side; lastQty; price;
+                      orderQty; cashOrderQty; transactTime; ordStatus; taker; ordRejReason }
+  | NewOrderBatchReject ->
+    let batchID =
+      Option.get
+        (Field.Set.find_typ_bind BatchID t.fields ~f:Uuidm.of_string) in
+    let text = Field.Set.find_typ Text t.fields in
+    NewOrderBatchReject { batchID; text }
   | OrderCancelReject ->
-    let clOrdID =
-      Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
-    let orderID =
-      Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
-    let origClOrderID =
-      Field.Set.find_typ_bind OrigClOrdID t.fields ~f:Uuidm.of_string in
+    let clOrdID = Option.get (Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string) in
+    let orderID = Option.get (Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string) in
+    let origClOrdID = Field.Set.find_typ_bind OrigClOrdID t.fields ~f:Uuidm.of_string in
     let ordStatus = Field.Set.find_typ OrdStatus t.fields in
-    let cxlRejReason = Field.Set.find_typ CxlRejReason t.fields in
-    let cxlRejResponseTo = Field.Set.find_typ CxlRejResponseTo t.fields in
-    begin
-      match cxlRejResponseTo with
-      | None -> invalid_arg "parse_order_cancel_reject"
-      | Some cxlRejResponseTo ->
-        { clOrdID ; orderID ; origClOrderID ; ordStatus ;
-          cxlRejReason ; cxlRejResponseTo }
-    end
-  | _ -> invalid_arg "not an OrderCancelReject"
-
+    let cxlRejReason = Field.Set.find_typ_exn CxlRejReason t.fields in
+    let cxlRejResponseTo = Field.Set.find_typ_exn CxlRejResponseTo t.fields in
+    OrderCancelReject { clOrdID; orderID; origClOrdID;
+                        ordStatus; cxlRejReason; cxlRejResponseTo }
+  (* | OrderCancelBatchReject ->
+   * | Reject -> *)
+  | _ -> assert false
