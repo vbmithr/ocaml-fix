@@ -54,24 +54,27 @@ val cancel_order :
 val cancel_orders :
   Uuidm.t -> symbol:string -> (Uuidm.t * Uuidm.t option) list -> t
 
+type executionReport = {
+  clOrdID : Uuidm.t option ;
+  orderID : Uuidm.t option ;
+  symbol : string ;
+  execType : Fixtypes.ExecType.t ;
+  side : Fixtypes.Side.t ;
+  lastQty : float option ;
+  price : float option ;
+  orderQty : float ;
+  transactTime : Ptime.t option ;
+  ordStatus : Fixtypes.OrdStatus.t ;
+  ordRejReason : Fixtypes.OrdRejReason.t option ;
+  tradeID : Uuidm.t option ;
+  taker : bool option ;
+  text : string option ;
+} [@@deriving sexp,yojson]
+
 type t =
   | Logout
   | Heartbeat of string option
-  | ExecutionReport of {
-      clOrdID : Uuidm.t option ;
-      orderID : Uuidm.t option ;
-      symbol : string ;
-      side : Fixtypes.Side.t ;
-      lastQty : float option ;
-      price : float ;
-      orderQty : float ;
-      cashOrderQty : float option ;
-      transactTime : Ptime.t ;
-      ordStatus : Fixtypes.OrdStatus.t ;
-      ordRejReason : Fixtypes.OrdRejReason.t option ;
-      tradeID : Uuidm.t ;
-      taker : bool ;
-    }
+  | ExecutionReport of executionReport
   | NewOrderBatchReject of {
       batchID: Uuidm.t; text: string option
     }

@@ -205,26 +205,29 @@ let cancel_orders batchID ~symbol orders =
   Fix.create
     ~fields:[ BatchID.create (Uuidm.to_string batchID) ]
     ~groups:(NoOrders.create (List.length orders), orders)
-  Fixtypes.MsgType.OrderCancelBatchRequest
+    Fixtypes.MsgType.OrderCancelBatchRequest
+
+type executionReport = {
+  clOrdID : Uuidm.t option ;
+  orderID : Uuidm.t option ;
+  symbol : string ;
+  execType : Fixtypes.ExecType.t ;
+  side : Fixtypes.Side.t ;
+  lastQty : float option ;
+  price : float option ;
+  orderQty : float ;
+  transactTime : Ptime.t option ;
+  ordStatus : Fixtypes.OrdStatus.t ;
+  ordRejReason : Fixtypes.OrdRejReason.t option ;
+  tradeID : Uuidm.t option ;
+  taker : bool option ;
+  text: string option ;
+} [@@deriving sexp,yojson]
 
 type t =
   | Logout
   | Heartbeat of string option
-  | ExecutionReport of {
-      clOrdID : Uuidm.t option ;
-      orderID : Uuidm.t option ;
-      symbol : string ;
-      side : Fixtypes.Side.t ;
-      lastQty : float option ;
-      price : float ;
-      orderQty : float ;
-      cashOrderQty : float option ;
-      transactTime : Ptime.t ;
-      ordStatus : Fixtypes.OrdStatus.t ;
-      ordRejReason : Fixtypes.OrdRejReason.t option ;
-      tradeID : Uuidm.t ;
-      taker : bool ;
-    }
+  | ExecutionReport of executionReport
   | NewOrderBatchReject of {
       batchID: Uuidm.t; text: string option
     }
@@ -249,19 +252,20 @@ let parse t =
   | ExecutionReport ->
     let clOrdID      = Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
     let orderID      = Field.Set.find_typ_bind OrderID t.fields ~f:Uuidm.of_string in
-    let tradeID      = Option.get (Field.Set.find_typ_bind TradeID t.fields ~f:Uuidm.of_string) in
+    let tradeID      = Field.Set.find_typ_bind TradeID t.fields ~f:Uuidm.of_string in
     let symbol       = Field.Set.find_typ_exn Symbol t.fields in
     let side         = Field.Set.find_typ_exn Side t.fields in
     let lastQty      = Field.Set.find_typ LastQty t.fields in
-    let price        = Field.Set.find_typ_exn Price t.fields in
+    let price        = Field.Set.find_typ Price t.fields in
     let orderQty     = Field.Set.find_typ_exn OrderQty t.fields in
-    let cashOrderQty = Field.Set.find_typ CashOrderQty t.fields in
-    let transactTime = Field.Set.find_typ_exn TransactTime t.fields in
+    let transactTime = Field.Set.find_typ TransactTime t.fields in
     let ordStatus    = Field.Set.find_typ_exn OrdStatus t.fields in
-    let taker        = Field.Set.find_typ_exn AggressorIndicator t.fields in
+    let taker        = Field.Set.find_typ AggressorIndicator t.fields in
     let ordRejReason = Field.Set.find_typ OrdRejReason t.fields in
-    ExecutionReport { clOrdID; orderID; tradeID; symbol; side; lastQty; price;
-                      orderQty; cashOrderQty; transactTime; ordStatus; taker; ordRejReason }
+    let execType     = Field.Set.find_typ_exn ExecType t.fields in
+    let text         = Field.Set.find_typ Text t.fields in
+    ExecutionReport { clOrdID; orderID; tradeID; symbol; execType; side; lastQty; price;
+                      orderQty; transactTime; ordStatus; taker; ordRejReason; text }
   | NewOrderBatchReject ->
     let batchID =
       Option.get
