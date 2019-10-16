@@ -123,6 +123,7 @@ type _ typ += MDEntrySize : float typ
 type _ typ += MDEntryDate : Ptime.t typ
 
 type _ typ += ExecInst : ExecInst.t typ
+type _ typ += ExecType : ExecType.t typ
 type _ typ += CancelOrdersOnDisconnect : CancelOrdersOnDisconnect.t typ
 
 module NoRelatedSym : FIELD with type t := int

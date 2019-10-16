@@ -20,7 +20,7 @@ module type IOMIN = sig
   val t_of_sexp : Sexplib.Sexp.t -> t
   val sexp_of_t : t -> Sexplib.Sexp.t
   val parse : string -> (t, R.msg) result
-  val print : t -> string
+  val to_string : t -> string
 end
 
 module type IO = sig
@@ -380,7 +380,7 @@ module ExecType : sig
     | TradeInClearingHold
     | TradeReleasedToClearing
     | Triggered
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,bin_io]
   include IO with type t := t
 end
 
@@ -393,7 +393,8 @@ module OrdRejReason : sig
     | TooLateToEnter
     | UnknownOrder
     | DuplicateOrder
-  [@@deriving sexp,yojson]
+    | StaleOrder
+  [@@deriving sexp,yojson,bin_io]
   include IO with type t := t
 end
 

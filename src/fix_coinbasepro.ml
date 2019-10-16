@@ -43,7 +43,7 @@ module SelfTradePrevention = struct
       | "B" -> Ok CancelBothOrders
       | _ -> R.error_msg "invalid argument"
 
-    let print = function
+    let to_string = function
       | DecrementAndCancel -> "D"
       | CancelRestingOrder -> "O"
       | CancelIncomingOrder -> "N"

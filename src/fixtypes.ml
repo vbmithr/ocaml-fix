@@ -21,7 +21,7 @@ module type IOMIN = sig
   val t_of_sexp : Sexplib.Sexp.t -> t
   val sexp_of_t : t -> Sexplib.Sexp.t
   val parse : string -> (t, R.msg) result
-  val print : t -> string
+  val to_string : t -> string
 end
 
 module type IO = sig
@@ -35,7 +35,7 @@ end
 module Make (T : IOMIN) = struct
   open T
   let parse_exn s = R.failwith_error_msg (parse s)
-  let pp ppf v = Format.fprintf ppf "%s" (print v)
+  let pp ppf v = Format.fprintf ppf "%s" (to_string v)
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 end
@@ -199,7 +199,7 @@ module Date = struct
     type t = Ptime.date [@@deriving sexp,yojson]
 
     let parse = Ptime.date_of_string
-    let print = Ptime.string_of_date
+    let to_string = Ptime.string_of_date
   end
   include T
   include Make(T)
@@ -210,7 +210,7 @@ module TZTimeOnly = struct
     type t = Ptime.time [@@deriving sexp,yojson]
 
     let parse = Ptime.time_of_string
-    let print = Ptime.string_of_time
+    let to_string = Ptime.string_of_time
   end
   include T
   include Make(T)
@@ -273,7 +273,7 @@ module UserRequestType = struct
       | "4" -> Ok RequestStatus
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Logon          -> "1"
       | Logoff         -> "2"
       | ChangePassword -> "3"
@@ -307,7 +307,7 @@ module UserStatus = struct
       | "8" -> Ok SessionShutdownWarning
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | LoggedIn               -> "1"
       | LoggedOff              -> "2"
       | NotRecognized          -> "3"
@@ -335,7 +335,7 @@ module HandlInst = struct
       | "3" -> Ok Manual
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Private -> "1"
       | Public -> "2"
       | Manual -> "3"
@@ -382,7 +382,7 @@ module OrdStatus = struct
       | "E" -> Ok PendingReplace
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | New                -> "0"
       | PartiallyFilled    -> "1"
       | Filled             -> "2"
@@ -425,7 +425,7 @@ module PosReqType = struct
       | "6" -> Ok DeltaPositions
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Positions          -> "0"
       | Trades             -> "1"
       | Exercises          -> "2"
@@ -466,7 +466,7 @@ module MassStatusReqType = struct
       | "10" -> Ok UssuerOfUnderlyingSecurity
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Security                   -> "1"
       | UnderlyingSecurity         -> "2"
       | Product                    -> "3"
@@ -500,7 +500,7 @@ module PosReqResult = struct
       | "4" -> Ok Unsupported
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | ValidRequest     -> "0"
       | InvalidRequest   -> "1"
       | NoPositionsFound -> "2"
@@ -531,7 +531,7 @@ module OrdType = struct
       | "K" -> Ok LimitIfTouched
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Market        -> "1"
       | Limit         -> "2"
       | Stop          -> "3"
@@ -553,7 +553,8 @@ module OrdRejReason = struct
       | TooLateToEnter
       | UnknownOrder
       | DuplicateOrder
-    [@@deriving sexp,yojson]
+      | StaleOrder
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "0" -> Ok Broker
@@ -563,9 +564,10 @@ module OrdRejReason = struct
       | "4" -> Ok TooLateToEnter
       | "5" -> Ok UnknownOrder
       | "6" -> Ok DuplicateOrder
+      | "8" -> Ok StaleOrder
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Broker            -> "0"
       | UnknownSymbol     -> "1"
       | ExchangeClosed    -> "2"
@@ -573,7 +575,7 @@ module OrdRejReason = struct
       | TooLateToEnter    -> "4"
       | UnknownOrder      -> "5"
       | DuplicateOrder    -> "6"
-
+      | StaleOrder        -> "8"
   end
   include T
   include Make(T)
@@ -591,7 +593,7 @@ module PutOrCall = struct
       | "1" -> Ok Call
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Put -> "0"
       | Call -> "1"
   end
@@ -621,7 +623,7 @@ module EncryptMethod = struct
       | "6" -> Ok PEM_DES_MD5
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Other -> "0"
       | PKCS -> "1"
       | DES -> "2"
@@ -650,7 +652,7 @@ module ExecTransType = struct
       | "3" -> Ok Status
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | New     -> "0"
       | Cancel  -> "1"
       | Correct -> "2"
@@ -674,7 +676,7 @@ module SubscriptionRequestType = struct
       | "2" -> Ok Unsubscribe
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Snapshot -> "0"
       | Subscribe -> "1"
       | Unsubscribe -> "2"
@@ -695,7 +697,7 @@ module MDUpdateType = struct
       | "1" -> Ok Incremental
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Full -> "0"
       | Incremental -> "1"
   end
@@ -723,7 +725,7 @@ module MDUpdateAction = struct
       | "5" -> Ok Overlay
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | New -> "0"
       | Change -> "1"
       | Delete -> "2"
@@ -749,7 +751,7 @@ module MDEntryType = struct
       | "2" -> Ok Trade
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Bid -> "0"
       | Offer -> "1"
       | Trade -> "2"
@@ -770,7 +772,7 @@ module Side = struct
       | "2" -> Ok Sell
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Buy -> "1"
       | Sell -> "2"
   end
@@ -808,7 +810,7 @@ module TimeInForce = struct
       | "P" -> Ok PostOnly
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Session -> "0"
       | GoodTillCancel -> "1"
       | AtTheOpening -> "2"
@@ -834,7 +836,7 @@ module YesOrNo = struct
       | "N" -> Ok false
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | true -> "Y"
       | false -> "N"
   end
@@ -862,7 +864,7 @@ module SecurityListRequestType = struct
       | "5" -> Ok MarketID
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Symbol -> "0"
       | SecurityType -> "1"
       | Product -> "2"
@@ -884,7 +886,7 @@ module SecurityRequestResult = struct
       | "0" -> Ok Valid
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Valid -> "0"
 
   end
@@ -906,7 +908,7 @@ module SecurityType = struct
       | "INDEX" -> Ok Index
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Future -> "FUT"
       | Option -> "OPT"
       | Index -> "INDEX"
@@ -929,7 +931,7 @@ module QtyType = struct
       | "2" -> Ok UnitsPerTime
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Units -> "0"
       | Contracts -> "1"
       | UnitsPerTime -> "2"
@@ -956,7 +958,7 @@ module Version = struct
       | FIX  (major, minor) -> Format.fprintf ppf "FIX.%d.%d" major minor
       | FIXT (major, minor) -> Format.fprintf ppf "FIXT.%d.%d" major minor
 
-    let print t = Format.asprintf "%a" pp t
+    let to_string t = Format.asprintf "%a" pp t
 
     let to_yojson t = `String (Format.asprintf "%a" pp t)
 
@@ -1056,7 +1058,7 @@ module MsgType = struct
     try Ok (parse_exn s)
     with Invalid_argument msg -> R.error_msg msg
 
-  let print = function
+  let to_string = function
     | Heartbeat                     -> "0"
     | TestRequest                   -> "1"
     | ResendRequest                 -> "2"
@@ -1091,7 +1093,7 @@ module MsgType = struct
     | OrderCancelBatchReject        -> "U5"
 
   let pp ppf t =
-    Format.fprintf ppf "%s" (print t)
+    Format.fprintf ppf "%s" (to_string t)
 end
 
 module SessionRejectReason = struct
@@ -1151,7 +1153,7 @@ module SessionRejectReason = struct
 
   let parse_exn s = R.failwith_error_msg (parse s)
 
-  let print t = string_of_int (to_int t)
+  let to_string t = string_of_int (to_int t)
 
   let pp ppf t = Format.pp_print_int ppf (to_int t)
 end
@@ -1181,7 +1183,7 @@ module ExecType = struct
       | TradeInClearingHold
       | TradeReleasedToClearing
       | Triggered
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,bin_io]
 
     let parse = function
       | "0" -> Ok New
@@ -1208,7 +1210,7 @@ module ExecType = struct
       | "L" -> Ok Triggered
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | New                     -> "0"
       | PartialFill             -> "1"
       | Fill                    -> "2"
@@ -1253,7 +1255,7 @@ module MiscFeeType = struct
       | "4" -> Ok ExchangeFees
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | Regulatory      -> "1"
       | Tax             -> "2"
       | LocalCommission -> "3"
@@ -1279,7 +1281,7 @@ module CxlRejReason = struct
       | "3" -> Ok PendingCancelOrReplace
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | TooLateToCancel        -> "0"
       | UnknownOrder           -> "1"
       | BrokerExchangeOption   -> "2"
@@ -1301,7 +1303,7 @@ module CxlRejResponseTo = struct
       | "2" -> Ok OrderReplaceRequest
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | OrderCancelRequest  -> "1"
       | OrderReplaceRequest -> "2"
   end
@@ -1319,7 +1321,7 @@ module ExecInst = struct
       | "E" -> Ok DoNotIncrease
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | DoNotIncrease  -> "E"
   end
   include T
@@ -1338,7 +1340,7 @@ module CancelOrdersOnDisconnect = struct
       | "S" -> Ok Session
       | _ -> R.error_msg "invalid argument"
 
-    let print = function
+    let to_string = function
       | All -> "Y"
       | Session -> "S"
   end
@@ -1360,7 +1362,7 @@ module LastLiquidityInd = struct
       | "3" -> Ok LiquidityRoutedOut
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | AddedLiquidity  -> "1"
       | RemovedLiquidity -> "2"
       | LiquidityRoutedOut -> "3"
@@ -1385,7 +1387,7 @@ module TickDirection = struct
       | "3" -> Ok ZeroMinusTick
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | PlusTick -> "0"
       | ZeroPlusTick -> "1"
       | MinusTick -> "2"
@@ -1421,7 +1423,7 @@ module PegPriceType = struct
       | "9" -> Ok PegToLimitPrice
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | LastPeg         -> "1"
       | MidPricePeg     -> "2"
       | OpeningPeg      -> "3"
@@ -1452,7 +1454,7 @@ module ContingencyType = struct
       | "4" -> Ok OUOP
       | _ -> R.error_msg "unknown code"
 
-    let print = function
+    let to_string = function
       | OCO -> "1"
       | OTO -> "2"
       | OUOA -> "3"

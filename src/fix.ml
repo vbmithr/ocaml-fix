@@ -74,7 +74,7 @@ let serialize t
       match ts with
       | None -> fields
       | Some ts -> Field.Set.add (Field.SendingTime.create ts) fields in
-    add_field k "35" @@ MsgType.print typ ;
+    add_field k "35" @@ MsgType.to_string typ ;
     add_field k "49" sid ;
     add_field k "56" tid ;
     add_field k "34" (string_of_int seqnum) ;
@@ -96,7 +96,7 @@ let serialize t
     end
   in
   inner () ;
-  add_field (fun e _ s -> sum := !sum + s ; e ()) "8" (Version.print version) ;
+  add_field (fun e _ s -> sum := !sum + s ; e ()) "8" (Version.to_string version) ;
   add_field (fun e _ s -> sum := !sum + s ; e ()) "9" (String.of_int !len) ;
   add_field k "10" (Printf.sprintf "%03d" (!sum mod 256)) ;
   List.fold_right (fun e () -> e ()) !effects ()

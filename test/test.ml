@@ -1,10 +1,10 @@
 open Fixtypes
 
 let date () =
-  ignore (Date.print (0, 0, 0))
+  ignore (Date.to_string (0, 0, 0))
 
 let time () =
-  ignore (TZTimeOnly.print ((0, 0, 0), 0))
+  ignore (TZTimeOnly.to_string ((0, 0, 0), 0))
 
 let types = [
   "date", `Quick, date ;
