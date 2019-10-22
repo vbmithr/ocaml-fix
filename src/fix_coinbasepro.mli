@@ -72,7 +72,9 @@ type executionReport = {
 } [@@deriving sexp,yojson]
 
 type t =
+  | Logon
   | Logout
+  | TestRequest of string
   | Heartbeat of string option
   | ExecutionReport of executionReport
   | NewOrderBatchReject of {

@@ -225,7 +225,9 @@ type executionReport = {
 } [@@deriving sexp,yojson]
 
 type t =
+  | Logon
   | Logout
+  | TestRequest of string
   | Heartbeat of string option
   | ExecutionReport of executionReport
   | NewOrderBatchReject of {
@@ -247,7 +249,9 @@ type t =
 
 let parse t =
   match t.typ with
+  | Logon -> Logon
   | Logout -> Logout
+  | TestRequest -> TestRequest (Field.Set.find_typ_exn TestReqID t.fields)
   | Heartbeat -> Heartbeat (Field.Set.find_typ TestReqID t.fields)
   | ExecutionReport ->
     let clOrdID      = Field.Set.find_typ_bind ClOrdID t.fields ~f:Uuidm.of_string in
@@ -281,6 +285,4 @@ let parse t =
     let cxlRejResponseTo = Field.Set.find_typ_exn CxlRejResponseTo t.fields in
     OrderCancelReject { clOrdID; orderID; origClOrdID;
                         ordStatus; cxlRejReason; cxlRejResponseTo }
-  (* | OrderCancelBatchReject ->
-   * | Reject -> *)
-  | _ -> assert false
+  | _ -> Format.kasprintf invalid_arg "received %a" Fixtypes.MsgType.pp t.typ
