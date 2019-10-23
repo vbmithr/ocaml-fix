@@ -30,6 +30,9 @@ val logon_fields :
 val testreq : testreqid:string -> t
 val order_status_request : Uuidm.t -> t
 
+val supported_timeInForces : TimeInForce.t list
+val supported_ordTypes : OrdType.t list
+
 val new_order_fields :
   ?selfTradePrevention:SelfTradePrevention.t ->
   ?timeInForce:TimeInForce.t ->

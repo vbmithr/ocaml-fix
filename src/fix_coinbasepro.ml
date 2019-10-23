@@ -128,18 +128,18 @@ let order_status_request orderID =
   ] in
   Fix.create ~fields Fixtypes.MsgType.OrderStatusRequest
 
-let check_timeInForce = function
-  | Fixtypes.TimeInForce.GoodTillCancel
-  | ImmediateOrCancel
-  | FillOrKill
-  | PostOnly -> ()
-  | _ -> invalid_arg "timeInForce not supported by Coinbasepro"
+let supported_timeInForces = [
+  Fixtypes.TimeInForce.GoodTillCancel ;
+  ImmediateOrCancel ;
+  FillOrKill ;
+  PostOnly ;
+]
 
-let check_ordType = function
-  | Fixtypes.OrdType.Market
-  | Limit
-  | StopLimit -> ()
-  | _ -> invalid_arg "ordType not supported by Coinbasepro"
+let supported_ordTypes = [
+  Fixtypes.OrdType.Market ;
+  Limit ;
+  StopLimit ;
+]
 
 let new_order_fields
     ?selfTradePrevention
@@ -151,8 +151,9 @@ let new_order_fields
     ~qty
     ~symbol
     clOrdID =
-  check_timeInForce timeInForce ;
-  check_ordType ordType ;
+  if not List.(mem timeInForce supported_timeInForces &&
+               mem ordType supported_ordTypes) then
+    invalid_arg "unsupported tif or ordType" ;
   List.filter_map (fun a -> a) [
     Option.some @@ Field.HandlInst.create Private ;
     Option.some @@ Field.ClOrdID.create (Uuidm.to_string clOrdID) ;
