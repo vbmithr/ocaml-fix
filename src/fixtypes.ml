@@ -30,6 +30,7 @@ module type IO = sig
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
+  val encoding : t Json_encoding.encoding
 end
 
 module Make (T : IOMIN) = struct
@@ -38,6 +39,8 @@ module Make (T : IOMIN) = struct
   let pp ppf v = Format.fprintf ppf "%s" (to_string v)
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+  let encoding =
+    Json_encoding.(conv to_string parse_exn string)
 end
 
 let of_yojson_string ~f = function
@@ -979,183 +982,179 @@ module Version = struct
 end
 
 module MsgType = struct
-  type t =
-    | Heartbeat
-    | TestRequest
-    | ResendRequest
-    | Reject
-    | SequenceReset
-    | Logout
-    | IOI
-    | Advertisement
-    | ExecutionReport
-    | OrderCancelReject
-    | Logon
-    | NewOrderSingle
-    | NewOrderList
-    | OrderCancelRequest
-    | OrderCancelReplaceRequest
-    | OrderStatusRequest
-    | MarketDataRequest
-    | MarketDataSnapshotFullRefresh
-    | MarketDataIncrementalRefresh
-    | MarketDataRequestReject
-    | SecurityListRequest
-    | SecurityList
-    | DerivativeSecurityListRequest
-    | OrderMassStatusRequest
-    | RequestForPositions
-    | PositionReport
-    | UserRequest
-    | UserResponse
+  module T = struct
+    type t =
+      | Heartbeat
+      | TestRequest
+      | ResendRequest
+      | Reject
+      | SequenceReset
+      | Logout
+      | IOI
+      | Advertisement
+      | ExecutionReport
+      | OrderCancelReject
+      | Logon
+      | NewOrderSingle
+      | NewOrderList
+      | OrderCancelRequest
+      | OrderCancelReplaceRequest
+      | OrderStatusRequest
+      | MarketDataRequest
+      | MarketDataSnapshotFullRefresh
+      | MarketDataIncrementalRefresh
+      | MarketDataRequestReject
+      | SecurityListRequest
+      | SecurityList
+      | DerivativeSecurityListRequest
+      | OrderMassStatusRequest
+      | RequestForPositions
+      | PositionReport
+      | UserRequest
+      | UserResponse
 
-    | NewOrderBatch
-    | NewOrderBatchReject
+      | NewOrderBatch
+      | NewOrderBatchReject
 
-    | OrderCancelBatchRequest
-    | OrderCancelBatchReject
-  [@@deriving sexp,yojson]
+      | OrderCancelBatchRequest
+      | OrderCancelBatchReject
+    [@@deriving sexp,yojson]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
+    let parse_exn = function
+      | "0" -> Heartbeat
+      | "1" -> TestRequest
+      | "2" -> ResendRequest
+      | "3" -> Reject
+      | "4" -> SequenceReset
+      | "5" -> Logout
+      | "6" -> IOI
+      | "7" -> Advertisement
+      | "8" -> ExecutionReport
+      | "9" -> OrderCancelReject
+      | "A" -> Logon
+      | "D" -> NewOrderSingle
+      | "E" -> NewOrderList
+      | "F" -> OrderCancelRequest
+      | "G" -> OrderCancelReplaceRequest
+      | "H" -> OrderStatusRequest
+      | "V" -> MarketDataRequest
+      | "W" -> MarketDataSnapshotFullRefresh
+      | "X" -> MarketDataIncrementalRefresh
+      | "Y" -> MarketDataRequestReject
+      | "x" -> SecurityListRequest
+      | "y" -> SecurityList
+      | "z" -> DerivativeSecurityListRequest
+      | "AF" -> OrderMassStatusRequest
+      | "AN" -> RequestForPositions
+      | "AP" -> PositionReport
+      | "BE" -> UserRequest
+      | "BF" -> UserResponse
+      | "U6" -> NewOrderBatch
+      | "U7" -> NewOrderBatchReject
+      | "U4" -> OrderCancelBatchRequest
+      | "U5" -> OrderCancelBatchReject
+      | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
 
-  let parse_exn = function
-    | "0" -> Heartbeat
-    | "1" -> TestRequest
-    | "2" -> ResendRequest
-    | "3" -> Reject
-    | "4" -> SequenceReset
-    | "5" -> Logout
-    | "6" -> IOI
-    | "7" -> Advertisement
-    | "8" -> ExecutionReport
-    | "9" -> OrderCancelReject
-    | "A" -> Logon
-    | "D" -> NewOrderSingle
-    | "E" -> NewOrderList
-    | "F" -> OrderCancelRequest
-    | "G" -> OrderCancelReplaceRequest
-    | "H" -> OrderStatusRequest
-    | "V" -> MarketDataRequest
-    | "W" -> MarketDataSnapshotFullRefresh
-    | "X" -> MarketDataIncrementalRefresh
-    | "Y" -> MarketDataRequestReject
-    | "x" -> SecurityListRequest
-    | "y" -> SecurityList
-    | "z" -> DerivativeSecurityListRequest
-    | "AF" -> OrderMassStatusRequest
-    | "AN" -> RequestForPositions
-    | "AP" -> PositionReport
-    | "BE" -> UserRequest
-    | "BF" -> UserResponse
-    | "U6" -> NewOrderBatch
-    | "U7" -> NewOrderBatchReject
-    | "U4" -> OrderCancelBatchRequest
-    | "U5" -> OrderCancelBatchReject
-    | s -> invalid_arg ("MsgType: unknown msg type " ^ s)
+    let parse s =
+      try Ok (parse_exn s)
+      with Invalid_argument msg -> R.error_msg msg
 
-  let parse s =
-    try Ok (parse_exn s)
-    with Invalid_argument msg -> R.error_msg msg
-
-  let to_string = function
-    | Heartbeat                     -> "0"
-    | TestRequest                   -> "1"
-    | ResendRequest                 -> "2"
-    | Reject                        -> "3"
-    | SequenceReset                 -> "4"
-    | Logout                        -> "5"
-    | IOI                           -> "6"
-    | Advertisement                 -> "7"
-    | ExecutionReport               -> "8"
-    | OrderCancelReject             -> "9"
-    | Logon                         -> "A"
-    | NewOrderSingle                -> "D"
-    | NewOrderList                  -> "E"
-    | OrderCancelRequest            -> "F"
-    | OrderCancelReplaceRequest     -> "G"
-    | OrderStatusRequest            -> "H"
-    | MarketDataRequest             -> "V"
-    | MarketDataSnapshotFullRefresh -> "W"
-    | MarketDataIncrementalRefresh  -> "X"
-    | MarketDataRequestReject       -> "Y"
-    | SecurityListRequest           -> "x"
-    | SecurityList                  -> "y"
-    | DerivativeSecurityListRequest -> "z"
-    | OrderMassStatusRequest        -> "AF"
-    | RequestForPositions           -> "AN"
-    | PositionReport                -> "AP"
-    | UserRequest                   -> "BE"
-    | UserResponse                  -> "BF"
-    | NewOrderBatch                 -> "U6"
-    | NewOrderBatchReject           -> "U7"
-    | OrderCancelBatchRequest       -> "U4"
-    | OrderCancelBatchReject        -> "U5"
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (to_string t)
+    let to_string = function
+      | Heartbeat                     -> "0"
+      | TestRequest                   -> "1"
+      | ResendRequest                 -> "2"
+      | Reject                        -> "3"
+      | SequenceReset                 -> "4"
+      | Logout                        -> "5"
+      | IOI                           -> "6"
+      | Advertisement                 -> "7"
+      | ExecutionReport               -> "8"
+      | OrderCancelReject             -> "9"
+      | Logon                         -> "A"
+      | NewOrderSingle                -> "D"
+      | NewOrderList                  -> "E"
+      | OrderCancelRequest            -> "F"
+      | OrderCancelReplaceRequest     -> "G"
+      | OrderStatusRequest            -> "H"
+      | MarketDataRequest             -> "V"
+      | MarketDataSnapshotFullRefresh -> "W"
+      | MarketDataIncrementalRefresh  -> "X"
+      | MarketDataRequestReject       -> "Y"
+      | SecurityListRequest           -> "x"
+      | SecurityList                  -> "y"
+      | DerivativeSecurityListRequest -> "z"
+      | OrderMassStatusRequest        -> "AF"
+      | RequestForPositions           -> "AN"
+      | PositionReport                -> "AP"
+      | UserRequest                   -> "BE"
+      | UserResponse                  -> "BF"
+      | NewOrderBatch                 -> "U6"
+      | NewOrderBatchReject           -> "U7"
+      | OrderCancelBatchRequest       -> "U4"
+      | OrderCancelBatchReject        -> "U5"
+  end
+  include T
+  include Make(T)
 end
 
 module SessionRejectReason = struct
-  type t =
-    | InvalidTag
-    | MissingTag
-    | TagNotDefinedForThisMessage
-    | UndefinedTag
-    | TagWithoutValue
-    | TagValueIncorrect
-    | IncorrectData
-    | DecryptionProblem
-    | SignatureProblem
-    | CompIDProblem
-    | SendingTimeAccuracy
-    | InvalidMsgType
-    | XMLValidationError
-    | InvalidVersion
-    | Other
-  [@@deriving sexp,yojson]
+  module T = struct
+    type t =
+      | InvalidTag
+      | MissingTag
+      | TagNotDefinedForThisMessage
+      | UndefinedTag
+      | TagWithoutValue
+      | TagValueIncorrect
+      | IncorrectData
+      | DecryptionProblem
+      | SignatureProblem
+      | CompIDProblem
+      | SendingTimeAccuracy
+      | InvalidMsgType
+      | XMLValidationError
+      | InvalidVersion
+      | Other
+    [@@deriving sexp,yojson]
 
-  let pp_sexp ppf t =
-    Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
 
-  let of_int_exn = function
-    | 0 -> InvalidTag
-    | 1 -> MissingTag
-    | 2 -> TagNotDefinedForThisMessage
-    | 3 -> UndefinedTag
-    | _ -> invalid_arg "SessionRejectReason.of_int"
+    let of_int_exn = function
+      | 0 -> InvalidTag
+      | 1 -> MissingTag
+      | 2 -> TagNotDefinedForThisMessage
+      | 3 -> UndefinedTag
+      | _ -> invalid_arg "SessionRejectReason.of_int"
 
-  let of_int i =
-    try Ok (of_int_exn i)
-    with Invalid_argument msg -> R.error_msg msg
+    let of_int i =
+      try Ok (of_int_exn i)
+      with Invalid_argument msg -> R.error_msg msg
 
-  let to_int = function
-    | InvalidTag -> 0
-    | MissingTag -> 1
-    | TagNotDefinedForThisMessage -> 2
-    | UndefinedTag -> 3
-    | TagWithoutValue -> 4
-    | TagValueIncorrect -> 5
-    | IncorrectData -> 6
-    | DecryptionProblem -> 7
-    | SignatureProblem -> 8
-    | CompIDProblem -> 9
-    | SendingTimeAccuracy -> 10
-    | InvalidMsgType -> 11
-    | XMLValidationError -> 12
-    | InvalidVersion -> 18
-    | Other -> 99
+    let to_int = function
+      | InvalidTag -> 0
+      | MissingTag -> 1
+      | TagNotDefinedForThisMessage -> 2
+      | UndefinedTag -> 3
+      | TagWithoutValue -> 4
+      | TagValueIncorrect -> 5
+      | IncorrectData -> 6
+      | DecryptionProblem -> 7
+      | SignatureProblem -> 8
+      | CompIDProblem -> 9
+      | SendingTimeAccuracy -> 10
+      | InvalidMsgType -> 11
+      | XMLValidationError -> 12
+      | InvalidVersion -> 18
+      | Other -> 99
 
-  let parse s =
-    match int_of_string_opt s with
-    | None -> R.error_msg "not an int"
-    | Some i -> of_int i
+    let parse s =
+      match int_of_string_opt s with
+      | None -> R.error_msg "not an int"
+      | Some i -> of_int i
 
-  let parse_exn s = R.failwith_error_msg (parse s)
-
-  let to_string t = string_of_int (to_int t)
-
-  let pp ppf t = Format.pp_print_int ppf (to_int t)
+    let to_string t = string_of_int (to_int t)
+  end
+  include T
+  include Make(T)
 end
 
 module ExecType = struct

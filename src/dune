@@ -3,7 +3,7 @@
  (public_name fixtypes)
  (modules fixtypes)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries bin_prot rresult astring ptime sexplib tyre))
+ (libraries ocplib-json-typed bin_prot rresult astring ptime sexplib tyre))
 
 (library
  (name fix)

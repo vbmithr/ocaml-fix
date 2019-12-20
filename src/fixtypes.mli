@@ -28,6 +28,7 @@ module type IO = sig
   val parse_exn : string -> t
   val pp : Format.formatter -> t -> unit
   val pp_sexp : Format.formatter -> t -> unit
+  val encoding : t Json_encoding.encoding
 end
 
 module Make (T : IOMIN) : sig
