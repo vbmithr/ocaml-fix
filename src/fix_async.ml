@@ -66,12 +66,11 @@ type st = {
   logon_ts:Ptime.t option;
   closed: unit Ivar.t ;
   do_cleanup: unit Ivar.t ;
-  calibrator: Time_stamp_counter.Calibrator.t ;
   condition: status Condition.t ;
   mutable status: status ;
   mutable history: Fix.t BoundedIntMap.t ;
-  mutable last_received: Time_stamp_counter.t ;
-  mutable last_sent: Time_stamp_counter.t ;
+  mutable last_received: Time_ns.t ;
+  mutable last_sent: Time_ns.t ;
   mutable count: int ;
 }
 and status = [
@@ -90,10 +89,9 @@ let create_st
   do_cleanup = Ivar.create () ;
   condition = Condition.create () ;
   status = `Connected ;
-  calibrator = Lazy.force Time_stamp_counter.calibrator ;
   history = BoundedIntMap.empty history_size ;
-  last_received = Time_stamp_counter.now () ;
-  last_sent = Time_stamp_counter.now () ;
+  last_received = Time_ns.epoch ;
+  last_sent = Time_ns.epoch ;
   count = 1 ;
 }
 
@@ -113,20 +111,18 @@ let ptime_of_time_ns t =
   to_float |> Ptime.of_float_s
 
 let send_msg
-    (({ calibrator; last_sent; count;
+    (({ last_sent; count;
         logon_ts; w; version; sid; tid; status; _ } as st)) msg =
   match status, msg.typ with
   | `Connected, Logon
   | `Closing, Logout
   | `Authenticated, _ ->
-    st.last_sent <- Time_stamp_counter.now () ;
+    st.last_sent <- Time_ns.now () ;
     let ts = begin
       match msg.typ, logon_ts with
       | Logon, Some ts -> Some ts
       | _, None -> None
-      | _, Some _ ->
-        ptime_of_time_ns
-          (Time_stamp_counter.to_time_ns ~calibrator last_sent)
+      | _, Some _ -> ptime_of_time_ns last_sent
     end in
     let msg = { msg with version; sid; tid; seqnum = count ; ts } in
     st.history <- BoundedIntMap.add st.history ~key:count ~data:msg ;
@@ -135,7 +131,7 @@ let send_msg
   | _ -> Deferred.Or_error.ok_unit
 
 let filter_messages st process_w m =
-  st.last_received <- Time_stamp_counter.now () ;
+  st.last_received <- Time_ns.now () ;
   match m.typ, st.status with
   | Logon, `Connected ->
     st.status <- `Authenticated ;
@@ -171,42 +167,33 @@ let filter_messages st process_w m =
     Pipe.write_if_open process_w m
   | _ -> assert false
 
-let watchdog ({ calibrator; last_received; last_sent;
+let watchdog ({ last_received; last_sent;
                 do_cleanup; heartbeat; status; _ } as st) =
   match status with
   | `Connected
   | `Closing
   | `Closed -> Deferred.Or_error.ok_unit
   | `Authenticated ->
-    let hb = Time_ns.Span.to_int63_ns heartbeat in
-    let now = Time_stamp_counter.now () in
-    let span_last_received =
-      Time_stamp_counter.Span.to_ns
-        ~calibrator (Time_stamp_counter.diff now last_received) in
-    let span_last_sent =
-      Time_stamp_counter.Span.to_ns
-        ~calibrator (Time_stamp_counter.diff now last_sent) in
+    let now = Time_ns.now () in
+    let span_last_received = Time_ns.diff now last_received in
+    let span_last_sent = Time_ns.diff now last_sent in
     let open Int63 in
     Log_async.debug begin fun m ->
-      m "watchdog %a %a" pp span_last_received pp span_last_sent
+      m "watchdog %a %a"
+        Time_ns.Span.pp span_last_received
+        Time_ns.Span.pp span_last_sent
     end >>= fun () ->
-    if span_last_received > of_int 2 * hb then begin
+    if Time_ns.Span.(span_last_received > scale_int heartbeat 2) then begin
       Ivar.fill_if_empty do_cleanup () ;
       Deferred.Or_error.ok_unit
     end
-    else if span_last_received > hb then
-      if span_last_sent > hb then
+    else if Time_ns.Span.(span_last_received > heartbeat) then
+      if Time_ns.Span.(span_last_sent > heartbeat) then
         send_msg st (Fix.heartbeat ())
       else
         send_msg st (Fix.create Fixtypes.MsgType.TestRequest)
     else
       Deferred.Or_error.ok_unit
-
-let start_calibration { calibrator; do_cleanup; _ } =
-  Clock_ns.every (Time_ns.Span.of_int_sec 60)
-    (fun () -> Time_stamp_counter.Calibrator.calibrate calibrator)
-    ~stop:(Ivar.read do_cleanup)
-    ~continue_on_error:false
 
 let connect
     ?(history_size=10)
@@ -219,7 +206,6 @@ let connect
   connect uri >>= fun (r, w) ->
   let st = create_st ?heartbeat ?logon_ts ?logon_fields
       ~history_size ~sid ~tid version r w in
-  start_calibration st ;
   send_msg st (logon st) >>=? fun () ->
   Clock_ns.every' (Time_ns.Span.of_int_sec 5)
     (fun () -> Deferred.Or_error.ok_exn (watchdog st))
