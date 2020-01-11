@@ -71,7 +71,7 @@ let main sandbox cfg =
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~passphrase ~logon_ts in
-  Fix_async.EZ.with_connection
+  Fix_async.with_connection
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version ~logon_fields url
