@@ -74,10 +74,3 @@ let connect ?(stream=Faraday.create 4096) uri =
     ] >>= cleanup r w
   end ;
   client_read, client_write
-
-let with_connection ?stream url ~f =
-  connect ?stream url >>=? fun (r, w) ->
-  Monitor.protect (fun () -> f r w)
-    ~finally:begin fun () ->
-      Pipe.close w ; Pipe.close_read r ; Deferred.unit
-    end
