@@ -216,7 +216,7 @@ let connect
     ~sid
     ~tid
     ~version uri =
-  connect uri >>=? fun (r, w) ->
+  connect uri >>= fun (r, w) ->
   let st = create_st ?heartbeat ?logon_ts ?logon_fields
       ~history_size ~sid ~tid version r w in
   start_calibration st ;

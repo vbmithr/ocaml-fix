@@ -4,22 +4,21 @@ open Async
 open Fix
 
 let src = Logs.Src.create "fix.async"
+module Log = (val Logs.src_log src : Logs.LOG)
 module Log_async = (val Logs_async.src_log src : Logs_async.LOG)
 
-let write_iovec w iovec =
-  List.fold_left iovec ~init:0 ~f:begin fun a { Faraday.buffer ; off ; len } ->
-    Writer.write_bigstring w buffer ~pos:off ~len ;
-    a+len
-  end
+let write_iovecs w iovecs =
+  let nbWritten =
+    List.fold_left iovecs ~init:0 ~f:begin fun a ({ Faraday.len; _ } as iovec) ->
+      Writer.schedule_iovec w (Obj.magic iovec) ;
+      a+len
+    end in
+  `Ok nbWritten
 
-let rec flush stream w =
-  match Faraday.operation stream with
-  | `Close -> raise Exit
-  | `Yield -> Deferred.unit
-  | `Writev iovecs ->
-    let nb_written = write_iovec w iovecs  in
-    Faraday.shift stream nb_written ;
-    flush stream w
+let flush stream w =
+  Faraday_async.serialize stream
+    ~yield:(fun _ -> Scheduler.yield ())
+    ~writev:(fun iovecs -> return (write_iovecs w iovecs))
 
 let parse_f fields msg_write = function
   | Error e -> Error.raise e
@@ -43,34 +42,41 @@ let parse_f fields msg_write = function
             Log_async.debug (fun m -> m "<- %a" pp msg) >>= fun () ->
             Pipe.write msg_write msg
 
-let run stream msg_read msg_write r w =
-  don't_wait_for begin
-    Pipe.iter msg_read ~f:begin fun msg ->
-      Fix.serialize stream msg ;
-      flush stream w >>= fun () ->
-      Log_async.debug (fun m -> m "-> %a" Fix.pp msg)
+let mk_client_write ~monitor w =
+  Pipe.create_writer begin fun r ->
+    Scheduler.within' ~monitor begin fun () ->
+      Pipe.iter r ~f:begin fun msg ->
+        let stream = Faraday.create 256 in
+        Fix.serialize stream msg ;
+        Faraday.close stream ;
+        flush stream w >>= fun () ->
+        Log_async.debug (fun m -> m "-> %a" Fix.pp msg)
+      end
     end
-  end ;
-  let fields = ref [] in
-  let prsr = Angstrom.lift
-      (R.reword_error (function `Msg m -> Error.of_string m)) Field.parser in
-  Deferred.Result.map_error ~f:Error.of_string
-    (Angstrom_async.parse_many prsr (parse_f fields msg_write) r)
+  end
 
-let connect ?(stream=Faraday.create 4096) uri =
-  let client_read, msg_write = Pipe.create () in
-  let msg_read, client_write = Pipe.create () in
-  let cleanup r w _ =
-    Log_async.warn (fun m -> m "connect: cleaning up") >>= fun () ->
-    Pipe.close_read msg_read ;
-    Pipe.close msg_write ;
-    Deferred.any_unit [ Reader.close r ; Writer.close w ] in
-  Monitor.try_with_or_error
-    (fun () -> Async_uri.connect uri) >>|? fun (_, _, r, w) ->
-  don't_wait_for begin
-    Deferred.any [
-      (Pipe.closed client_write >>= fun () -> Deferred.Or_error.ok_unit) ;
-      run stream msg_read msg_write r w ;
-    ] >>= cleanup r w
-  end ;
-  client_read, client_write
+let mk_client_read ~monitor r =
+  Pipe.create_reader ~close_on_exception:false begin fun w ->
+    Scheduler.within' ~monitor begin fun () ->
+      let fields = ref [] in
+      let prsr = Angstrom.lift
+          (R.reword_error (function `Msg m -> Error.of_string m)) Field.parser in
+      Deferred.Or_error.ok_exn @@
+      Deferred.Result.map_error ~f:Error.of_string
+        (Angstrom_async.parse_many prsr (parse_f fields w) r)
+    end
+  end
+
+let connect uri =
+  Async_uri.connect uri >>= fun (_, _, r, w) ->
+  let monitor = Monitor.create () in
+  let client_read = mk_client_read ~monitor r in
+  let client_write = mk_client_write ~monitor w in
+  let log_exn exn = Log.err (fun m -> m "%a" Exn.pp exn) in
+  Monitor.detach_and_iter_errors monitor ~f:log_exn ;
+  Monitor.detach_and_iter_errors (Writer.monitor w) ~f:log_exn ;
+  don't_wait_for (Deferred.all_unit Pipe.[closed client_read;
+                                          closed client_write] >>= fun () ->
+                  Writer.close w >>= fun () ->
+                  Reader.close r) ;
+  return (client_read, client_write)
