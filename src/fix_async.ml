@@ -39,21 +39,26 @@ module T = struct
   type t = {
     r: Fix.t Pipe.Reader.t ;
     w: Fix.t Pipe.Writer.t ;
-    closed: unit Deferred.t ;
   }
   module Address = struct
     include Uri_sexp
     let equal = Uri.equal
   end
 
-  let is_closed { r; _ } = Pipe.is_closed r
-  let close { r; w; closed } =
-    Pipe.close w ; Pipe.close_read r ; closed
-  let close_finished { closed; _ } = closed
+  let create r w = { r; w }
+
+  let is_closed { r; w } =
+    Pipe.(is_closed r && is_closed w)
+
+  let close { r; w } =
+    Pipe.close w ;
+    Pipe.close_read r ;
+    Deferred.unit
+
+  let close_finished { r; w } =
+    Deferred.all_unit [Pipe.closed r ; Pipe.closed w]
 end
 include T
-
-let create r w closed = { r; w; closed }
 
 type st = {
   r : Fix.t Pipe.Reader.t ;
@@ -65,7 +70,6 @@ type st = {
   logon_fields: Fix.Field.t list;
   logon_ts:Ptime.t option;
   closed: unit Ivar.t ;
-  do_cleanup: unit Ivar.t ;
   condition: status Condition.t ;
   mutable status: status ;
   mutable history: Fix.t BoundedIntMap.t ;
@@ -86,7 +90,6 @@ let create_st
     ~history_size ~sid ~tid version r w = {
   r; w; heartbeat; logon_fields; logon_ts; sid; tid; version;
   closed = Ivar.create () ;
-  do_cleanup = Ivar.create () ;
   condition = Condition.create () ;
   status = `Connected ;
   history = BoundedIntMap.empty history_size ;
@@ -127,25 +130,31 @@ let send_msg
     let msg = { msg with version; sid; tid; seqnum = count ; ts } in
     st.history <- BoundedIntMap.add st.history ~key:count ~data:msg ;
     st.count <- succ st.count ;
-    Monitor.try_with_or_error (fun () -> Pipe.write w msg)
-  | _ -> Deferred.Or_error.ok_unit
+    Pipe.write w msg
+  | _ -> Deferred.unit
 
-let filter_messages st process_w m =
+let mk_client_write ~monitor st =
+  Pipe.create_writer begin fun r ->
+    Scheduler.within' ~monitor
+      (fun () -> Pipe.iter r ~f:(fun m -> send_msg st m))
+  end
+
+let filter_messages st w m =
   st.last_received <- Time_ns.now () ;
   match m.typ, st.status with
   | Logon, `Connected ->
     st.status <- `Authenticated ;
     Condition.broadcast st.condition `Authenticated ;
-    Pipe.write_if_open process_w m
+    Pipe.write w m
   | Logout, `Closing -> (* End of connection, cleaning up *)
     Log_async.debug (fun m -> m "Logout response received") >>= fun () ->
-    Ivar.fill_if_empty st.do_cleanup () ;
+    Pipe.close w ;
     Deferred.unit
   | Logout, _ ->
     Log_async.debug (fun m -> m "Logout request received") >>= fun () ->
     send_msg st (Fix.create Fixtypes.MsgType.Logout) >>= fun _ ->
     st.status <- `Closed ;
-    Ivar.fill_if_empty st.do_cleanup () ;
+    Pipe.close w ;
     Deferred.unit
   | _, `Closing
   | _, `Closed -> Deferred.unit
@@ -164,28 +173,34 @@ let filter_messages st process_w m =
     end >>= fun _ ->
     Deferred.unit
   | _, `Authenticated ->
-    Pipe.write_if_open process_w m
+    Pipe.write w m
   | _ -> assert false
 
-let watchdog ({ last_received; last_sent;
-                do_cleanup; heartbeat; status; _ } as st) =
+let mk_client_read ~monitor st =
+  Pipe.create_reader ~close_on_exception:true begin fun w ->
+    Scheduler.within' ~monitor
+      (fun () -> Pipe.iter st.r ~f:(filter_messages st w))
+  end
+
+let watchdog ({ last_received; last_sent; heartbeat; status; _ } as st) =
   match status with
   | `Connected
   | `Closing
-  | `Closed -> Deferred.Or_error.ok_unit
+  | `Closed -> Deferred.unit
   | `Authenticated ->
     let now = Time_ns.now () in
     let span_last_received = Time_ns.diff now last_received in
     let span_last_sent = Time_ns.diff now last_sent in
-    let open Int63 in
     Log_async.debug begin fun m ->
       m "watchdog %a %a"
         Time_ns.Span.pp span_last_received
         Time_ns.Span.pp span_last_sent
     end >>= fun () ->
     if Time_ns.Span.(span_last_received > scale_int heartbeat 2) then begin
-      Ivar.fill_if_empty do_cleanup () ;
-      Deferred.Or_error.ok_unit
+      (* close connection *)
+      Pipe.close_read st.r ;
+      Pipe.close st.w ;
+      Deferred.unit
     end
     else if Time_ns.Span.(span_last_received > heartbeat) then
       if Time_ns.Span.(span_last_sent > heartbeat) then
@@ -193,7 +208,7 @@ let watchdog ({ last_received; last_sent;
       else
         send_msg st (Fix.create Fixtypes.MsgType.TestRequest)
     else
-      Deferred.Or_error.ok_unit
+      Deferred.unit
 
 let connect
     ?(history_size=10)
@@ -206,50 +221,41 @@ let connect
   connect uri >>= fun (r, w) ->
   let st = create_st ?heartbeat ?logon_ts ?logon_fields
       ~history_size ~sid ~tid version r w in
-  send_msg st (logon st) >>=? fun () ->
-  Clock_ns.every' (Time_ns.Span.of_int_sec 5)
-    (fun () -> Deferred.Or_error.ok_exn (watchdog st))
-    ~continue_on_error:false
-    ~stop:(Ivar.read st.do_cleanup) ;
-  let process_r, client_w = Pipe.create () in
-  let client_r, process_w = Pipe.create () in
-  don't_wait_for
-    (Pipe.iter r ~f:(filter_messages st process_w)) ;
-  don't_wait_for
-    (Pipe.iter process_r ~f:(fun m -> Deferred.Or_error.ok_exn (send_msg st m))) ;
-  let cleanup () =
-    Ivar.read st.do_cleanup >>= fun () ->
-    Log_async.warn (fun m -> m "EZ.connect: cleaning up") >>| fun () ->
-    Pipe.close client_w ;
-    Pipe.close_read client_r ;
-    Pipe.close w ;
-    Pipe.close_read r ;
-    Ivar.fill st.closed () in
-  don't_wait_for (cleanup ()) ;
+  send_msg st (logon st) >>= fun () ->
+  let stop =
+    Deferred.all_unit [Pipe.closed r; Pipe.closed w] in
+  Clock_ns.every' ~continue_on_error:false ~stop
+    (Time_ns.Span.of_int_sec 5) (fun () -> watchdog st) ;
+  let monitor = Monitor.create () in
+  let client_read = mk_client_read ~monitor st in
+  let client_write = mk_client_write ~monitor st in
   don't_wait_for begin
-    Deferred.all_unit [Pipe.closed client_r; Pipe.closed client_w] >>= fun () ->
+    Deferred.all_unit [Pipe.closed client_read;
+                       Pipe.closed client_write] >>= fun () ->
     match st.status with
     | `Closing | `Closed -> Deferred.unit
     | `Authenticated ->
-      Log_async.warn (fun m -> m "EZ.connect: closing") >>= fun () ->
+      Log_async.warn (fun m -> m "connect: closing") >>= fun () ->
       st.status <- `Closing ;
       send_msg st (Fix.create Fixtypes.MsgType.Logout) >>= fun _ ->
       Deferred.unit
     | `Connected ->
       Condition.wait st.condition >>= fun _ ->
-      Log_async.warn (fun m -> m "EZ.connect: closing") >>= fun () ->
+      Log_async.warn (fun m -> m "connect: closing") >>= fun () ->
       st.status <- `Closing ;
       send_msg st (Fix.create Fixtypes.MsgType.Logout) >>= fun _ ->
       Deferred.unit
   end ;
-  Deferred.Or_error.return (create client_r client_w (Ivar.read st.closed))
+  let log_exn exn = Log.err (fun m -> m "%a" Exn.pp exn) in
+  Monitor.detach_and_iter_errors monitor ~f:log_exn ;
+  return (create client_read client_write)
 
 let with_connection
     ?history_size ?heartbeat ?logon_fields
     ?logon_ts ~sid ~tid ~version uri ~f =
   connect ?history_size ?heartbeat ?logon_fields
-    ?logon_ts ~sid ~tid ~version uri >>=? fun { r; w; closed } ->
-  Monitor.protect (fun () -> f ~closed r w)
+    ?logon_ts ~sid ~tid ~version uri >>= fun { r; w } ->
+  Monitor.protect (fun () -> f r w)
     ~finally:begin fun () ->
       Pipe.close w ; Pipe.close_read r ; Deferred.unit
     end
@@ -260,8 +266,10 @@ module Persistent = struct
   let create'
       ~server_name ?history_size ?heartbeat ?logon_fields
       ?logon_ts ?on_event ?retry_delay ~sid ~tid ~version =
-    let connect url = connect ?history_size ?heartbeat ?logon_fields
-        ?logon_ts ~sid ~tid ~version url in
+    let connect url =
+      connect ?history_size ?heartbeat
+        ?logon_fields ?logon_ts ~sid ~tid ~version url >>=
+      Deferred.Or_error.return in
     create ~server_name ?on_event ?retry_delay ~connect
 end
 

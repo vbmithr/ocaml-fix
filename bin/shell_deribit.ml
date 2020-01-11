@@ -146,18 +146,17 @@ let main sandbox cfg =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
   Fix_async.connect
     ~sid ~tid ~version:Version.v44
-    ~logon_fields (if sandbox then test_url else url) >>=? fun { closed; r; w } ->
+    ~logon_fields (if sandbox then test_url else url) >>= fun { r; w } ->
   Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
   Logs_async.app ~src (fun m -> m "Connected to Deribit") >>= fun () ->
   Deferred.any [
+    Deferred.all_unit [Pipe.closed r ; Pipe.closed w] ;
     Pipe.iter r ~f:(on_server_msg w);
     Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd key w);
-    closed
-  ] >>= fun () ->
-  Deferred.Or_error.ok_unit
+  ]
 
 let command =
-  Command.async_or_error ~summary:"Deribit testnet shell" begin
+  Command.async ~summary:"Deribit testnet shell" begin
     let open Command.Let_syntax in
     [%map_open
       let cfg = Bs_devkit.Cfg.param ()

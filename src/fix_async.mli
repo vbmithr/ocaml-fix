@@ -10,7 +10,6 @@ open Fix
 type t = {
   r: Fix.t Pipe.Reader.t ;
   w: Fix.t Pipe.Writer.t ;
-  closed: unit Deferred.t ;
 }
 
 val connect :
@@ -21,7 +20,7 @@ val connect :
   sid:string ->
   tid:string ->
   version:Fixtypes.Version.t ->
-  Uri.t -> t Deferred.Or_error.t
+  Uri.t -> t Deferred.t
 
 val with_connection :
   ?history_size:int ->
@@ -32,10 +31,8 @@ val with_connection :
   tid:string ->
   version:Fixtypes.Version.t ->
   Uri.t ->
-  f:(closed:unit Deferred.t ->
-     Fix.t Pipe.Reader.t ->
-     Fix.t Pipe.Writer.t -> 'a Deferred.Or_error.t) ->
-  'a Deferred.Or_error.t
+  f:(Fix.t Pipe.Reader.t -> Fix.t Pipe.Writer.t -> 'a Deferred.t) ->
+  'a Deferred.t
 
 module Persistent : sig
   include Persistent_connection_kernel.S

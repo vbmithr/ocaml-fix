@@ -75,13 +75,13 @@ let main sandbox cfg =
     ~logon_ts
     ~heartbeat:(Time_ns.Span.of_int_sec 30)
     ~sid:key ~tid ~version ~logon_fields url
-    ~f:begin fun ~closed r w ->
+    ~f:begin fun r w ->
       Signal.(handle terminating ~f:(fun _ -> Pipe.close w)) ;
       Logs_async.app ~src (fun m -> m "Connected to Coinbase") >>= fun () ->
       Deferred.any [
+        Deferred.all_unit [Pipe.closed r; Pipe.closed w] ;
         Pipe.iter r ~f:(on_server_msg w);
         Pipe.iter Reader.(stdin |> Lazy.force |> pipe) ~f:(on_client_cmd w);
-        closed
       ] >>= fun () ->
       Deferred.Or_error.ok_unit
     end
