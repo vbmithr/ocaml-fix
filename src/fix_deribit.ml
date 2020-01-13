@@ -272,6 +272,38 @@ module MarkPrice = Make(struct
   end)
 let () = register_field (module MarkPrice)
 
+type _ typ += CurrentFunding : float typ
+module CurrentFunding = Make(struct
+    type t = float [@@deriving sexp,yojson]
+    let t = CurrentFunding
+    let pp = Format.pp_print_float
+    let parse = float_of_string_result
+    let tag = 100_092
+    let name = "CurrentFunding"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CurrentFunding, CurrentFunding -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module CurrentFunding)
+
+type _ typ += Funding8h : float typ
+module Funding8h = Make(struct
+    type t = float [@@deriving sexp,yojson]
+    let t = Funding8h
+    let pp = Format.pp_print_float
+    let parse = float_of_string_result
+    let tag = 100_093
+    let name = "Funding8h"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | Funding8h, Funding8h -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module Funding8h)
+
 let url = Uri.make ~host:"www.deribit.com" ~port:9880 ()
 let test_url = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
