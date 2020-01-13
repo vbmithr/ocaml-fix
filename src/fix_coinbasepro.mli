@@ -6,6 +6,8 @@
 open Fix
 open Fixtypes
 
+type _ Field.typ += BatchID : string Field.typ
+
 val url : Uri.t
 val sandbox_url : Uri.t
 val tid : string
@@ -20,6 +22,9 @@ module SelfTradePrevention : sig
   [@@deriving sexp]
 end
 
+module STP : Field.FIELD with type t := SelfTradePrevention.t
+module BatchID : Field.FIELD with type t := string
+
 val logon_fields :
   ?cancel_on_disconnect:[`All | `Session] ->
   key:string ->
@@ -32,72 +37,6 @@ val order_status_request : Uuidm.t -> t
 
 val supported_timeInForces : TimeInForce.t list
 val supported_ordTypes : OrdType.t list
-
-val new_order_fields :
-  ?selfTradePrevention:SelfTradePrevention.t ->
-  ?timeInForce:TimeInForce.t ->
-  ?ordType:OrdType.t ->
-  ?price:float ->
-  ?stopPx:float ->
-  side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> Field.t list
-
-val new_order :
-  ?selfTradePrevention:SelfTradePrevention.t ->
-  ?timeInForce:TimeInForce.t ->
-  ?ordType:OrdType.t ->
-  ?price:float ->
-  ?stopPx:float -> side:Side.t -> qty:float -> symbol:string -> Uuidm.t -> t
-
-val new_orders_limit : Uuidm.t -> Field.t list list -> t
-
-val cancel_order :
-  orderID:[`ClOrdID of Uuidm.t | `OrderID of Uuidm.t] ->
-  clOrdID:Uuidm.t -> t
-
-val cancel_orders :
-  Uuidm.t -> symbol:string -> (Uuidm.t * Uuidm.t option) list -> t
-
-type executionReport = {
-  clOrdID : Uuidm.t option ;
-  orderID : Uuidm.t option ;
-  symbol : string ;
-  execType : Fixtypes.ExecType.t ;
-  side : Fixtypes.Side.t ;
-  lastQty : float option ;
-  price : float option ;
-  orderQty : float ;
-  transactTime : Ptime.t option ;
-  ordStatus : Fixtypes.OrdStatus.t ;
-  ordRejReason : Fixtypes.OrdRejReason.t option ;
-  tradeID : Uuidm.t option ;
-  taker : bool option ;
-  text : string option ;
-} [@@deriving sexp,yojson]
-
-type t =
-  | Logon
-  | Logout
-  | TestRequest of string
-  | Heartbeat of string option
-  | ExecutionReport of executionReport
-  | NewOrderBatchReject of {
-      batchID: Uuidm.t; text: string option
-    }
-  | OrderCancelReject of {
-      clOrdID: Uuidm.t;
-      orderID: Uuidm.t;
-      origClOrdID: Uuidm.t option;
-      ordStatus: Fixtypes.OrdStatus.t option;
-      cxlRejReason: Fixtypes.CxlRejReason.t ;
-      cxlRejResponseTo : Fixtypes.CxlRejResponseTo.t ;
-    }
-  | OrderCancelBatchReject of {
-      batchID: Uuidm.t; text: string option
-    }
-  | Reject
-[@@deriving sexp,yojson]
-
-val parse : Fix.t -> t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 Vincent Bernardoff

@@ -4,6 +4,7 @@ open Async
 open Fix
 open Fixtypes
 open Fix_coinbasepro
+open Fixmsg
 
 let src = Logs.Src.create "fix.coinbase.shell"
 (* let uri = Uri.make ~host:"127.0.0.1" ~port:4197 () *)

@@ -54,6 +54,12 @@ module Ptime : sig
   val time_to_yojson : time -> Yojson.Safe.t
 end
 
+module Uuidm : sig
+  include module type of Uuidm with type t = Uuidm.t
+  include Sexpable.S with type t := t
+  include Yojsonable.S with type t := t
+end
+
 module Date : IO with type t := Ptime.date
 module TZTimeOnly : IO with type t := Ptime.time
 

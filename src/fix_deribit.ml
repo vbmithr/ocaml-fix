@@ -304,11 +304,39 @@ module Funding8h = Make(struct
   end)
 let () = register_field (module Funding8h)
 
+type _ typ += DeribitLabel : string typ
+module DeribitLabel = Make(struct
+    type t = string [@@deriving sexp,yojson]
+    let t = DeribitLabel
+    let pp = Format.pp_print_string
+    let parse s = Ok s
+    let tag = 100010
+    let name = "DeribitLabel"
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | DeribitLabel, DeribitLabel -> Some Eq
+      | _ -> None
+  end)
+let () = register_field (module DeribitLabel)
+
 let url = Uri.make ~host:"www.deribit.com" ~port:9880 ()
 let test_url = Uri.make ~host:"test.deribit.com" ~port:9881 ()
 
 let sid = "ocaml-fix"
 let tid = "DERIBITSERVER"
+let version = Version.v44
+
+let supported_timeInForces = [
+  Fixtypes.TimeInForce.GoodTillCancel ;
+  ImmediateOrCancel ;
+  FillOrKill ;
+]
+
+let supported_ordTypes = [
+  Fixtypes.OrdType.Market ;
+  Limit ;
+]
 
 let logon_fields
     ?(cancel_on_disconnect=true)

@@ -5,6 +5,7 @@
 
 open Fix
 open Field
+open Fixtypes
 
 type _ typ += DeribitTradeID : int typ
 module DeribitTradeID : FIELD with type t := int
@@ -13,6 +14,9 @@ val url : Uri.t
 val test_url : Uri.t
 val sid : string
 val tid : string
+val version : Version.t
+val supported_timeInForces : TimeInForce.t list
+val supported_ordTypes : OrdType.t list
 
 val logon_fields :
   ?cancel_on_disconnect:bool ->

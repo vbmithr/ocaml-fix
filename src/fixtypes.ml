@@ -197,6 +197,29 @@ module Ptime = struct
   let time_to_yojson t = `String (string_of_time t)
 end
 
+module Uuidm = struct
+  include Uuidm
+
+  let t_of_sexp sexp =
+    let sexp_str = string_of_sexp sexp in
+    match of_string sexp_str with
+    | None -> invalid_arg "Uuidm.t_of_sexp"
+    | Some u -> u
+
+  let sexp_of_t t =
+    sexp_of_string (to_string t)
+
+  let of_yojson = function
+    | `String s -> begin
+      match of_string s with
+      | None -> Error "not an uuid"
+      | Some u -> Ok u
+    end
+    | #Yojson.Safe.t -> Error "not a json string"
+
+  let to_yojson t = `String (to_string t)
+end
+
 module Date = struct
   module T = struct
     type t = Ptime.date [@@deriving sexp,yojson]
