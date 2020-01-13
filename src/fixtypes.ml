@@ -1313,14 +1313,17 @@ end
 module ExecInst = struct
   module T = struct
     type t =
+      | ParticipateDoNotInitiate
       | DoNotIncrease
     [@@deriving sexp,yojson]
 
     let parse = function
+      | "6" -> Ok ParticipateDoNotInitiate
       | "E" -> Ok DoNotIncrease
       | _ -> R.error_msg "unknown code"
 
     let to_string = function
+      | ParticipateDoNotInitiate -> "6"
       | DoNotIncrease  -> "E"
   end
   include T
