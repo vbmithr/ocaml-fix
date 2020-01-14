@@ -150,6 +150,7 @@ let filter_messages st w m =
     Log_async.debug (fun m -> m "Logout response received") >>= fun () ->
     Pipe.close w ;
     Deferred.unit
+  | Reject, _
   | Logout, _ ->
     Log_async.debug (fun m -> m "Logout request received") >>= fun () ->
     send_msg st (Fix.create Fixtypes.MsgType.Logout) >>= fun _ ->
