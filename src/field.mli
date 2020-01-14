@@ -16,7 +16,7 @@ type _ typ = ..
 module type T = sig
   type t [@@deriving sexp,yojson]
   val t : t typ
-  val pp : Format.formatter -> t -> unit
+  val pp : t Fmt.t
   val tag : int
   val name : string
   val eq : 'a typ -> 'b typ -> ('a, 'b) eq option
@@ -51,7 +51,7 @@ end
 val create : 'a typ -> (module T with type t = 'a) -> 'a -> field
 
 val sum_string : string -> int
-val pp : Format.formatter -> t -> unit
+val pp : t Fmt.t
 val print : t -> string
 val add_to_buffer : int * int -> Buffer.t -> field -> int * int
 val serialize : ((unit -> unit) -> int -> int -> 'a) -> Faraday.t -> t -> 'a

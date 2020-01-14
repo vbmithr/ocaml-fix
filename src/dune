@@ -2,8 +2,8 @@
  (name fixtypes)
  (public_name fixtypes)
  (modules fixtypes)
- (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ocplib-json-typed uuidm bin_prot rresult astring ptime sexplib tyre))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_deriving.show ppx_bin_prot))
+ (libraries ocplib-json-typed fmt uuidm bin_prot rresult astring ptime sexplib tyre))
 
 (library
  (name fix)
@@ -30,8 +30,8 @@
  (name fix_coinbasepro)
  (public_name fix-coinbasepro)
  (modules fix_coinbasepro)
- (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ptime uuidm fixtypes fix base64 monocypher digestif.c uri))
+ (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_deriving.show ppx_bin_prot))
+ (libraries ppx_deriving.show ptime uuidm fixtypes fix base64 monocypher digestif.c uri))
 
 (library
  (name fix_ftx)

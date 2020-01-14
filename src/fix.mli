@@ -18,7 +18,7 @@ type t = {
   groups : (Field.t * Field.field list list) option ;
 } [@@deriving sexp,yojson]
 
-val pp : Format.formatter -> t -> unit
+val pp : t Fmt.t
 val create :
   ?version:Fixtypes.Version.t ->
   ?ts:Ptime.t ->

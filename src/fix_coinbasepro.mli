@@ -19,7 +19,7 @@ module SelfTradePrevention : sig
     | CancelRestingOrder
     | CancelIncomingOrder
     | CancelBothOrders
-  [@@deriving sexp]
+  [@@deriving sexp,show]
 end
 
 module STP : Field.FIELD with type t := SelfTradePrevention.t

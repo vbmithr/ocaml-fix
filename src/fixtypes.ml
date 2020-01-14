@@ -28,15 +28,15 @@ module type IO = sig
   include IOMIN
 
   val parse_exn : string -> t
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  val pp_fix : t Fmt.t
+  val pp_sexp : t Fmt.t
   val encoding : t Json_encoding.encoding
 end
 
 module Make (T : IOMIN) = struct
   open T
   let parse_exn s = R.failwith_error_msg (parse s)
-  let pp ppf v = Format.fprintf ppf "%s" (to_string v)
+  let pp_fix ppf v = Format.fprintf ppf "%s" (to_string v)
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
   let encoding =
@@ -290,7 +290,7 @@ module UserRequestType = struct
       | Logoff
       | ChangePassword
       | RequestStatus
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok Logon
@@ -320,7 +320,7 @@ module UserStatus = struct
       | Other
       | ForcedLogout
       | SessionShutdownWarning
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok LoggedIn
@@ -353,7 +353,7 @@ module HandlInst = struct
       | Private
       | Public
       | Manual
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok Private
@@ -388,7 +388,7 @@ module OrdStatus = struct
       | Expired
       | AcceptedForBidding
       | PendingReplace
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "0" -> Ok New
@@ -439,7 +439,7 @@ module PosReqType = struct
       | SettlementActivity
       | BackoutMessage
       | DeltaPositions
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Positions
@@ -477,7 +477,7 @@ module MassStatusReqType = struct
       | PartyID
       | SecurityIssuer
       | UssuerOfUnderlyingSecurity
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok Security
@@ -516,7 +516,7 @@ module PosReqResult = struct
       | NoPositionsFound
       | NotAuthorized
       | Unsupported
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok ValidRequest
@@ -546,7 +546,7 @@ module OrdType = struct
       | StopLimit
       | MarketIfTouched
       | LimitIfTouched
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "1" -> Ok Market
@@ -580,7 +580,7 @@ module OrdRejReason = struct
       | UnknownOrder
       | DuplicateOrder
       | StaleOrder
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "0" -> Ok Broker
@@ -612,7 +612,7 @@ module PutOrCall = struct
     type t =
       | Put
       | Call
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Put
@@ -637,7 +637,7 @@ module EncryptMethod = struct
       | PGP_DES
       | PGP_DES_MD5
       | PEM_DES_MD5
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Other
@@ -669,7 +669,7 @@ module ExecTransType = struct
       | Cancel
       | Correct
       | Status
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok New
@@ -694,7 +694,7 @@ module SubscriptionRequestType = struct
       | Snapshot
       | Subscribe
       | Unsubscribe
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Snapshot
@@ -716,7 +716,7 @@ module MDUpdateType = struct
     type t =
       | Full
       | Incremental
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Full
@@ -740,7 +740,7 @@ module MDUpdateAction = struct
       | DeleteThru
       | DeleteFrom
       | Overlay
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok New
@@ -769,7 +769,7 @@ module MDEntryType = struct
       | Bid
       | Offer
       | Trade
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Bid
@@ -791,7 +791,7 @@ module Side = struct
     type t =
       | Buy
       | Sell
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "1" -> Ok Buy
@@ -820,7 +820,7 @@ module TimeInForce = struct
       | GoodThroughCrossing
       | AtCrossing
       | PostOnly (* Coinbase special *)
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "0" -> Ok Session
@@ -855,7 +855,7 @@ end
 
 module YesOrNo = struct
   module T = struct
-    type t = bool [@@deriving sexp,yojson]
+    type t = bool [@@deriving sexp,yojson,show]
 
     let parse = function
       | "Y" -> Ok true
@@ -879,7 +879,7 @@ module SecurityListRequestType = struct
       | TradingSessionID
       | AllSecurities
       | MarketID
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Symbol
@@ -906,7 +906,7 @@ module SecurityRequestResult = struct
   module T = struct
     type t =
       | Valid
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Valid
@@ -926,7 +926,7 @@ module SecurityType = struct
       | Future
       | Option
       | Index
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "FUT" -> Ok Future
@@ -949,7 +949,7 @@ module QtyType = struct
       | Units
       | Contracts
       | UnitsPerTime
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok Units
@@ -971,7 +971,7 @@ module Version = struct
     type t =
       | FIX of int * int
       | FIXT of int * int
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let v40 = FIX (4, 0)
     let v41 = FIX (4, 1)
@@ -1041,7 +1041,7 @@ module MsgType = struct
 
       | OrderCancelBatchRequest
       | OrderCancelBatchReject
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse_exn = function
       | "0" -> Heartbeat
@@ -1138,7 +1138,7 @@ module SessionRejectReason = struct
       | XMLValidationError
       | InvalidVersion
       | Other
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
 
     let of_int_exn = function
@@ -1205,7 +1205,7 @@ module ExecType = struct
       | TradeInClearingHold
       | TradeReleasedToClearing
       | Triggered
-    [@@deriving sexp,yojson,bin_io]
+    [@@deriving sexp,yojson,bin_io,show]
 
     let parse = function
       | "0" -> Ok New
@@ -1268,7 +1268,7 @@ module MiscFeeType = struct
       | Tax
       | LocalCommission
       | ExchangeFees
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok Regulatory
@@ -1294,7 +1294,7 @@ module CxlRejReason = struct
       | UnknownOrder
       | BrokerExchangeOption
       | PendingCancelOrReplace
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok TooLateToCancel
@@ -1318,7 +1318,7 @@ module CxlRejResponseTo = struct
     type t =
       | OrderCancelRequest
       | OrderReplaceRequest
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok OrderCancelRequest
@@ -1338,7 +1338,7 @@ module ExecInst = struct
     type t =
       | ParticipateDoNotInitiate
       | DoNotIncrease
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "6" -> Ok ParticipateDoNotInitiate
@@ -1358,7 +1358,7 @@ module CancelOrdersOnDisconnect = struct
     type t =
       | All
       | Session
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "Y" -> Ok All
@@ -1379,7 +1379,7 @@ module LastLiquidityInd = struct
       | AddedLiquidity
       | RemovedLiquidity
       | LiquidityRoutedOut
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok AddedLiquidity
@@ -1403,7 +1403,7 @@ module TickDirection = struct
       | ZeroPlusTick
       | MinusTick
       | ZeroMinusTick
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "0" -> Ok PlusTick
@@ -1434,7 +1434,7 @@ module PegPriceType = struct
       | PegToVWAP
       | TrailingStopPeg
       | PegToLimitPrice
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok LastPeg
@@ -1470,7 +1470,7 @@ module ContingencyType = struct
       | OTO
       | OUOA
       | OUOP
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "1" -> Ok OCO

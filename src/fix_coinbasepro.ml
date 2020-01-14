@@ -11,7 +11,7 @@ module SelfTradePrevention = struct
       | CancelRestingOrder
       | CancelIncomingOrder
       | CancelBothOrders
-    [@@deriving sexp,yojson]
+    [@@deriving sexp,yojson,show]
 
     let parse = function
       | "D" -> Ok DecrementAndCancel
@@ -34,7 +34,7 @@ type _ typ += SelfTradePrevention : SelfTradePrevention.t typ
 module STP = Make(struct
     type t = SelfTradePrevention.t [@@deriving sexp,yojson]
     let t = SelfTradePrevention
-    let pp = SelfTradePrevention.pp
+    let pp = SelfTradePrevention.pp_fix
     let parse = SelfTradePrevention.parse
     let tag = 7928
     let name = "SelfTradePrevention"

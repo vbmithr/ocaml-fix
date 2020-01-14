@@ -26,15 +26,15 @@ end
 module type IO = sig
   include IOMIN
   val parse_exn : string -> t
-  val pp : Format.formatter -> t -> unit
-  val pp_sexp : Format.formatter -> t -> unit
+  val pp_fix : t Fmt.t
+  val pp_sexp : t Fmt.t
   val encoding : t Json_encoding.encoding
 end
 
 module Make (T : IOMIN) : sig
   val parse_exn : string -> T.t
-  val pp : Format.formatter -> T.t -> unit
-  val pp_sexp : Format.formatter -> T.t -> unit
+  val pp_fix : T.t Fmt.t
+  val pp_sexp : T.t Fmt.t
 end
 
 module Ptime : sig
@@ -69,14 +69,17 @@ module UTCTimestamp : sig
   val pp : Format.formatter -> Ptime.t -> unit
 end
 
-module YesOrNo : IO with type t := bool
+module YesOrNo : sig
+  type t = bool [@@deriving sexp,yojson,show]
+  include IO with type t := bool
+end
 
 module HandlInst : sig
   type t =
     | Private
     | Public
     | Manual
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -87,7 +90,7 @@ module ExecTransType : sig
     | Cancel
     | Correct
     | Status
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -109,7 +112,7 @@ module OrdStatus : sig
     | Expired
     | AcceptedForBidding
     | PendingReplace
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
 
   include IO with type t := t
 end
@@ -123,7 +126,7 @@ module PosReqType : sig
     | SettlementActivity
     | BackoutMessage
     | DeltaPositions
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -135,7 +138,7 @@ module PosReqResult : sig
     | NoPositionsFound
     | NotAuthorized
     | Unsupported
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -148,7 +151,7 @@ module OrdType : sig
     | StopLimit
     | MarketIfTouched
     | LimitIfTouched
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
 
   include IO with type t := t
 end
@@ -162,7 +165,7 @@ module EncryptMethod : sig
     | PGP_DES
     | PGP_DES_MD5
     | PEM_DES_MD5
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -172,7 +175,7 @@ module SubscriptionRequestType : sig
     | Snapshot
     | Subscribe
     | Unsubscribe
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -181,7 +184,7 @@ module MDUpdateType : sig
   type t =
     | Full
     | Incremental
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -194,7 +197,7 @@ module MDUpdateAction : sig
     | DeleteThru
     | DeleteFrom
     | Overlay
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -204,7 +207,7 @@ module MDEntryType : sig
     | Bid
     | Offer
     | Trade
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -213,7 +216,7 @@ module Side : sig
   type t =
     | Buy
     | Sell
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
 
   include IO with type t := t
 end
@@ -231,7 +234,7 @@ module TimeInForce : sig
     | GoodThroughCrossing
     | AtCrossing
     | PostOnly (* Coinbase special *)
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
 
   include IO with type t := t
 end
@@ -240,7 +243,7 @@ module Version : sig
   type t =
     | FIX of int * int
     | FIXT of int * int
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   val v40 : t
   val v41 : t
@@ -288,7 +291,7 @@ module MsgType : sig
 
     | OrderCancelBatchRequest
     | OrderCancelBatchReject
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -310,7 +313,8 @@ module SessionRejectReason : sig
     | XMLValidationError
     | InvalidVersion
     | Other
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
+
 
   include IO with type t := t
 end
@@ -319,7 +323,7 @@ module PutOrCall : sig
   type t =
     | Put
     | Call
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -332,7 +336,7 @@ module SecurityListRequestType : sig
     | TradingSessionID
     | AllSecurities
     | MarketID
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -340,7 +344,7 @@ end
 module SecurityRequestResult : sig
   type t =
     | Valid
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
 
   include IO with type t := t
 end
@@ -350,7 +354,7 @@ module SecurityType : sig
     | Future
     | Option
     | Index
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -359,7 +363,7 @@ module QtyType : sig
     | Units
     | Contracts
     | UnitsPerTime
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -387,7 +391,7 @@ module ExecType : sig
     | TradeInClearingHold
     | TradeReleasedToClearing
     | Triggered
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
   include IO with type t := t
 end
 
@@ -401,7 +405,7 @@ module OrdRejReason : sig
     | UnknownOrder
     | DuplicateOrder
     | StaleOrder
-  [@@deriving sexp,yojson,bin_io]
+  [@@deriving sexp,yojson,bin_io,show]
   include IO with type t := t
 end
 
@@ -411,7 +415,7 @@ module UserRequestType : sig
     | Logoff
     | ChangePassword
     | RequestStatus
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -425,7 +429,7 @@ module UserStatus : sig
     | Other
     | ForcedLogout
     | SessionShutdownWarning
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -441,7 +445,7 @@ module MassStatusReqType : sig
     | PartyID
     | SecurityIssuer
     | UssuerOfUnderlyingSecurity
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -451,7 +455,7 @@ module MiscFeeType : sig
     | Tax
     | LocalCommission
     | ExchangeFees
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -461,7 +465,7 @@ module CxlRejReason : sig
     | UnknownOrder
     | BrokerExchangeOption
     | PendingCancelOrReplace
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -469,7 +473,7 @@ module CxlRejResponseTo : sig
   type t =
     | OrderCancelRequest
     | OrderReplaceRequest
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -477,7 +481,7 @@ module ExecInst : sig
   type t =
     | ParticipateDoNotInitiate
     | DoNotIncrease
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -485,7 +489,7 @@ module CancelOrdersOnDisconnect : sig
   type t =
     | All
     | Session
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -494,7 +498,7 @@ module LastLiquidityInd : sig
     | AddedLiquidity
     | RemovedLiquidity
     | LiquidityRoutedOut
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -504,7 +508,7 @@ module TickDirection : sig
     | ZeroPlusTick
     | MinusTick
     | ZeroMinusTick
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -519,7 +523,7 @@ module PegPriceType : sig
     | PegToVWAP
     | TrailingStopPeg
     | PegToLimitPrice
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
@@ -529,7 +533,7 @@ module ContingencyType : sig
     | OTO
     | OUOA
     | OUOP
-  [@@deriving sexp,yojson]
+  [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
 
