@@ -11,8 +11,6 @@ module Field = Field
 
 open Fixtypes
 
-(* let src = Logs.Src.create "fix.core" *)
-
 type t = {
   version : Version.t ;
   typ : MsgType.t ;
