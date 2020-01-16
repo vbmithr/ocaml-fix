@@ -63,4 +63,4 @@
  (public_name fixmsg)
  (modules fixmsg)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries fixtypes fix fix_deribit fix_coinbasepro fix_ftx))
+ (libraries sexplib fixtypes fix fix_deribit fix_coinbasepro fix_ftx))
