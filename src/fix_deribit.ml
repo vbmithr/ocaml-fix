@@ -17,12 +17,12 @@ module CancelOnDisconnect = Make(struct
     let parse = YesOrNo.parse
     let tag = 9001
     let name = "CancelOnDisconnect"
-  let eq :
-    type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
-    match a, b with
-    | CancelOnDisconnect, CancelOnDisconnect -> Some Eq
-    | _ -> None
-end)
+    let eq :
+      type a b. a typ -> b typ -> (a, b) eq option = fun a b ->
+      match a, b with
+      | CancelOnDisconnect, CancelOnDisconnect -> Some Eq
+      | _ -> None
+  end)
 let () = register_field (module CancelOnDisconnect)
 
 type _ typ += InstrumentPricePrecision : int typ
