@@ -1,0 +1,24 @@
+opam-version: "2.0"
+authors: "Vincent Bernardoff <vb@luminar.eu.org>"
+maintainer: "Vincent Bernardoff <vb@luminar.eu.org>"
+homepage: "https://github.com/vbmithr/ocaml-fix"
+bug-reports: "https://github.com/vbmithr/ocaml-fix/issues"
+dev-repo: "git+https://github.com/vbmithr/ocaml-fix"
+doc: "https://vbmithr.github.io/ocaml-fix/doc"
+build: [ "dune" "build" "-j" jobs "-p" name ]
+run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
+depends: [
+  "dune" {>= "1.11.4"}
+  "ocplib-json-typed" {>= "0.7.1"}
+  "fmt" {>= "0.8.8"}
+  "uuidm" {>= "0.9.7"}
+  "bin_prot" {>= "v0.12.0"}
+  "rresult" {>= "0.6.0"}
+  "astring" {>= "0.8.3"}
+  "ptime" {>= "0.8.5"}
+  "sexplib" {>= "v0.12.0"}
+  "tyre" {>= "0.4.1"}
+]
+synopsis: "FIX library"
+description: """
+"""

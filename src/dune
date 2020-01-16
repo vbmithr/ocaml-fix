@@ -10,35 +10,53 @@
  (public_name fix)
  (modules field fix)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries fixtypes rresult astring ptime logs sexplib angstrom faraday))
+ (libraries fixtypes rresult astring ptime sexplib angstrom faraday))
 
 (library
  (name fix_async)
  (public_name fix-async)
  (modules fix_async_raw fix_async)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries uri-sexp fix async angstrom-async faraday-async async-uri logs-async))
+ (libraries uri-sexp fix core async angstrom-async faraday-async async-uri logs-async))
 
 (library
  (name fix_deribit)
  (public_name fix-deribit)
  (modules fix_deribit)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ptime uuidm fix base64 monocypher digestif.c uri))
+ (libraries
+   fixtypes
+   fix
+   rresult
+   ptime
+   base64
+   monocypher
+   sexplib
+   digestif.c
+   uri))
 
 (library
  (name fix_coinbasepro)
  (public_name fix-coinbasepro)
  (modules fix_coinbasepro)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_deriving.show ppx_bin_prot))
- (libraries ppx_deriving.show ptime uuidm fixtypes fix base64 monocypher digestif.c uri))
+ (libraries
+   rresult
+   ppx_deriving.show
+   uuidm
+   fixtypes
+   fix
+   base64
+   digestif.c
+   sexplib
+   uri))
 
 (library
  (name fix_ftx)
  (public_name fix-ftx)
  (modules fix_ftx)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries ptime uuidm fixtypes fix hex monocypher digestif.c uri))
+ (libraries uuidm fixtypes fix hex digestif.c uri))
 
 (library
  (name fixmsg)
