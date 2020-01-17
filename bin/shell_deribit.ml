@@ -135,12 +135,16 @@ let on_client_cmd username w words =
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main sandbox cfg =
-  let open Bs_devkit in
-  Logs_async.debug ~src (fun m -> m "%a" Cfg.pp cfg) >>= fun () ->
-  let { Cfg.key ; secret ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg
-      (if sandbox then "DERIBIT" else "DERIBIT_PROD") in
+let get_key_secret sandbox =
+  let key =
+    if sandbox then "TOKEN_DERIBIT_TEST" else "TOKEN_DERIBIT" in
+  match String.split ~on:':' (Sys.getenv_exn key) with
+  | [key; secret] ->
+    key, secret
+  | _ -> assert false
+
+let main sandbox =
+  let key, secret = get_key_secret sandbox in
   let ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:true ~username:key ~secret ~ts in
@@ -159,12 +163,11 @@ let command =
   Command.async ~summary:"Deribit testnet shell" begin
     let open Command.Let_syntax in
     [%map_open
-      let cfg = Bs_devkit.Cfg.param ()
-      and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
+      let sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
       and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main sandbox cfg
+        main sandbox
     ]
   end
 

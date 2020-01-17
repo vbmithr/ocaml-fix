@@ -9,13 +9,16 @@ build: [ "dune" "build" "-j" jobs "-p" name ]
 run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
 depends: [
   "dune" {>= "1.11.4"}
+  "ptime" {>= "0.8.5"}
   "ppx_deriving_yojson" {>= "3.5.1"}
   "sexplib" {>= "v0.12.0"}
   "fixtypes" {= version}
   "fix" {= version}
+  "fix-async" {= version}
   "fix-deribit" {= version}
   "fix-coinbasepro" {= version}
   "fix-ftx" {= version}
+  "logs-async-reporter" {= version}
 ]
 synopsis: "FIX library"
 description: """

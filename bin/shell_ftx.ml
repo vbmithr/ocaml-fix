@@ -43,10 +43,13 @@ let on_client_cmd w words =
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main cfg =
-  let open Bs_devkit in
-  let { Cfg.key ; secret ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg "FTX" in
+let key, secret =
+  match String.split ~on:':' (Sys.getenv_exn "TOKEN_FTX") with
+  | [key; secret] ->
+    key, secret
+  | _ -> assert false
+
+let main () =
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
     logon_fields ~cancel_on_disconnect:`Session ~key ~secret ~logon_ts in
@@ -69,11 +72,10 @@ let command =
   Command.async_or_error ~summary:"FTX shell" begin
     let open Command.Let_syntax in
     [%map_open
-      let cfg = Bs_devkit.Cfg.param ()
-      and () = Logs_async_reporter.set_level_via_param [] in
+      let () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main cfg
+        main ()
     ]
   end
 

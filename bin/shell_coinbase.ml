@@ -63,11 +63,14 @@ let on_client_cmd w words =
   | _ ->
     Logs_async.app ~src (fun m -> m "Unsupported command")
 
-let main sandbox cfg =
-  let open Bs_devkit in
+let key, secret, passphrase =
+  match String.split ~on:':' (Sys.getenv_exn "TOKEN_CBPRO") with
+  | [key; secret; passphrase] ->
+    key, secret, passphrase
+  | _ -> assert false
+
+let main sandbox =
   let url = if sandbox then sandbox_url else url in
-  let { Cfg.key ; secret ; passphrase ; _ } =
-    List.Assoc.find_exn ~equal:String.equal cfg "CBPRO" in
   let secret = Base64.decode_exn secret in
   let logon_ts = Ptime_clock.now () in
   let logon_fields =
@@ -91,12 +94,11 @@ let command =
   Command.async_or_error ~summary:"Coinbase shell" begin
     let open Command.Let_syntax in
     [%map_open
-      let cfg = Bs_devkit.Cfg.param ()
-      and sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
+      let sandbox = flag "sandbox" no_arg ~doc:" Use sandbox"
       and () = Logs_async_reporter.set_level_via_param [] in
       fun () ->
         Logs.set_reporter (Logs_async_reporter.reporter ()) ;
-        main sandbox cfg
+        main sandbox
     ]
   end
 

@@ -2,22 +2,37 @@
  (name shell_deribit)
  (public_name fix-deribit-shell)
  (modules shell_deribit)
- (package fix-deribit)
+ (package fixmsg)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries fixmsg bs-devkit ptime.clock.os logs-async-reporter fix-async fix-deribit))
+ (libraries
+   fixmsg
+   ptime.clock.os
+   logs-async-reporter
+   fix-async
+   fix-deribit))
 
 (executable
  (name shell_coinbase)
  (public_name fix-coinbase-shell)
  (modules shell_coinbase)
- (package fix-coinbasepro)
+ (package fixmsg)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries fixmsg bs-devkit ptime.clock.os logs-async-reporter fix-async fix-coinbasepro))
+ (libraries
+   fixmsg
+   ptime.clock.os
+   logs-async-reporter
+   fix-async
+   fix-coinbasepro))
 
 (executable
  (name shell_ftx)
  (public_name fix-coinbase-ftx)
  (modules shell_ftx)
- (package fix-ftx)
+ (package fixmsg)
  (preprocess (pps ppx_let ppx_sexp_conv))
- (libraries fixmsg bs-devkit ptime.clock.os logs-async-reporter fix-async fix-ftx))
+ (libraries
+   fixmsg
+   ptime.clock.os
+   logs-async-reporter
+   fix-async
+   fix-ftx))

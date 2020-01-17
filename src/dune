@@ -104,6 +104,6 @@
    sexplib
    fixtypes
    fix
-   fix_deribit
-   fix_coinbasepro
-   fix_ftx))
+   fix-deribit
+   fix-coinbasepro
+   fix-ftx))
