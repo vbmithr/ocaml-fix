@@ -3,21 +3,48 @@
  (public_name fixtypes)
  (modules fixtypes)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_deriving.show ppx_bin_prot))
- (libraries ocplib-json-typed fmt uuidm bin_prot rresult astring ptime sexplib tyre))
+ (libraries
+   ppx_deriving
+   ppx_deriving_yojson
+   ocplib-json-typed
+   fmt
+   uuidm
+   bin_prot
+   rresult
+   astring
+   ptime
+   sexplib
+   tyre))
 
 (library
  (name fix)
  (public_name fix)
  (modules field fix)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries fixtypes rresult astring ptime sexplib angstrom faraday))
+ (libraries
+   ppx_deriving_yojson
+   fixtypes
+   rresult
+   astring
+   ptime
+   sexplib
+   angstrom
+   faraday))
 
 (library
  (name fix_async)
  (public_name fix-async)
  (modules fix_async_raw fix_async)
- (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries uri-sexp fix core async angstrom-async faraday-async async-uri logs-async))
+ (preprocess (pps ppx_sexp_conv ppx_bin_prot))
+ (libraries
+   uri-sexp
+   fix
+   core
+   async
+   angstrom-async
+   faraday-async
+   async-uri
+   logs-async))
 
 (library
  (name fix_deribit)
@@ -25,6 +52,7 @@
  (modules fix_deribit)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
  (libraries
+   ppx_deriving_yojson
    fixtypes
    fix
    rresult
@@ -41,6 +69,8 @@
  (modules fix_coinbasepro)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_deriving.show ppx_bin_prot))
  (libraries
+   ppx_deriving
+   ppx_deriving_yojson
    rresult
    ppx_deriving.show
    uuidm
@@ -55,12 +85,25 @@
  (name fix_ftx)
  (public_name fix-ftx)
  (modules fix_ftx)
- (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries uuidm fixtypes fix hex digestif.c uri))
+ (preprocess (pps ppx_sexp_conv ppx_bin_prot))
+ (libraries
+   uuidm
+   fixtypes
+   fix
+   hex
+   digestif.c
+   uri))
 
 (library
  (name fixmsg)
  (public_name fixmsg)
  (modules fixmsg)
  (preprocess (pps ppx_sexp_conv ppx_deriving_yojson ppx_bin_prot))
- (libraries sexplib fixtypes fix fix_deribit fix_coinbasepro fix_ftx))
+ (libraries
+   ppx_deriving_yojson
+   sexplib
+   fixtypes
+   fix
+   fix_deribit
+   fix_coinbasepro
+   fix_ftx))

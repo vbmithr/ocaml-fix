@@ -9,6 +9,7 @@ build: [ "dune" "build" "-j" jobs "-p" name ]
 run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
 depends: [
   "dune" {>= "1.11.4"}
+  "ppx_deriving_yojson" {>= "3.5.1"}
   "sexplib" {>= "v0.12.0"}
   "fixtypes" {= version}
   "fix" {= version}

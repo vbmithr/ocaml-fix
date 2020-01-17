@@ -9,6 +9,8 @@ build: [ "dune" "build" "-j" jobs "-p" name ]
 run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
 depends: [
   "dune" {>= "1.11.4"}
+  "ppx_deriving" {>= "4.4"}
+  "ppx_deriving_yojson" {>= "3.5.1"}
   "rresult" {>= "0.6.0"}
   "ppx_deriving" {>= "4.4"}
   "uuidm" {>= "0.9.7"}
