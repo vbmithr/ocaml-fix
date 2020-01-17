@@ -1,5 +1,6 @@
 (test
  (name       test)
  (modules    test)
+ (package fixtypes)
  (preprocess (pps ppx_sexp_conv))
  (libraries fixtypes alcotest))
