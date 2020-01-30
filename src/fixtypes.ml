@@ -1338,16 +1338,22 @@ module ExecInst = struct
     type t =
       | ParticipateDoNotInitiate
       | DoNotIncrease
+      | DoNotDecrease
+      | AllOrNone
     [@@deriving sexp,yojson,show]
 
     let parse = function
       | "6" -> Ok ParticipateDoNotInitiate
       | "E" -> Ok DoNotIncrease
+      | "F" -> Ok DoNotDecrease
+      | "G" -> Ok AllOrNone
       | _ -> R.error_msg "unknown code"
 
     let to_string = function
       | ParticipateDoNotInitiate -> "6"
-      | DoNotIncrease  -> "E"
+      | DoNotIncrease -> "E"
+      | DoNotDecrease -> "F"
+      | AllOrNone -> "G"
   end
   include T
   include Make(T)

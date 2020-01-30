@@ -481,6 +481,8 @@ module ExecInst : sig
   type t =
     | ParticipateDoNotInitiate
     | DoNotIncrease
+    | DoNotDecrease
+    | AllOrNone
   [@@deriving sexp,yojson,show]
   include IO with type t := t
 end
