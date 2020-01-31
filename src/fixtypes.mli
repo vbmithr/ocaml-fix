@@ -25,6 +25,8 @@ end
 
 module type IO = sig
   include IOMIN
+  val to_char : t -> char
+  val of_char : char -> t
   val parse_exn : string -> t
   val pp_fix : t Fmt.t
   val pp_sexp : t Fmt.t

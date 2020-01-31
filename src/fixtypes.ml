@@ -27,6 +27,8 @@ end
 module type IO = sig
   include IOMIN
 
+  val to_char : t -> char
+  val of_char : char -> t
   val parse_exn : string -> t
   val pp_fix : t Fmt.t
   val pp_sexp : t Fmt.t
@@ -35,7 +37,9 @@ end
 
 module Make (T : IOMIN) = struct
   open T
+  let to_char t = String.get (to_string t) 0
   let parse_exn s = R.failwith_error_msg (parse s)
+  let of_char c = Format.kasprintf parse_exn "%c" c
   let pp_fix ppf v = Format.fprintf ppf "%s" (to_string v)
   let pp_sexp ppf t =
     Format.fprintf ppf "%a" Sexplib.Sexp.pp (sexp_of_t t)
