@@ -1,0 +1,15 @@
+language: c
+sudo: required
+install: test -e .travis.opam.sh || wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
+script:
+- bash -ex .travis-opam.sh
+env:
+  global:
+    - PINS="monocypher.dev:https://github.com/vbmithr/ocaml-monocypher.git fixtypes.dev:. fix.dev:. fix-ftx.dev:. fix-async.dev:. fix-coinbasepro.dev:. fix-deribit.dev:. fixmsg.dev:."
+  matrix:
+    - OCAML_VERSION="4.08" PACKAGE="fix"
+# - PACKAGE_NAME=fix-ftx OCAML_VERSION=4.08
+# - PACKAGE_NAME=fix-async OCAML_VERSION=4.08
+# - PACKAGE_NAME=fix-deribit OCAML_VERSION=4.08
+os:
+- linux
