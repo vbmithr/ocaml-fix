@@ -13,7 +13,7 @@ env:
     - OCAML_VERSION="4.09" PACKAGE="fixtypes"
     - OCAML_VERSION="4.08" PACKAGE="fix-async"
     - OCAML_VERSION="4.09" PACKAGE="fix-async"
-    - OCAML_VERSION="4.08" PACKAGE="fix-msg"
-    - OCAML_VERSION="4.09" PACKAGE="fix-msg"
+    - OCAML_VERSION="4.08" PACKAGE="fixmsg"
+    - OCAML_VERSION="4.09" PACKAGE="fixmsg"
 os:
 - linux

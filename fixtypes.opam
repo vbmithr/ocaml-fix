@@ -21,7 +21,10 @@ depends: [
   "ptime" {>= "0.8.5"}
   "sexplib" {>= "v0.12.0"}
   "tyre" {>= "0.4.1"}
+  "alcotest" {with-test & >= "0.8.5"}
 ]
-synopsis: "FIX library"
-description: """
-"""
+synopsis: "FIX protocol: types"
+description:"""The Financial Information eXchange (FIX) protocol is
+an electronic communications protocol initiated in 1992 for
+international real-time exchange of information related to securities
+transactions and markets."""

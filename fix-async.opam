@@ -19,6 +19,8 @@ depends: [
   "angstrom-async" {>= "0.12.1"}
   "faraday-async" {>= "0.7.0"}
 ]
-synopsis: "FIX library"
-description: """
-"""
+synopsis: "FIX protocol: Async library to communicate to a server"
+description:"""The Financial Information eXchange (FIX) protocol is
+an electronic communications protocol initiated in 1992 for
+international real-time exchange of information related to securities
+transactions and markets."""

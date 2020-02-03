@@ -20,6 +20,8 @@ depends: [
   "fix-ftx" {= version}
   "logs-async-reporter" {= version}
 ]
-synopsis: "FIX library"
-description: """
-"""
+synopsis: "FIX protocol: high level types and messages"
+description:"""The Financial Information eXchange (FIX) protocol is
+an electronic communications protocol initiated in 1992 for
+international real-time exchange of information related to securities
+transactions and markets."""
