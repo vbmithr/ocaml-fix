@@ -8,8 +8,12 @@ env:
     - PINS="monocypher.dev:https://github.com/vbmithr/ocaml-monocypher.git fixtypes.dev:. fix.dev:. fix-ftx.dev:. fix-async.dev:. fix-coinbasepro.dev:. fix-deribit.dev:. fixmsg.dev:."
   matrix:
     - OCAML_VERSION="4.08" PACKAGE="fix"
-# - PACKAGE_NAME=fix-ftx OCAML_VERSION=4.08
-# - PACKAGE_NAME=fix-async OCAML_VERSION=4.08
-# - PACKAGE_NAME=fix-deribit OCAML_VERSION=4.08
+    - OCAML_VERSION="4.09" PACKAGE="fix"
+    - OCAML_VERSION="4.08" PACKAGE="fixtypes"
+    - OCAML_VERSION="4.09" PACKAGE="fixtypes"
+    - OCAML_VERSION="4.08" PACKAGE="fix-async"
+    - OCAML_VERSION="4.09" PACKAGE="fix-async"
+    - OCAML_VERSION="4.08" PACKAGE="fix-msg"
+    - OCAML_VERSION="4.09" PACKAGE="fix-msg"
 os:
 - linux
