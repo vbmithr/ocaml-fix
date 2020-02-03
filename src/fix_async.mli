@@ -50,7 +50,8 @@ module Persistent : sig
     sid:string ->
     tid:string ->
     version:Fixtypes.Version.t ->
-    (unit -> address Or_error.t Deferred.t) -> t
+    ?random_state:Base.Random.State.t ->
+    ?time_source:Time_source.t -> (unit -> address Or_error.t Deferred.t) -> t
 end
 
 (*---------------------------------------------------------------------------
