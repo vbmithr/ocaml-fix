@@ -5,7 +5,7 @@ script:
 - bash -ex .travis-opam.sh
 env:
   global:
-    - PINS="logs-async.dev:https://github.com/vbmithr/logs-async async-uri.dev:https://github.com/vbmithr/async-uri monocypher.dev:https://github.com/vbmithr/ocaml-monocypher.git fixtypes.dev:. fix.dev:. fix-ftx.dev:. fix-async.dev:. fix-coinbasepro.dev:. fix-deribit.dev:. fixmsg.dev:."
+    - PINS="logs-async.dev:https://github.com/vbmithr/logs-async.git async-uri.dev:https://github.com/vbmithr/async-uri.git monocypher.dev:https://github.com/vbmithr/ocaml-monocypher.git fixtypes.dev:. fix.dev:. fix-ftx.dev:. fix-async.dev:. fix-coinbasepro.dev:. fix-deribit.dev:. fixmsg.dev:."
   matrix:
     - OCAML_VERSION="4.08" PACKAGE="fix"
     - OCAML_VERSION="4.09" PACKAGE="fix"
