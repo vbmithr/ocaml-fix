@@ -11,6 +11,7 @@ depends: [
   "dune" {>= "1.11.4"}
   "ptime" {>= "0.8.5"}
   "uri-sexp" {>= "3.1.0"}
+  "logs" {>= "0.7.0"}
   "fix" {= version}
   "async-uri" {= version}
   "logs-async" {= version}

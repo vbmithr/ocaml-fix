@@ -39,12 +39,13 @@
  (libraries
    uri-sexp
    fix
+   logs
+   logs-async
    core
    async
    angstrom-async
    faraday-async
-   async-uri
-   logs-async))
+   async-uri))
 
 (library
  (name fix_deribit)
