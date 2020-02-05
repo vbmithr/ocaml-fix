@@ -18,7 +18,6 @@ depends: [
   "fix-deribit" {= version}
   "fix-coinbasepro" {= version}
   "fix-ftx" {= version}
-  "logs-async-reporter" {= version}
 ]
 synopsis: "FIX protocol: high level types and messages"
 description:"""The Financial Information eXchange (FIX) protocol is
