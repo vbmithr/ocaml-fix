@@ -68,7 +68,7 @@ let mk_client_read ~monitor r =
   end
 
 let connect uri =
-  Async_uri.connect uri >>= fun (_, _, r, w) ->
+  Async_uri.connect uri >>= fun { r; w; _ } ->
   let monitor = Monitor.create () in
   let client_read = mk_client_read ~monitor r in
   let client_write = mk_client_write ~monitor w in
