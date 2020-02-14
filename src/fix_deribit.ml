@@ -343,8 +343,14 @@ let logon_fields
     ~username
     ~secret
     ~ts =
+  let rand () = Random.int64 Int64.max_int in
+  let buf = Bytes.create 32 in
+  Bytes.set_int64_ne buf 0 (rand ()) ;
+  Bytes.set_int64_ne buf 8 (rand ()) ;
+  Bytes.set_int64_ne buf 16 (rand ()) ;
+  Bytes.set_int64_ne buf 24 (rand ()) ;
   let b64rand =
-    Base64.encode_exn (Monocypher.Rand.gen 32 |> Bigstring.to_string) in
+    Base64.encode_exn (Bytes.unsafe_to_string buf) in
   let rawdata =
     Format.asprintf "%.0f.%s" (Ptime.to_float_s ts *. 1e3) b64rand in
   let password =

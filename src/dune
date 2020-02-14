@@ -59,7 +59,6 @@
    rresult
    ptime
    base64
-   monocypher
    sexplib
    digestif.c
    uri))
