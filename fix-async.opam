@@ -12,13 +12,18 @@ depends: [
   "ptime" {>= "0.8.5"}
   "uri-sexp" {>= "3.1.0"}
   "logs" {>= "0.7.0"}
-  "fix" {= version}
-  "async-uri" {= version}
-  "logs-async" {= version}
+  "fix"
+  "async-uri" {>= "0.1"}
+  "logs-async" {>= "1.1"}
   "core" {>= "v0.12.0"}
   "async" {>= "v0.12.0"}
   "angstrom-async" {>= "0.12.1"}
   "faraday-async" {>= "0.7.0"}
+]
+pin-depends: [
+  ["fix.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["async-uri.dev" "git+https://github.com/vbmithr/async-uri.git"]
+  ["logs-async.dev" "git+https://github.com/vbmithr/logs-async.git"]
 ]
 synopsis: "FIX protocol: Async library to communicate to a server"
 description:"""The Financial Information eXchange (FIX) protocol is

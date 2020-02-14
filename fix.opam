@@ -8,15 +8,19 @@ doc: "https://vbmithr.github.io/ocaml-fix/doc"
 build: [ "dune" "build" "-j" jobs "-p" name ]
 run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
 depends: [
+  "ocaml" {>= "4.08.0"}
   "dune" {>= "1.11.4"}
   "ppx_deriving_yojson" {>= "3.5.1"}
-  "fixtypes" {= version}
+  "fixtypes"
   "rresult" {>= "0.6.0"}
   "astring" {>= "0.8.3"}
   "ptime" {>= "0.8.5"}
-  "sexplib" {>= "v0.12.0"}
+  "sexplib" {>= "v0.13.0"}
   "angstrom" {>= "0.12.1"}
   "faraday" {>= "0.7.0"}
+]
+pin-depends: [
+  ["fixtypes.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
 ]
 synopsis: "FIX protocol: library to create FIX fields and messages"
 description:"""The Financial Information eXchange (FIX) protocol is

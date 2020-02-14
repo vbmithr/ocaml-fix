@@ -8,18 +8,23 @@ doc: "https://vbmithr.github.io/ocaml-fix/doc"
 build: [ "dune" "build" "-j" jobs "-p" name ]
 run-test: [ "dune" "runtest" "-j" jobs "-p" name ]
 depends: [
+  "ocaml" {>= "4.08.0"}
   "dune" {>= "1.11.4"}
   "ppx_deriving" {>= "4.4"}
   "ppx_deriving_yojson" {>= "3.5.1"}
   "rresult" {>= "0.6.0"}
   "ppx_deriving" {>= "4.4"}
   "uuidm" {>= "0.9.7"}
-  "fixtypes" {= version}
-  "fix" {= version}
+  "fixtypes"
+  "fix"
   "base64" {>= "3.2.0"}
   "digestif" {>= "0.8.0"}
   "sexplib" {>= "v0.12.0"}
   "uri" {>= "3.1.0"}
+]
+pin-depends: [
+  ["fixtypes.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
 ]
 synopsis: "FIX library"
 description: """

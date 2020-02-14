@@ -12,12 +12,20 @@ depends: [
   "ptime" {>= "0.8.5"}
   "ppx_deriving_yojson" {>= "3.5.1"}
   "sexplib" {>= "v0.12.0"}
-  "fixtypes" {= version}
-  "fix" {= version}
-  "fix-async" {= version}
-  "fix-deribit" {= version}
-  "fix-coinbasepro" {= version}
-  "fix-ftx" {= version}
+  "fixtypes"
+  "fix"
+  "fix-async"
+  "fix-deribit"
+  "fix-coinbasepro"
+  "fix-ftx"
+]
+pin-depends: [
+  ["fixtypes.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix-async.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix-deribit.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix-coinbasepro.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
+  ["fix-ftx.dev" "git+https://github.com/vbmithr/ocaml-fix.git"]
 ]
 synopsis: "FIX protocol: high level types and messages"
 description:"""The Financial Information eXchange (FIX) protocol is
